@@ -1,7 +1,9 @@
 import { GetServerSideProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useState } from 'react';
 import Header from '../src/components/Header';
+import QuoteRequestModal from '../src/components/QuoteRequestModal';
 import { getProducts } from '../src/lib/api';
 import { Product } from '../src/lib/api';
 
@@ -10,6 +12,13 @@ interface ProductsPageProps {
 }
 
 export default function ProductsPage({ products }: ProductsPageProps) {
+  const [showQuoteModal, setShowQuoteModal] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+
+  const handleGetQuote = (product: Product) => {
+    setSelectedProduct(product);
+    setShowQuoteModal(true);
+  };
   return (
     <>
       <Head>
@@ -20,7 +29,7 @@ export default function ProductsPage({ products }: ProductsPageProps) {
       <div className="min-h-screen bg-gray-50">
         <Header />
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-28">
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900">Our Products</h1>
             <p className="mt-2 text-gray-600">Discover amazing digital products and services</p>
@@ -72,22 +81,23 @@ export default function ProductsPage({ products }: ProductsPageProps) {
                       {product.description}
                     </p>
                     <div className="flex items-center justify-between">
-                      <span className="text-2xl font-bold text-indigo-600">
-                        ${product.price.toFixed(2)}
-                      </span>
-                      <Link
-                        href={`/products/${product.id}`}
-                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 transition-colors"
-                      >
-                        View Details
-                      </Link>
-                    </div>
-                    <div className="mt-2 text-xs text-gray-500">
-                      {product.stock > 0 ? (
-                        <span className="text-green-600">In Stock ({product.stock})</span>
-                      ) : (
-                        <span className="text-red-600">Out of Stock</span>
-                      )}
+                      <div className="text-sm text-gray-600">
+                        <span className="font-medium">Custom pricing available</span>
+                      </div>
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => handleGetQuote(product)}
+                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 transition-colors"
+                        >
+                          Get Quote
+                        </button>
+                        <Link
+                          href={`/products/${product.id}`}
+                          className="inline-flex items-center px-4 py-2 border border-indigo-600 text-sm font-medium rounded-md text-indigo-600 bg-white hover:bg-indigo-50 transition-colors"
+                        >
+                          View Details
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -96,6 +106,13 @@ export default function ProductsPage({ products }: ProductsPageProps) {
           )}
         </div>
       </div>
+
+      {/* Quote Request Modal */}
+      <QuoteRequestModal
+        isOpen={showQuoteModal}
+        onClose={() => setShowQuoteModal(false)}
+        productName={selectedProduct?.name}
+      />
     </>
   );
 }

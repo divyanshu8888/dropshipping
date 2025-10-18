@@ -142,8 +142,11 @@ const ProductDetail = () => {
                             <div>
                                 <h1 className="text-3xl font-bold text-gray-900 mb-2">{product.name}</h1>
                                 <p className="text-lg text-gray-600 mb-4">{product.category}</p>
-                                <div className="text-3xl font-bold text-indigo-600 mb-4">
-                                    ${product.price.toFixed(2)}
+                                <div className="text-2xl font-bold text-gray-900 mb-2">
+                                    Contact for Pricing
+                                </div>
+                                <div className="text-sm text-gray-600 mb-4">
+                                    Get a custom quote based on your requirements
                                 </div>
                             </div>
 
@@ -152,44 +155,30 @@ const ProductDetail = () => {
                                 <p className="text-gray-700 leading-relaxed">{product.description}</p>
                             </div>
 
-                            <div className="flex items-center space-x-4">
-                                <label htmlFor="quantity" className="text-sm font-medium text-gray-700">
-                                    Quantity:
-                                </label>
-                                <select
-                                    id="quantity"
-                                    value={quantity}
-                                    onChange={(e) => setQuantity(Number(e.target.value))}
-                                    className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                >
-                                    {[...Array(Math.min(10, product.stock))].map((_, i) => (
-                                        <option key={i + 1} value={i + 1}>
-                                            {i + 1}
-                                        </option>
-                                    ))}
-                                </select>
-                                <span className="text-sm text-gray-500">
-                                    {product.stock} in stock
-                                </span>
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                <div className="flex items-center">
+                                    <svg className="w-5 h-5 text-blue-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                                    </svg>
+                                    <span className="text-blue-800 font-medium">Custom Pricing Available</span>
+                                </div>
+                                <p className="text-blue-700 text-sm mt-1">
+                                    Contact our freelancers for personalized quotes based on your specific needs.
+                                </p>
                             </div>
 
                             <div className="flex space-x-4">
-                                <button
-                                    onClick={handleAddToCart}
-                                    disabled={product.stock === 0}
-                                    className={`flex-1 py-3 px-6 rounded-lg font-semibold text-white transition-colors ${
-                                        product.stock === 0
-                                            ? 'bg-gray-400 cursor-not-allowed'
-                                            : 'bg-indigo-600 hover:bg-indigo-700'
-                                    }`}
-                                >
-                                    {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
-                                </button>
                                 <Link
-                                    href="/cart"
+                                    href="/freelancers"
+                                    className="flex-1 py-3 px-6 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors text-center"
+                                >
+                                    Get Quote
+                                </Link>
+                                <Link
+                                    href="/freelancers"
                                     className="py-3 px-6 border border-indigo-600 text-indigo-600 rounded-lg font-semibold hover:bg-indigo-50 transition-colors"
                                 >
-                                    View Cart
+                                    Browse Freelancers
                                 </Link>
                             </div>
 

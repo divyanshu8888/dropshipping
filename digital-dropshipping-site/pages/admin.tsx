@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { GetServerSideProps } from 'next'
 import Head from 'next/head'
 import Link from 'next/link'
+import { useRouter } from 'next/router'
 import Header from '../src/components/Header'
 import { supabase } from '../src/lib/supabase'
 
@@ -30,8 +31,40 @@ interface AdminProps {
 }
 
 export default function AdminDashboard({ freelancers, pendingCount, approvedCount, quoteRequests }: AdminProps) {
+  const router = useRouter()
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all')
   const [selectedFreelancer, setSelectedFreelancer] = useState<Freelancer | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState<{name: string, role: string} | null>(null)
+
+  useEffect(() => {
+    // Check if user is logged in and is an admin
+    const userData = localStorage.getItem('user')
+    if (!userData) {
+      router.push('/login')
+      return
+    }
+    
+    const userObj = JSON.parse(userData)
+    if (userObj.role !== 'admin') {
+      router.push('/login')
+      return
+    }
+
+    setUser(userObj)
+    setLoading(false)
+  }, [router])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
 
   const filteredFreelancers = freelancers.filter(f => filter === 'all' || f.status === filter)
 
@@ -73,14 +106,24 @@ export default function AdminDashboard({ freelancers, pendingCount, approvedCoun
         <Header />
 
         {/* Hero */}
-        <section className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-12">
+        <section className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-12 pt-24">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-4xl font-extrabold mb-2">Admin Dashboard</h1>
-                <p className="text-xl text-indigo-100">Manage freelancer applications and platform</p>
+                <p className="text-xl text-indigo-100">Welcome back, {user?.name}! Manage freelancer applications and platform</p>
               </div>
-              <Link
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={() => {
+                    localStorage.removeItem('user')
+                    router.push('/login')
+                  }}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Logout
+                </button>
+                <Link
                 href="/admin/quotes"
                 className="px-6 py-3 bg-white text-indigo-600 rounded-xl font-bold hover:bg-gray-50 transition-all shadow-lg flex items-center"
               >
@@ -88,7 +131,8 @@ export default function AdminDashboard({ freelancers, pendingCount, approvedCoun
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                 </svg>
                 View Quote Requests ({quoteRequests})
-              </Link>
+                </Link>
+              </div>
             </div>
           </div>
         </section>

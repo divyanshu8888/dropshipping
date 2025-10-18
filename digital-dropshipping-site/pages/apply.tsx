@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import Header from '../src/components/Header'
@@ -6,6 +6,20 @@ import Header from '../src/components/Header'
 export default function ApplyPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    // Check if user is logged in and redirect to new profile setup
+    const user = localStorage.getItem('user');
+    if (user) {
+      const userData = JSON.parse(user);
+      if (userData.role === 'freelancer') {
+        router.push('/freelancer-profile-setup');
+        return;
+      }
+    }
+    // If not logged in as freelancer, redirect to signup
+    router.push('/signup');
+  }, [router]);
   const [formData, setFormData] = useState({
     display_name: '',
     title: '',
@@ -259,6 +273,107 @@ export default function ApplyPage() {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Services */}
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Services You Offer</label>
+                <p className="text-sm text-gray-600 mb-4">Add the services you want to offer to clients</p>
+                
+                {formData.services.map((service, index) => (
+                  <div key={index} className="border-2 border-gray-200 rounded-xl p-4 mb-4">
+                    <div className="flex justify-between items-center mb-3">
+                      <h4 className="font-semibold text-gray-900">Service {index + 1}</h4>
+                      <button
+                        type="button"
+                        onClick={() => removeService(index)}
+                        className="text-red-600 hover:text-red-800 font-medium"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Service Title *</label>
+                        <input
+                          type="text"
+                          required
+                          value={service.title}
+                          onChange={(e) => updateService(index, 'title', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                          placeholder="e.g., Website Design"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
+                        <select
+                          required
+                          value={service.category}
+                          onChange={(e) => updateService(index, 'category', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        >
+                          <option value="">Select Category</option>
+                          {serviceCategories.map((category) => (
+                            <option key={category} value={category}>{category}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Description *</label>
+                      <textarea
+                        required
+                        value={service.description}
+                        onChange={(e) => updateService(index, 'description', e.target.value)}
+                        rows={3}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        placeholder="Describe what this service includes..."
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Price (USD) *</label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-2 text-gray-500">$</span>
+                          <input
+                            type="number"
+                            min="1"
+                            required
+                            value={service.price || ''}
+                            onChange={(e) => updateService(index, 'price', parseInt(e.target.value) || 0)}
+                            className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                            placeholder="500"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Time (Days) *</label>
+                        <input
+                          type="number"
+                          min="1"
+                          required
+                          value={service.delivery_time || ''}
+                          onChange={(e) => updateService(index, 'delivery_time', parseInt(e.target.value) || 1)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                          placeholder="7"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                
+                <button
+                  type="button"
+                  onClick={addService}
+                  className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-indigo-400 hover:text-indigo-600 transition-colors font-medium"
+                >
+                  + Add Another Service
+                </button>
               </div>
 
               {/* Pricing (Private) */}

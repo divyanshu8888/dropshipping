@@ -3,7 +3,17 @@ import { GetServerSideProps } from 'next'
 import Head from 'next/head'
 import Link from 'next/link'
 import Header from '../src/components/Header'
+import QuoteRequestModal from '../src/components/QuoteRequestModal'
 import { supabase } from '../src/lib/supabase'
+import { getFreelancerAvatar, getServiceIcon, getCategoryColor } from '../src/utils/imageUtils'
+
+interface FreelancerService {
+  id: string;
+  title: string;
+  price: number;
+  category: string;
+  delivery_time: number;
+}
 
 interface Freelancer {
   id: string;
@@ -17,6 +27,7 @@ interface Freelancer {
   completed_projects: number;
   response_time: string;
   availability: string;
+  services?: FreelancerService[];
 }
 
 interface FreelancersPageProps {
@@ -28,7 +39,7 @@ export default function FreelancersPage({ freelancers }: FreelancersPageProps) {
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [sortBy, setSortBy] = useState('rating')
 
-  const categories = ['all', 'Development', 'Design', 'Marketing', 'Writing', 'Data Science']
+  const categories = ['all', ...Array.from(new Set(freelancers.map(f => f.title.split(' ')[0]).filter(Boolean)))]
 
   const filteredFreelancers = freelancers.filter(freelancer => {
     const matchesSearch = freelancer.display_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -172,6 +183,26 @@ export default function FreelancersPage({ freelancers }: FreelancersPageProps) {
                     )}
                   </div>
 
+                  {/* Services */}
+                  {freelancer.services && freelancer.services.length > 0 && (
+                    <div className="mb-4">
+                      <h4 className="text-xs font-semibold text-gray-700 mb-2">Services:</h4>
+                      <div className="space-y-1">
+                        {freelancer.services.slice(0, 2).map((service) => (
+                          <div key={service.id} className="flex justify-between items-center text-xs">
+                            <span className="text-gray-600 truncate">{service.title}</span>
+                            <span className="text-indigo-600 font-medium">${(service.price / 100).toFixed(0)}</span>
+                          </div>
+                        ))}
+                        {freelancer.services.length > 2 && (
+                          <div className="text-xs text-gray-500">
+                            +{freelancer.services.length - 2} more services
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Stats */}
                   <div className="grid grid-cols-2 gap-4 mb-4 py-4 border-t border-b border-gray-100">
                     <div>
@@ -248,7 +279,26 @@ export const getServerSideProps: GetServerSideProps = async () => {
     // Fetch all approved freelancers from database (NO PRICING!)
     const { data: freelancers, error } = await supabase
       .from('freelancers')
-      .select('id, display_name, title, description, country, skills, rating, total_reviews, completed_projects, response_time, availability')
+      .select(`
+        id, 
+        display_name, 
+        title, 
+        description, 
+        country, 
+        skills, 
+        rating, 
+        total_reviews, 
+        completed_projects, 
+        response_time, 
+        availability,
+        freelancer_services (
+          id,
+          title,
+          price,
+          category,
+          delivery_time
+        )
+      `)
       .eq('status', 'approved')
       .order('rating', { ascending: false });
 
@@ -257,9 +307,15 @@ export const getServerSideProps: GetServerSideProps = async () => {
       throw error;
     }
 
+    // Transform the data to include services
+    const freelancersWithServices = freelancers?.map(freelancer => ({
+      ...freelancer,
+      services: freelancer.freelancer_services || []
+    })) || [];
+
     return {
       props: {
-        freelancers: freelancers || [],
+        freelancers: freelancersWithServices,
       },
     };
   } catch (error) {

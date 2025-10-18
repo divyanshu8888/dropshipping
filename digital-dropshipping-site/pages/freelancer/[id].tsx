@@ -5,6 +5,15 @@ import { useState } from 'react';
 import Header from '../../src/components/Header';
 import { supabase } from '../../src/lib/supabase';
 
+interface FreelancerService {
+  id: string;
+  title: string;
+  description: string;
+  price: number;
+  category: string;
+  delivery_time: number;
+}
+
 interface Freelancer {
   id: string;
   display_name: string;
@@ -18,6 +27,7 @@ interface Freelancer {
   completed_projects: number;
   response_time: string;
   availability: string;
+  services?: FreelancerService[];
 }
 
 interface Review {
@@ -169,6 +179,38 @@ export default function FreelancerProfile({ freelancer, reviews, portfolio }: Fr
                 ))}
               </div>
             </div>
+
+            {/* Services */}
+            {freelancer.services && freelancer.services.length > 0 && (
+              <div className="bg-white rounded-2xl shadow-lg p-8">
+                <h2 className="text-3xl font-bold text-gray-900 mb-6">Services & Pricing</h2>
+                <div className="grid gap-6 md:grid-cols-2">
+                  {freelancer.services.map((service) => (
+                    <div key={service.id} className="border-2 border-gray-100 rounded-xl p-6 hover:border-indigo-200 transition-colors">
+                      <div className="flex justify-between items-start mb-3">
+                        <h3 className="text-xl font-bold text-gray-900">{service.title}</h3>
+                        <div className="text-right">
+                          <div className="text-2xl font-bold text-indigo-600">${(service.price / 100).toFixed(0)}</div>
+                          <div className="text-sm text-gray-500">{service.delivery_time} days delivery</div>
+                        </div>
+                      </div>
+                      <p className="text-gray-600 mb-3">{service.description}</p>
+                      <div className="flex items-center justify-between">
+                        <span className="px-3 py-1 bg-indigo-50 text-indigo-700 text-sm font-medium rounded-full">
+                          {service.category}
+                        </span>
+                        <button 
+                          onClick={() => setShowQuoteForm(true)}
+                          className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors"
+                        >
+                          Get Quote
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Portfolio */}
             {portfolio.length > 0 && (
@@ -454,10 +496,20 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
     const { id } = context.params!;
 
-    // Fetch freelancer details
+    // Fetch freelancer details with services
     const { data: freelancer, error: freelancerError } = await supabase
       .from('freelancers')
-      .select('*')
+      .select(`
+        *,
+        freelancer_services (
+          id,
+          title,
+          description,
+          price,
+          category,
+          delivery_time
+        )
+      `)
       .eq('id', id)
       .eq('status', 'approved')
       .single();
@@ -489,9 +541,15 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       console.error('Error fetching portfolio:', portfolioError);
     }
 
+    // Transform freelancer data to include services
+    const freelancerWithServices = {
+      ...freelancer,
+      services: freelancer.freelancer_services || []
+    };
+
     return {
       props: {
-        freelancer,
+        freelancer: freelancerWithServices,
         reviews: reviews || [],
         portfolio: portfolio || [],
       },

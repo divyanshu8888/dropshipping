@@ -1,5 +1,6 @@
 import { GetServerSideProps } from 'next';
 import Link from 'next/link';
+import { useState, useEffect } from 'react';
 import Header from '../src/components/Header';
 import { supabase } from '../src/lib/supabase';
 
@@ -25,56 +26,115 @@ interface HomePageProps {
 }
 
 const HomePage = ({ testimonials, stats }: HomePageProps) => {
+  const [currentTestimonialIndex, setCurrentTestimonialIndex] = useState(0);
+  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+
+  // Auto-rotate testimonials every 5 seconds
+  useEffect(() => {
+    if (!isAutoPlaying || testimonials.length <= 3) return;
+    
+    const interval = setInterval(() => {
+      setCurrentTestimonialIndex((prevIndex) => 
+        (prevIndex + 1) % (testimonials.length - 2)
+      );
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [isAutoPlaying, testimonials.length]);
+
+  // Get current testimonials to display (3 at a time)
+  const getCurrentTestimonials = () => {
+    if (testimonials.length <= 3) return testimonials;
+    
+    const endIndex = currentTestimonialIndex + 3;
+    if (endIndex <= testimonials.length) {
+      return testimonials.slice(currentTestimonialIndex, endIndex);
+    } else {
+      // Handle wrap-around
+      return [
+        ...testimonials.slice(currentTestimonialIndex),
+        ...testimonials.slice(0, endIndex - testimonials.length)
+      ];
+    }
+  };
+
+  const currentTestimonials = getCurrentTestimonials();
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-cyan-50 to-blue-50 relative overflow-hidden">
+      {/* Animated Background Elements */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-emerald-400/20 to-cyan-500/20 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-br from-blue-400/20 to-indigo-500/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-br from-teal-400/10 to-emerald-500/10 rounded-full blur-3xl animate-pulse delay-500"></div>
+      </div>
+
       <Header />
       
       {/* Hero Section */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-purple-500/10"></div>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-20">
           <div className="text-center animate-fade-in">
-            <div className="inline-block mb-4 px-4 py-2 bg-indigo-100 rounded-full">
-              <span className="text-indigo-600 font-semibold">🚀 #1 Freelance Marketplace</span>
+            <div className="inline-block mb-4 px-4 py-2 bg-gradient-to-r from-emerald-100 to-cyan-100 rounded-full border border-emerald-200">
+              <span className="text-emerald-700 font-semibold text-sm">🚀 #1 Freelance Marketplace</span>
             </div>
-            <h1 className="text-5xl md:text-7xl font-extrabold text-gray-900 mb-6 leading-tight">
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
+            <h1 className="text-4xl md:text-6xl font-extrabold text-gray-900 mb-6 leading-tight">
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 via-cyan-600 to-blue-600">
                 TalentHub Pro
               </span>
               <br />
               <span className="text-gray-800">Where Talent Meets Opportunity</span>
             </h1>
-            <p className="mt-6 max-w-2xl mx-auto text-xl md:text-2xl text-gray-600 leading-relaxed">
+            <p className="mt-4 max-w-xl mx-auto text-lg md:text-xl text-gray-600 leading-relaxed">
               Connect with world-class freelancers and transform your business with expert services at unbeatable prices.
             </p>
             
-            {/* Price Beat Guarantee Badge - BIGGER */}
-            <div className="mt-10 inline-flex items-center bg-gradient-to-r from-green-500 to-emerald-500 text-white px-12 py-6 rounded-3xl shadow-2xl transform hover:scale-105 transition-all duration-300 animate-pulse">
-              <svg className="w-16 h-16 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-              </svg>
-              <div className="text-left">
-                <div className="font-black text-3xl mb-1">Price Beat Guarantee</div>
-                <div className="text-xl font-semibold">Find cheaper? Get 10% more off! 💰</div>
-                <div className="text-sm mt-1 opacity-90">100% Money Back Guarantee</div>
+            {/* Price Beat Guarantee Badge - Dynamic & Moving */}
+            <div className="mt-8 inline-flex items-center bg-gradient-to-r from-emerald-500 via-cyan-500 to-blue-500 text-white px-8 py-4 rounded-2xl shadow-xl transform hover:scale-105 transition-all duration-300 animate-pulse hover:animate-none relative overflow-hidden animate-glow">
+              {/* Animated background gradient */}
+              <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 via-cyan-400 to-blue-400 opacity-0 hover:opacity-100 transition-opacity duration-500 animate-gradient-x"></div>
+              
+              <div className="w-12 h-12 mr-4 bg-white/20 rounded-full flex items-center justify-center relative z-10 animate-float">
+                <svg className="w-6 h-6 animate-wiggle" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                </svg>
               </div>
+              <div className="text-left relative z-10">
+                <div className="font-bold text-xl mb-1 animate-pulse">Price Beat Guarantee</div>
+                <div className="text-sm font-semibold animate-bounce">Find cheaper? Get 10% more off! 💰</div>
+                <div className="text-xs mt-1 opacity-90 animate-pulse">100% Money Back Guarantee</div>
+              </div>
+              
+              {/* Floating elements */}
+              <div className="absolute -top-2 -right-2 w-4 h-4 bg-yellow-400 rounded-full animate-ping"></div>
+              <div className="absolute -bottom-1 -left-1 w-3 h-3 bg-green-400 rounded-full animate-ping animation-delay-200"></div>
+              <div className="absolute top-1/2 -left-2 w-2 h-2 bg-pink-400 rounded-full animate-ping animation-delay-400"></div>
+              
+              {/* Moving sparkle effects */}
+              <div className="absolute top-2 right-4 text-yellow-300 animate-ping animation-delay-200">✨</div>
+              <div className="absolute bottom-2 left-6 text-green-300 animate-ping animation-delay-400">⭐</div>
             </div>
 
-            <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 href="/freelancers"
-                className="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-white bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl hover:from-indigo-700 hover:to-purple-700 transform hover:scale-105 transition-all duration-200 shadow-xl hover:shadow-2xl"
+                className="group relative inline-flex items-center justify-center px-8 py-3 text-lg font-semibold text-white bg-gradient-to-r from-emerald-500 via-cyan-500 to-blue-500 rounded-xl hover:from-emerald-600 hover:via-cyan-600 hover:to-blue-600 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl"
               >
+                <span className="mr-2 text-lg">👥</span>
                 <span className="relative z-10">Browse Freelancers</span>
                 <svg className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                 </svg>
               </Link>
               <Link
-                href="/apply"
-                className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-indigo-600 bg-white rounded-xl hover:bg-gray-50 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl border-2 border-indigo-100"
+                href="/signup"
+                className="group relative inline-flex items-center justify-center px-8 py-3 text-lg font-semibold text-emerald-600 bg-white border-2 border-emerald-500 rounded-xl hover:bg-emerald-50 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl"
               >
-                Apply as Freelancer
+                <span className="mr-2 text-lg">🚀</span>
+                Start as Freelancer
+                <svg className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
               </Link>
             </div>
             
@@ -86,19 +146,21 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
       </section>
 
       {/* Stats Section - DYNAMIC */}
-      <section className="py-16 bg-white/50 backdrop-blur-sm">
+      <section className="py-20 bg-white/60 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {[
-              { label: 'Active Freelancers', value: `${stats.totalFreelancers}+`, icon: '👥' },
-              { label: 'Projects Completed', value: `${stats.totalProjects.toLocaleString()}+`, icon: '✨' },
-              { label: 'Happy Clients', value: `${stats.totalReviews.toLocaleString()}+`, icon: '😊' },
-              { label: 'Countries', value: `${stats.countries}+`, icon: '🌍' },
+              { label: 'Active Freelancers', value: `${stats.totalFreelancers}+`, icon: '👥', color: 'from-emerald-500 to-cyan-500' },
+              { label: 'Projects Completed', value: `${stats.totalProjects.toLocaleString()}+`, icon: '✨', color: 'from-cyan-500 to-blue-500' },
+              { label: 'Happy Clients', value: `${stats.totalReviews.toLocaleString()}+`, icon: '😊', color: 'from-blue-500 to-indigo-500' },
+              { label: 'Countries', value: `${stats.countries}+`, icon: '🌍', color: 'from-indigo-500 to-purple-500' },
             ].map((stat, index) => (
-              <div key={index} className="text-center p-6 rounded-2xl bg-white shadow-lg hover:shadow-xl transition-shadow duration-300 transform hover:-translate-y-1">
-                <div className="text-4xl mb-3">{stat.icon}</div>
-                <div className="text-3xl md:text-4xl font-bold text-indigo-600 mb-2">{stat.value}</div>
-                <div className="text-gray-600 font-medium">{stat.label}</div>
+              <div key={index} className="text-center p-8 rounded-3xl bg-white/80 backdrop-blur-sm shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-white/50">
+                <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-emerald-100 to-cyan-100 rounded-2xl flex items-center justify-center">
+                  <span className="text-3xl">{stat.icon}</span>
+                </div>
+                <div className={`text-4xl md:text-5xl font-black bg-gradient-to-r ${stat.color} bg-clip-text text-transparent mb-3`}>{stat.value}</div>
+                <div className="text-gray-700 font-semibold text-lg">{stat.label}</div>
               </div>
             ))}
           </div>
@@ -183,28 +245,85 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
             </h2>
             <p className="text-xl text-gray-600">See what our clients say about us</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {testimonials.slice(0, 3).map((testimonial) => (
-              <div key={testimonial.id} className="bg-gradient-to-br from-gray-50 to-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-shadow">
-                <div className="flex mb-4">
-                  {[...Array(testimonial.rating)].map((_, i) => (
-                    <svg key={i} className="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                  ))}
-                </div>
-                <p className="text-gray-700 mb-4 italic">"{testimonial.testimonial_text}"</p>
-                <div className="flex items-center">
-                  <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold mr-3">
-                    {testimonial.client_name.charAt(0)}
+          {/* Testimonials Carousel */}
+          <div className="relative">
+            <div className="overflow-hidden">
+              <div 
+                className="flex transition-transform duration-1000 ease-in-out"
+                style={{ transform: `translateX(-${currentTestimonialIndex * (100 / 3)}%)` }}
+              >
+                {testimonials.map((testimonial) => (
+                  <div key={testimonial.id} className="w-1/3 flex-shrink-0 px-4">
+                    <div className="bg-gradient-to-br from-gray-50 to-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2">
+                      <div className="flex mb-4">
+                        {[...Array(testimonial.rating)].map((_, i) => (
+                          <svg key={i} className="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                          </svg>
+                        ))}
+                      </div>
+                      <p className="text-gray-700 mb-4 italic">"{testimonial.testimonial_text}"</p>
+                      <div className="flex items-center">
+                        <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold mr-3">
+                          {testimonial.client_name.charAt(0)}
+                        </div>
+                        <div>
+                          <div className="font-semibold text-gray-900">{testimonial.client_name}</div>
+                          <div className="text-sm text-gray-500">{testimonial.client_role}{testimonial.client_company && `, ${testimonial.client_company}`}</div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="font-semibold text-gray-900">{testimonial.client_name}</div>
-                    <div className="text-sm text-gray-500">{testimonial.client_role}{testimonial.client_company && `, ${testimonial.client_company}`}</div>
-                  </div>
-                </div>
+                ))}
               </div>
-            ))}
+            </div>
+
+            {/* Navigation Dots */}
+            {testimonials.length > 3 && (
+              <div className="flex justify-center mt-8 space-x-2">
+                {Array.from({ length: testimonials.length - 2 }, (_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => {
+                      setCurrentTestimonialIndex(i);
+                      setIsAutoPlaying(false);
+                      setTimeout(() => setIsAutoPlaying(true), 10000); // Resume auto-play after 10 seconds
+                    }}
+                    className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                      i === currentTestimonialIndex 
+                        ? 'bg-indigo-600 w-8' 
+                        : 'bg-gray-300 hover:bg-gray-400'
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Play/Pause Button */}
+            {testimonials.length > 3 && (
+              <div className="flex justify-center mt-4">
+                <button
+                  onClick={() => setIsAutoPlaying(!isAutoPlaying)}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center space-x-2"
+                >
+                  {isAutoPlaying ? (
+                    <>
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                      <span>Pause</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                      </svg>
+                      <span>Play</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </section>
