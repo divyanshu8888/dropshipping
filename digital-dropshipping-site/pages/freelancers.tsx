@@ -60,7 +60,7 @@ export default function FreelancersPage({ freelancers }: FreelancersPageProps) {
         <Header />
 
         {/* Hero Section */}
-        <section className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-16">
+        <section className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-16 pt-28">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h1 className="text-4xl md:text-5xl font-extrabold mb-4">
               Find the Perfect Freelancer
