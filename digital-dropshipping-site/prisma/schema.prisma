@@ -1,0 +1,104 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id            Int            @id @default(autoincrement())
+  email         String         @unique
+  name          String
+  bio           String?
+  role          String         @default("client") // "client" or "freelancer"
+  skills        String         @default("") // JSON string of skills array
+  rating        Float?
+  services      Service[]
+  workRequests  WorkRequest[]  @relation("RequestedBy")
+  offers        WorkRequest[]  @relation("OfferedBy")
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Service {
+  id          Int          @id @default(autoincrement())
+  title       String
+  description String
+  price       Float
+  category    String
+  deliveryTime Int         // in days
+  freelancer  User         @relation(fields: [userId], references: [id])
+  userId      Int
+  workRequests WorkRequest[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model FreelancerService {
+  id          Int          @id @default(autoincrement())
+  freelancerId String      // Will link to Supabase freelancer ID
+  title       String
+  description String
+  price       Float
+  category    String
+  deliveryTime Int         // in days
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model WorkRequest {
+  id          Int          @id @default(autoincrement())
+  title       String
+  description String
+  budget      Float
+  deadline    DateTime
+  status      String       @default("open") // open, assigned, completed, cancelled
+  client      User         @relation("RequestedBy", fields: [clientId], references: [id])
+  clientId    Int
+  freelancer  User?        @relation("OfferedBy", fields: [freelancerId], references: [id])
+  freelancerId Int?
+  service     Service?     @relation(fields: [serviceId], references: [id])
+  serviceId   Int?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+// E-commerce models
+model Product {
+  id          Int         @id @default(autoincrement())
+  name        String
+  description String
+  price       Float
+  category    String
+  imageUrl    String
+  stock       Int         @default(0)
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  orderItems  OrderItem[]
+}
+
+model Order {
+  id               Int         @id @default(autoincrement())
+  customerName     String
+  customerEmail    String
+  customerAddress  String
+  totalAmount      Float
+  status           String      @default("pending") // pending, confirmed, shipped, delivered, cancelled
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  items            OrderItem[]
+}
+
+model OrderItem {
+  id        Int     @id @default(autoincrement())
+  orderId   Int
+  productId Int
+  quantity  Int
+  price     Float
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id])
+}

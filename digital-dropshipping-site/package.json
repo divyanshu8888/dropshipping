@@ -1,0 +1,51 @@
+{
+  "name": "digital-dropshipping-site",
+  "version": "1.0.0",
+  "description": "A digital dropshipping website built with Next.js and TypeScript.",
+  "main": "index.js",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "test": "jest",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:seed": "tsx scripts/seed-products.ts"
+  },
+  "keywords": [
+    "dropshipping",
+    "ecommerce",
+    "nextjs",
+    "typescript"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "@prisma/client": "^5.7.0",
+    "@supabase/auth-helpers-nextjs": "^0.8.7",
+    "@supabase/supabase-js": "^2.38.0",
+    "lucide-react": "^0.294.0",
+    "next": "^14.0.0",
+    "next-auth": "^4.24.5",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-dropzone": "^14.2.3",
+    "react-hook-form": "^7.48.2",
+    "stripe": "^8.0.0"
+  },
+  "devDependencies": {
+    "@types/jest": "latest",
+    "@types/node": "^20.10.0",
+    "@types/react": "19.2.2",
+    "autoprefixer": "^10.4.21",
+    "eslint": "latest",
+    "eslint-config-next": "latest",
+    "jest": "latest",
+    "postcss": "^8.5.6",
+    "prisma": "^5.7.0",
+    "tailwindcss": "^3.4.18",
+    "ts-jest": "latest",
+    "tsx": "^4.20.6",
+    "typescript": "latest"
+  }
+}
