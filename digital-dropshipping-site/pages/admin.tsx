@@ -388,10 +388,15 @@ export default function AdminDashboard({ freelancers, pendingCount, approvedCoun
                     <div className="font-semibold text-text-base">Quote Requests</div>
                     <div className="text-sm text-text-mute">{quoteRequests} pending</div>
                   </Link>
-                  <Link href="/admin/products" className="group p-4 border-2 border-white/10 rounded-xl hover:border-accent-violet/50 hover:bg-white/5 transition-all text-center">
+                  <Link href="/admin/products-enhanced" className="group p-4 border-2 border-white/10 rounded-xl hover:border-accent-violet/50 hover:bg-white/5 transition-all text-center">
                     <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">📦</div>
                     <div className="font-semibold text-text-base">Manage Products</div>
-                    <div className="text-sm text-text-mute">Add & edit items</div>
+                    <div className="text-sm text-text-mute">Add & edit items with image upload</div>
+                  </Link>
+                  <Link href="/admin/setup" className="group p-4 border-2 border-white/10 rounded-xl hover:border-yellow-400/50 hover:bg-yellow-500/10 transition-all text-center">
+                    <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">⚙️</div>
+                    <div className="font-semibold text-text-base">Database Setup</div>
+                    <div className="text-sm text-text-mute">Create tables & sample data</div>
                   </Link>
                   <Link href="/admin/orders" className="group p-4 border-2 border-white/10 rounded-xl hover:border-accent-cyan/50 hover:bg-white/5 transition-all text-center">
                     <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">🛒</div>

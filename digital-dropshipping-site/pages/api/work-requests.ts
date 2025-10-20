@@ -1,49 +1,61 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { prisma } from '../../../src/lib/prisma';
+import { supabase } from '../../../src/lib/supabase';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     switch (req.method) {
         case 'GET':
             try {
-                const workRequests = await prisma.workRequest.findMany({
-                    include: {
-                        client: {
-                            select: {
-                                id: true,
-                                name: true,
-                            },
-                        },
-                        freelancer: {
-                            select: {
-                                id: true,
-                                name: true,
-                                rating: true,
-                            },
-                        },
-                        service: true,
-                    },
-                });
-                res.status(200).json(workRequests);
+                const { data: workRequests, error } = await supabase
+                    .from('projects')
+                    .select(`
+                        *,
+                        clients (
+                            id,
+                            name
+                        ),
+                        freelancers (
+                            id,
+                            name,
+                            rating
+                        ),
+                        services (*)
+                    `);
+                
+                if (error) {
+                    throw error;
+                }
+                
+                res.status(200).json(workRequests || []);
             } catch (error) {
+                console.error('Error fetching work requests:', error);
                 res.status(500).json({ message: 'Error fetching work requests' });
             }
             break;
 
         case 'POST':
             try {
-                const { title, description, budget, deadline, clientId, serviceId } = req.body;
-                const workRequest = await prisma.workRequest.create({
-                    data: {
+                const { title, description, budget, deadline, client_id, service_id } = req.body;
+                const { data: workRequest, error } = await supabase
+                    .from('projects')
+                    .insert({
                         title,
                         description,
                         budget,
-                        deadline: new Date(deadline),
-                        clientId,
-                        serviceId,
-                    },
-                });
+                        deadline,
+                        client_id,
+                        service_id,
+                        status: 'open'
+                    })
+                    .select()
+                    .single();
+                
+                if (error) {
+                    throw error;
+                }
+                
                 res.status(201).json(workRequest);
             } catch (error) {
+                console.error('Error creating work request:', error);
                 res.status(500).json({ message: 'Error creating work request' });
             }
             break;

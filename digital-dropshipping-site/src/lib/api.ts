@@ -1,4 +1,4 @@
-import { prisma } from './prisma';
+import { supabase } from './supabase';
 
 export interface Product {
   id: number;
@@ -6,27 +6,27 @@ export interface Product {
   description: string;
   price: number;
   category: string;
-  imageUrl: string;
+  image_url: string;
   stock: number;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Order {
   id: number;
-  customerName: string;
-  customerEmail: string;
-  customerAddress: string;
-  totalAmount: number;
+  customer_name: string;
+  customer_email: string;
+  customer_address: string;
+  total_amount: number;
   status: string;
   items: OrderItem[];
-  createdAt: Date;
+  created_at: string;
 }
 
 export interface OrderItem {
   id: number;
-  productId: number;
+  product_id: number;
   quantity: number;
   price: number;
   product: Product;
@@ -35,22 +35,40 @@ export interface OrderItem {
 // Products API
 export const getProducts = async (): Promise<Product[]> => {
   try {
-    const products = await prisma.product.findMany({
-      where: { isActive: true },
-      orderBy: { createdAt: 'desc' }
-    });
-    return products;
+    const { data: products, error } = await supabase
+      .from('products')
+      .select('*')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        console.log('Products table does not exist. Please create it in Supabase dashboard.');
+        return [];
+      }
+      throw error;
+    }
+
+    return products || [];
   } catch (error) {
     console.error('Error fetching products:', error);
-    throw new Error('Failed to fetch products');
+    return [];
   }
 };
 
 export const getProduct = async (id: number): Promise<Product | null> => {
   try {
-    const product = await prisma.product.findUnique({
-      where: { id, isActive: true }
-    });
+    const { data: product, error } = await supabase
+      .from('products')
+      .select('*')
+      .eq('id', id)
+      .eq('is_active', true)
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
     return product;
   } catch (error) {
     console.error('Error fetching product:', error);
@@ -75,31 +93,60 @@ export const createOrder = async (orderData: {
       0
     );
 
-    const order = await prisma.order.create({
-      data: {
-        customerName: orderData.customerName,
-        customerEmail: orderData.customerEmail,
-        customerAddress: orderData.customerAddress,
-        totalAmount,
-        status: 'pending',
-        items: {
-          create: orderData.items.map(item => ({
-            productId: item.productId,
-            quantity: item.quantity,
-            price: item.price
-          }))
-        }
-      },
-      include: {
-        items: {
-          include: {
-            product: true
-          }
-        }
-      }
-    });
+    // Create the order
+    const { data: order, error: orderError } = await supabase
+      .from('orders')
+      .insert({
+        customer_name: orderData.customerName,
+        customer_email: orderData.customerEmail,
+        customer_address: orderData.customerAddress,
+        total_amount: totalAmount,
+        status: 'pending'
+      })
+      .select()
+      .single();
 
-    return order;
+    if (orderError) {
+      throw orderError;
+    }
+
+    // Create order items
+    const orderItems = orderData.items.map(item => ({
+      order_id: order.id,
+      product_id: item.productId,
+      quantity: item.quantity,
+      price: item.price
+    }));
+
+    const { error: itemsError } = await supabase
+      .from('order_items')
+      .insert(orderItems);
+
+    if (itemsError) {
+      throw itemsError;
+    }
+
+    // Fetch the complete order with items
+    const { data: completeOrder, error: fetchError } = await supabase
+      .from('orders')
+      .select(`
+        *,
+        order_items (
+          *,
+          products (*)
+        )
+      `)
+      .eq('id', order.id)
+      .single();
+
+    if (fetchError) {
+      throw fetchError;
+    }
+
+    return {
+      ...completeOrder,
+      items: completeOrder.order_items || []
+    };
   } catch (error) {
     console.error('Error creating order:', error);
     throw new Error('Failed to create order');
@@ -108,17 +155,25 @@ export const createOrder = async (orderData: {
 
 export const getOrders = async (): Promise<Order[]> => {
   try {
-    const orders = await prisma.order.findMany({
-      include: {
-        items: {
-          include: {
-            product: true
-          }
-        }
-      },
-      orderBy: { createdAt: 'desc' }
-    });
-    return orders;
+    const { data: orders, error } = await supabase
+      .from('orders')
+      .select(`
+        *,
+        order_items (
+          *,
+          products (*)
+        )
+      `)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw error;
+    }
+
+    return orders?.map(order => ({
+      ...order,
+      items: order.order_items || []
+    })) || [];
   } catch (error) {
     console.error('Error fetching orders:', error);
     throw new Error('Failed to fetch orders');
@@ -127,18 +182,27 @@ export const getOrders = async (): Promise<Order[]> => {
 
 export const updateOrderStatus = async (id: number, status: string): Promise<Order> => {
   try {
-    const order = await prisma.order.update({
-      where: { id },
-      data: { status },
-      include: {
-        items: {
-          include: {
-            product: true
-          }
-        }
-      }
-    });
-    return order;
+    const { data: order, error } = await supabase
+      .from('orders')
+      .update({ status })
+      .eq('id', id)
+      .select(`
+        *,
+        order_items (
+          *,
+          products (*)
+        )
+      `)
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return {
+      ...order,
+      items: order.order_items || []
+    };
   } catch (error) {
     console.error('Error updating order:', error);
     throw new Error('Failed to update order');
@@ -155,9 +219,24 @@ export const createProduct = async (productData: {
   stock: number;
 }): Promise<Product> => {
   try {
-    const product = await prisma.product.create({
-      data: productData
-    });
+    const { data: product, error } = await supabase
+      .from('products')
+      .insert({
+        name: productData.name,
+        description: productData.description,
+        price: productData.price,
+        category: productData.category,
+        image_url: productData.imageUrl,
+        stock: productData.stock,
+        is_active: true
+      })
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
     return product;
   } catch (error) {
     console.error('Error creating product:', error);
@@ -167,10 +246,17 @@ export const createProduct = async (productData: {
 
 export const updateProduct = async (id: number, productData: Partial<Product>): Promise<Product> => {
   try {
-    const product = await prisma.product.update({
-      where: { id },
-      data: productData
-    });
+    const { data: product, error } = await supabase
+      .from('products')
+      .update(productData)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
     return product;
   } catch (error) {
     console.error('Error updating product:', error);
@@ -180,10 +266,14 @@ export const updateProduct = async (id: number, productData: Partial<Product>): 
 
 export const deleteProduct = async (id: number): Promise<void> => {
   try {
-    await prisma.product.update({
-      where: { id },
-      data: { isActive: false }
-    });
+    const { error } = await supabase
+      .from('products')
+      .update({ is_active: false })
+      .eq('id', id);
+
+    if (error) {
+      throw error;
+    }
   } catch (error) {
     console.error('Error deleting product:', error);
     throw new Error('Failed to delete product');

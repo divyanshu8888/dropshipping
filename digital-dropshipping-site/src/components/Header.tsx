@@ -81,7 +81,7 @@ const Header: React.FC = () => {
                         </Link>
                     )}
                     {user?.role === 'FREELANCER' && (
-                        <Link href="/freelancer-dashboard" className="text-text-soft hover:text-accent-blue hover:bg-white/5 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 hover:scale-105 flex items-center">
+                        <Link href="/freelancers/dashboard" className="text-text-soft hover:text-accent-blue hover:bg-white/5 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 hover:scale-105 flex items-center">
                             <span className="mr-2">💼</span>
                             My Dashboard
                         </Link>
@@ -176,7 +176,7 @@ const Header: React.FC = () => {
                             </Link>
                         )}
                         {user?.role === 'FREELANCER' && (
-                            <Link href="/freelancer-dashboard" className="text-text-soft hover:text-accent-blue hover:bg-white/5 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 flex items-center">
+                            <Link href="/freelancers/dashboard" className="text-text-soft hover:text-accent-blue hover:bg-white/5 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 flex items-center">
                                 <span className="mr-2">💼</span>
                                 My Dashboard
                             </Link>

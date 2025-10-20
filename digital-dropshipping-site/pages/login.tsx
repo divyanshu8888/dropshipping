@@ -38,7 +38,7 @@ export default function LoginPage() {
         if (data.user.role === 'ADMIN' || data.user.role === 'TEAM_MEMBER') {
           router.push('/admin');
         } else if (data.user.role === 'FREELANCER') {
-          router.push('/freelancer-dashboard');
+          router.push('/freelancers/dashboard');
         } else {
           router.push('/client-dashboard');
         }
