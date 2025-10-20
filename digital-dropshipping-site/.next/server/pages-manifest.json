@@ -2,7 +2,8 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
+  "/login": "pages/login.js",
+  "/api/homepage-stats": "pages/api/homepage-stats.js",
   "/": "pages/index.js",
-  "/freelancers": "pages/freelancers.js",
   "/products": "pages/products.js"
 }

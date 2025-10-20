@@ -62,7 +62,7 @@ export default function FreelancersPage({ freelancers }: FreelancersPageProps) {
 
         {/* Hero Section */}
         <section className="bg-gradient-to-r from-brand-a via-brand-b to-brand-c text-white py-16 pt-28">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
             <h1 className="text-4xl md:text-5xl font-extrabold mb-4">
               Find the Perfect Freelancer
             </h1>
@@ -90,7 +90,7 @@ export default function FreelancersPage({ freelancers }: FreelancersPageProps) {
 
         {/* Filters */}
         <section className="bg-white shadow-sm sticky top-16 z-40">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div className="flex items-center space-x-2 overflow-x-auto pb-2 md:pb-0">
                 {categories.map((category) => (
@@ -122,7 +122,7 @@ export default function FreelancersPage({ freelancers }: FreelancersPageProps) {
         </section>
 
         {/* Freelancers Grid */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="mb-6 flex items-center justify-between">
             <p className="text-gray-600">
               Showing <span className="font-semibold text-indigo-600">{filteredFreelancers.length}</span> freelancers
