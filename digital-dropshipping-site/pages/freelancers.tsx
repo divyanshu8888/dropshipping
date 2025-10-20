@@ -3,7 +3,7 @@ import { GetServerSideProps } from 'next'
 import Head from 'next/head'
 import Link from 'next/link'
 import Header from '../src/components/Header'
-import QuoteRequestModal from '../src/components/QuoteRequestModal'
+import QuoteRequestForm from '../src/components/QuoteRequestForm'
 import { supabase } from '../src/lib/supabase'
 import { getFreelancerAvatar, getServiceIcon, getCategoryColor } from '../src/utils/imageUtils'
 
@@ -38,6 +38,7 @@ export default function FreelancersPage({ freelancers }: FreelancersPageProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [sortBy, setSortBy] = useState('rating')
+  const [showQuoteForm, setShowQuoteForm] = useState(false)
 
   const categories = ['all', ...Array.from(new Set(freelancers.map(f => f.title.split(' ')[0]).filter(Boolean)))]
 
@@ -56,11 +57,11 @@ export default function FreelancersPage({ freelancers }: FreelancersPageProps) {
         <meta name="description" content="Browse verified freelancers and hire top talent for your projects" />
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-100">
+      <div className="min-h-screen bg-bg-base">
         <Header />
 
         {/* Hero Section */}
-        <section className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-16 pt-28">
+        <section className="bg-gradient-to-r from-brand-a via-brand-b to-brand-c text-white py-16 pt-28">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h1 className="text-4xl md:text-5xl font-extrabold mb-4">
               Find the Perfect Freelancer
@@ -226,12 +227,12 @@ export default function FreelancersPage({ freelancers }: FreelancersPageProps) {
                     <div className="text-sm text-gray-600">
                       💰 <span className="font-semibold">Custom pricing</span> based on project
                     </div>
-                    <Link
-                      href={`/freelancer/${freelancer.id}`}
+                    <button
+                      onClick={() => setShowQuoteForm(true)}
                       className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all shadow-md hover:shadow-lg"
                     >
                       Get Quote
-                    </Link>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -270,6 +271,17 @@ export default function FreelancersPage({ freelancers }: FreelancersPageProps) {
           </div>
         </section>
       </div>
+
+      {/* Quote Request Form Modal */}
+      {showQuoteForm && (
+        <QuoteRequestForm
+          onClose={() => setShowQuoteForm(false)}
+          onSuccess={() => {
+            setShowQuoteForm(false);
+            // You can add a success notification here
+          }}
+        />
+      )}
     </>
   )
 }

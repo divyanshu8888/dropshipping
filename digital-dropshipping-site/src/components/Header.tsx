@@ -1,24 +1,36 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { canAccessAdminDashboard } from '../lib/permissions';
+
+interface User {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+}
 
 const Header: React.FC = () => {
-    const [isScrolled, setIsScrolled] = useState(false);
+    const [user, setUser] = useState<User | null>(null);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-    const [user, setUser] = useState<any>(null);
+    const [scrolled, setScrolled] = useState(false);
+    const router = useRouter();
 
     useEffect(() => {
-        const handleScroll = () => {
-            setIsScrolled(window.scrollY > 10);
-        };
-
-        // Check for logged in user
         const userData = localStorage.getItem('user');
         if (userData) {
-            setUser(JSON.parse(userData));
+            try {
+                setUser(JSON.parse(userData));
+            } catch (error) {
+                console.error('Error parsing user data:', error);
+            }
         }
+    }, []);
 
-        window.addEventListener('scroll', handleScroll);
-        return () => window.removeEventListener('scroll', handleScroll);
+    useEffect(() => {
+        const onScroll = () => setScrolled(window.scrollY > 20);
+        window.addEventListener('scroll', onScroll);
+        return () => window.removeEventListener('scroll', onScroll);
     }, []);
 
     const handleLogout = () => {
@@ -28,128 +40,193 @@ const Header: React.FC = () => {
     };
 
     return (
-        <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-            isScrolled 
-                ? 'bg-white/95 backdrop-blur-md shadow-lg border-b border-gray-100' 
-                : 'bg-white/80 backdrop-blur-sm'
-        }`}>
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex justify-between items-center py-4">
-                    <div className="flex items-center">
-                        <Link href="/" className="flex items-center space-x-3 group">
-                            <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 via-cyan-500 to-blue-500 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-105">
-                                <span className="text-white font-bold text-xl">T</span>
+        <header className={scrolled 
+            ? 'sticky top-0 z-50 transition-all duration-500 bg-black/70 backdrop-blur-xl shadow-md border-b border-white/10'
+            : 'sticky top-0 z-50 transition-all duration-500 bg-black/60 backdrop-blur-xl border-b border-white/10'
+        }>
+            {/* Soft glow divider */}
+            <div className="absolute left-0 right-0 top-[100%] h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+            <div className="mx-auto max-w-7xl h-16 px-6 flex items-center justify-between">
+                <div className="flex items-center">
+                    <Link href="/" className="flex items-center space-x-3 group">
+                        <div className="relative">
+                            <div className="absolute inset-0 rounded-xl blur-md bg-gradient-to-r from-cyan-400 to-violet-500 opacity-40 group-hover:opacity-60 transition-opacity duration-300"></div>
+                            <div className="relative w-10 h-10 bg-gradient-to-br from-cyan-400 via-blue-500 to-violet-500 rounded-xl flex items-center justify-center shadow-[0_4px_20px_rgba(96,165,250,0.25)] group-hover:shadow-[0_8px_40px_rgba(96,165,250,0.35)] transition-all duration-300 group-hover:scale-105">
+                                <span className="text-white font-bold text-lg">T</span>
                             </div>
-                            <span className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 via-cyan-600 to-blue-600">
-                                TalentHub Pro
-                            </span>
-                        </Link>
-                    </div>
+                        </div>
+                        <span className="text-white font-semibold text-xl tracking-tight">
+                            TalentHub Pro
+                        </span>
+                    </Link>
+                </div>
+                
+                {/* Desktop Navigation */}
+                <nav className="hidden md:flex items-center gap-8 text-text-mute">
+                    <Link href="/freelancers" className="relative text-white/70 hover:text-white transition-colors duration-200 text-sm font-medium after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-0 after:bg-gradient-to-r after:from-cyan-400 after:to-violet-400 hover:after:w-full after:transition-all after:duration-300">
+                        Freelancers
+                    </Link>
+                    <Link href="/products" className="relative text-white/70 hover:text-white transition-colors duration-200 text-sm font-medium after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-0 after:bg-gradient-to-r after:from-cyan-400 after:to-violet-400 hover:after:w-full after:transition-all after:duration-300">
+                        Products
+                    </Link>
+                    <Link href="/admin" className="relative text-white/70 hover:text-white transition-colors duration-200 text-sm font-medium after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-0 after:bg-gradient-to-r after:from-cyan-400 after:to-violet-400 hover:after:w-full after:transition-all after:duration-300">
+                        Admin
+                    </Link>
                     
-                    {/* Desktop Navigation */}
-                    <nav className="hidden lg:flex items-center space-x-2">
-                        <Link href="/" className="text-gray-700 hover:text-emerald-600 hover:bg-emerald-50 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 hover:scale-105">
-                            Home
+                    {/* Role-specific Dashboard Links */}
+                    {canAccessAdminDashboard(user?.role || '') && (
+                        <Link href="/admin" className="text-text-soft hover:text-accent-violet hover:bg-white/5 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 hover:scale-105 flex items-center">
+                            <span className="mr-2">🧭</span>
+                            {user?.role === 'ADMIN' ? 'Admin Dashboard' : 'Dashboard'}
                         </Link>
-                        <Link href="/freelancers" className="text-gray-700 hover:text-emerald-600 hover:bg-emerald-50 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 hover:scale-105">
-                            Freelancers
+                    )}
+                    {user?.role === 'FREELANCER' && (
+                        <Link href="/freelancer-dashboard" className="text-text-soft hover:text-accent-blue hover:bg-white/5 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 hover:scale-105 flex items-center">
+                            <span className="mr-2">💼</span>
+                            My Dashboard
                         </Link>
-                        <Link href="/products" className="text-gray-700 hover:text-emerald-600 hover:bg-emerald-50 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 hover:scale-105">
-                            Products
+                    )}
+                    {user?.role === 'CLIENT' && (
+                        <Link href="/client-dashboard" className="text-text-soft hover:text-accent-cyan hover:bg-white/5 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 hover:scale-105 flex items-center">
+                            <span className="mr-2">📋</span>
+                            My Dashboard
                         </Link>
+                    )}
+                    
+                    {user ? (
+                        <div className="flex items-center space-x-3 ml-4">
+                            <div className="flex items-center space-x-2 px-3 py-2 bg-bg-surface rounded-xl border border-white/10">
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                    user.role === 'ADMIN' ? 'bg-gradient-to-br from-accent-violet to-purple-600' :
+                                    user.role === 'TEAM_MEMBER' ? 'bg-gradient-to-br from-indigo-500 to-indigo-600' :
+                                    user.role === 'FREELANCER' ? 'bg-gradient-to-br from-accent-blue to-blue-600' :
+                                    user.role === 'CLIENT' ? 'bg-gradient-to-br from-accent-cyan to-green-600' :
+                                    'bg-gradient-to-br from-accent-blue to-accent-cyan'
+                                }`}>
+                                    <span className="text-white text-sm font-bold">
+                                        {user.name?.charAt(0).toUpperCase()}
+                                    </span>
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-sm font-medium text-text-base">{user.name}</span>
+                                    <span className="text-xs text-text-mute capitalize">{user.role?.toLowerCase().replace('_', ' ')}</span>
+                                </div>
+                            </div>
+                            <button
+                                onClick={handleLogout}
+                                className="px-4 py-2 text-text-soft hover:text-red-400 hover:bg-red-500/10 rounded-xl text-sm font-medium transition-all duration-200"
+                            >
+                                Logout
+                            </button>
+                        </div>
+                        ) : (
+                            <div className="flex items-center gap-4">
+                                <Link href="/login" className="text-text-mute hover:text-white px-3 py-2 transition-colors duration-200 text-sm font-medium">
+                                    Log in
+                                </Link>
+                                <Link href="/signup" className="group inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500 text-white px-5 py-2.5 font-semibold text-sm shadow-[0_0_15px_rgba(96,165,250,0.35)] hover:shadow-[0_0_25px_rgba(96,165,250,0.45)] hover:scale-[1.03] transition-all duration-300">
+                                    Get started
+                                    <svg className="w-3 h-3 transition-transform group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="none">
+                                        <path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                                    </svg>
+                                </Link>
+                            </div>
+                        )}
+                </nav>
+
+                {/* Mobile Menu Button */}
+                <div className="md:hidden">
+                    <button 
+                        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                        className="text-text-mute hover:text-white p-2 rounded-xl hover:bg-white/5 transition-all duration-200"
+                    >
+                        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            {isMobileMenuOpen ? (
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            ) : (
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                            )}
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            {/* Mobile Menu */}
+            {isMobileMenuOpen && (
+                <div className="md:hidden pb-4 border-t border-white/10">
+                        <nav className="flex flex-col space-y-2 pt-4">
+                            <Link href="/" className="text-text-soft hover:text-text-base hover:bg-white/5 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200">
+                                Home
+                            </Link>
+                            <Link href="/freelancers" className="text-text-soft hover:text-text-base hover:bg-white/5 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200">
+                                Freelancers
+                            </Link>
+                            <Link href="/products" className="text-text-soft hover:text-text-base hover:bg-white/5 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200">
+                                Products
+                            </Link>
+                            <Link href="/admin" className="text-text-soft hover:text-text-base hover:bg-white/5 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200">
+                                Admin
+                            </Link>
+                        
+                        {/* Role-specific Dashboard Links */}
+                        {canAccessAdminDashboard(user?.role || '') && (
+                            <Link href="/admin" className="text-text-soft hover:text-accent-violet hover:bg-white/5 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 flex items-center">
+                                <span className="mr-2">🧭</span>
+                                {user?.role === 'ADMIN' ? 'Admin Dashboard' : 'Dashboard'}
+                            </Link>
+                        )}
+                        {user?.role === 'FREELANCER' && (
+                            <Link href="/freelancer-dashboard" className="text-text-soft hover:text-accent-blue hover:bg-white/5 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 flex items-center">
+                                <span className="mr-2">💼</span>
+                                My Dashboard
+                            </Link>
+                        )}
+                        {user?.role === 'CLIENT' && (
+                            <Link href="/client-dashboard" className="text-text-soft hover:text-accent-cyan hover:bg-white/5 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 flex items-center">
+                                <span className="mr-2">📋</span>
+                                My Dashboard
+                            </Link>
+                        )}
                         
                         {user ? (
-                            <div className="flex items-center space-x-3 ml-4">
-                                <div className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-emerald-50 to-cyan-50 rounded-xl">
-                                    <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-cyan-500 rounded-full flex items-center justify-center">
+                            <div className="pt-2 border-t border-white/10">
+                                <div className="flex items-center space-x-2 px-4 py-3">
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                        user.role === 'ADMIN' ? 'bg-gradient-to-br from-accent-violet to-purple-600' :
+                                        user.role === 'TEAM_MEMBER' ? 'bg-gradient-to-br from-indigo-500 to-indigo-600' :
+                                        user.role === 'FREELANCER' ? 'bg-gradient-to-br from-accent-blue to-blue-600' :
+                                        user.role === 'CLIENT' ? 'bg-gradient-to-br from-accent-cyan to-green-600' :
+                                        'bg-gradient-to-br from-accent-blue to-accent-cyan'
+                                    }`}>
                                         <span className="text-white text-sm font-bold">
                                             {user.name?.charAt(0).toUpperCase()}
                                         </span>
                                     </div>
-                                    <span className="text-sm font-medium text-gray-700">{user.name}</span>
+                                    <div className="flex flex-col">
+                                        <span className="text-sm font-medium text-text-base">{user.name}</span>
+                                        <span className="text-xs text-text-mute capitalize">{user.role?.toLowerCase().replace('_', ' ')}</span>
+                                    </div>
                                 </div>
                                 <button
                                     onClick={handleLogout}
-                                    className="px-4 py-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-xl text-sm font-medium transition-all duration-200"
+                                    className="w-full text-left text-text-soft hover:text-red-400 hover:bg-red-500/10 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200"
                                 >
                                     Logout
                                 </button>
                             </div>
                         ) : (
-                            <div className="flex items-center space-x-3 ml-4">
-                                <Link href="/login" className="text-gray-700 hover:text-emerald-600 hover:bg-emerald-50 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200">
+                            <div className="pt-2 border-t border-white/10 space-y-2">
+                                <Link href="/login" className="block text-text-soft hover:text-text-base hover:bg-white/5 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200">
                                     Login
                                 </Link>
-                                <Link href="/signup" className="inline-flex items-center px-6 py-2.5 bg-gradient-to-r from-emerald-500 via-cyan-500 to-blue-500 text-white rounded-xl text-sm font-medium hover:from-emerald-600 hover:via-cyan-600 hover:to-blue-600 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105">
-                                    <span className="mr-2">🚀</span>
+                                <Link href="/signup" className="block text-center px-4 py-3 bg-gradient-to-br from-accent-blue to-accent-cyan text-white rounded-xl text-sm font-medium shadow-metallic hover:shadow-xl transition-all duration-200">
                                     Get Started
                                 </Link>
                             </div>
                         )}
                     </nav>
-
-                    {/* Mobile Menu Button */}
-                    <div className="lg:hidden">
-                        <button 
-                            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                            className="text-gray-700 hover:text-emerald-600 p-2 rounded-xl hover:bg-emerald-50 transition-all duration-200"
-                        >
-                            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                {isMobileMenuOpen ? (
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                ) : (
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                                )}
-                            </svg>
-                        </button>
-                    </div>
                 </div>
-
-                {/* Mobile Menu */}
-                {isMobileMenuOpen && (
-                    <div className="lg:hidden pb-4 border-t border-gray-100">
-                        <nav className="flex flex-col space-y-2 pt-4">
-                            <Link href="/" className="text-gray-700 hover:text-emerald-600 hover:bg-emerald-50 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200">
-                                Home
-                            </Link>
-                            <Link href="/freelancers" className="text-gray-700 hover:text-emerald-600 hover:bg-emerald-50 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200">
-                                Freelancers
-                            </Link>
-                            <Link href="/products" className="text-gray-700 hover:text-emerald-600 hover:bg-emerald-50 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200">
-                                Products
-                            </Link>
-                            
-                            {user ? (
-                                <div className="pt-2 border-t border-gray-100">
-                                    <div className="flex items-center space-x-2 px-4 py-3">
-                                        <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-cyan-500 rounded-full flex items-center justify-center">
-                                            <span className="text-white text-sm font-bold">
-                                                {user.name?.charAt(0).toUpperCase()}
-                                            </span>
-                                        </div>
-                                        <span className="text-sm font-medium text-gray-700">{user.name}</span>
-                                    </div>
-                                    <button
-                                        onClick={handleLogout}
-                                        className="w-full text-left text-gray-600 hover:text-red-600 hover:bg-red-50 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200"
-                                    >
-                                        Logout
-                                    </button>
-                                </div>
-                            ) : (
-                                <div className="pt-2 border-t border-gray-100 space-y-2">
-                                    <Link href="/login" className="block text-gray-700 hover:text-emerald-600 hover:bg-emerald-50 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200">
-                                        Login
-                                    </Link>
-                                    <Link href="/signup" className="block text-center px-4 py-3 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white rounded-xl text-sm font-medium hover:from-emerald-600 hover:to-cyan-600 transition-all duration-200">
-                                        Get Started
-                                    </Link>
-                                </div>
-                            )}
-                        </nav>
-                    </div>
-                )}
-            </div>
+            )}
         </header>
     );
 };

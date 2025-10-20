@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { supabaseAdmin } from '../../../src/lib/supabase-admin';
+import { supabase } from '../../../src/lib/supabase';
 import bcrypt from 'bcryptjs';
 
 export default async function handler(
@@ -35,14 +35,29 @@ export default async function handler(
       });
     }
 
-    // Check if user already exists
-    const { data: existingUser } = await supabaseAdmin
-      .from('users')
+    // Validate user type
+    const validRoles = ['ADMIN', 'TEAM_MEMBER', 'FREELANCER', 'CLIENT'];
+    if (!validRoles.includes(userType)) {
+      return res.status(400).json({ 
+        error: 'Invalid user type' 
+      });
+    }
+
+    // Check if user already exists in freelancers table
+    const { data: existingFreelancer } = await supabase
+      .from('freelancers')
       .select('id')
-      .eq('email', email)
+      .eq('email', email.toLowerCase())
       .single();
 
-    if (existingUser) {
+    // Check if user already exists in clients table
+    const { data: existingClient } = await supabase
+      .from('clients')
+      .select('id')
+      .eq('email', email.toLowerCase())
+      .single();
+
+    if (existingFreelancer || existingClient) {
       return res.status(400).json({ 
         error: 'User with this email already exists' 
       });
@@ -51,45 +66,45 @@ export default async function handler(
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Create user in users table
-    const { data: newUser, error: userError } = await supabaseAdmin
-      .from('users')
-      .insert([{
-        email,
-        name,
-        role: userType,
-        password: hashedPassword // Note: In production, use proper auth system
-      }])
-      .select()
-      .single();
-
-    if (userError) {
-      console.error('Error creating user:', userError);
-      return res.status(500).json({ error: 'Failed to create user' });
-    }
-
-    // If freelancer, create a minimal entry in freelancers table (will be completed later)
-    if (userType === 'freelancer') {
-      const { error: freelancerError } = await supabaseAdmin
+    // Create user based on userType
+    let newUser;
+    if (userType === 'FREELANCER') {
+      const { data, error } = await supabase
         .from('freelancers')
-        .insert([{
-          display_name: name,
-          title: 'Profile Pending',
-          bio: 'Profile setup in progress',
-          description: 'Freelancer profile is being completed',
-          country: '',
-          skills: [],
-          hourly_rate: 0,
-          base_fee: 0,
-          contact_email: email,
-          status: 'pending_setup' // New status for incomplete profiles
-        }]);
+        .insert({
+          email: email.toLowerCase(),
+          name,
+          password: hashedPassword,
+          status: 'pending'
+        })
+        .select()
+        .single();
 
-      if (freelancerError) {
-        console.error('Error creating freelancer profile:', freelancerError);
-        // Don't fail the signup if freelancer profile creation fails
-        // The user account was created successfully, they can complete profile later
+      if (error) {
+        console.error('Error creating freelancer:', error);
+        return res.status(500).json({ error: 'Failed to create account' });
       }
+      newUser = data;
+    } else if (userType === 'CLIENT') {
+      const { data, error } = await supabase
+        .from('clients')
+        .insert({
+          email: email.toLowerCase(),
+          name,
+          password: hashedPassword
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating client:', error);
+        return res.status(500).json({ error: 'Failed to create account' });
+      }
+      newUser = data;
+    } else {
+      return res.status(400).json({ 
+        error: 'Only FREELANCER and CLIENT roles are supported for signup' 
+      });
     }
 
     return res.status(201).json({ 
@@ -99,7 +114,7 @@ export default async function handler(
         id: newUser.id,
         name: newUser.name,
         email: newUser.email,
-        role: newUser.role
+        role: userType
       }
     });
 

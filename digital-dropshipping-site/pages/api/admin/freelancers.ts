@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { supabaseAdmin } from '../../../lib/supabase'
-import { Freelancer } from '../../../types'
+import { supabaseAdmin } from '../../../src/lib/supabase'
+import { Freelancer } from '../../../src/types'
 
 // This is a simplified admin API - in production, you'd want proper authentication
 export default async function handler(

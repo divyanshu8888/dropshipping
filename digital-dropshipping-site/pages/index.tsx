@@ -2,7 +2,104 @@ import { GetServerSideProps } from 'next';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import Header from '../src/components/Header';
+import QuoteRequestForm from '../src/components/QuoteRequestForm';
 import { supabase } from '../src/lib/supabase';
+
+// Chip Component - Superhuman Style
+type ChipProps = { 
+  label: string; 
+  icon?: React.ReactNode; 
+  gradient?: 'violet'|'teal'|'blue'; 
+  onClick?: () => void;
+};
+
+const Chip = ({ label, icon, gradient = 'violet', onClick }: ChipProps) => {
+  const gradientMap = {
+    violet: 'from-fuchsia-500/25 via-violet-500/20 to-indigo-500/20',
+    teal: 'from-emerald-500/25 via-teal-500/20 to-cyan-500/20',
+    blue: 'from-sky-500/25 via-blue-500/20 to-indigo-500/20',
+  } as const;
+
+  return (
+    <button
+      onClick={onClick}
+      className={[
+        'group relative inline-flex items-center gap-2',
+        'rounded-2xl px-5 py-3 text-text-base/90 backdrop-blur',
+        'bg-gradient-to-r', gradientMap[gradient],
+        'border border-white/12 shadow-chip',
+        'transition-all hover:-translate-y-0.5 hover:brightness-110',
+        'focus:outline-none focus:ring-2 focus:ring-white/40'
+      ].join(' ')}
+    >
+      {/* glossy overlay + specular edge */}
+      <span className="pointer-events-none absolute inset-0 rounded-2xl bg-white/3 [mask-image:linear-gradient(to_bottom,white,transparent)]" />
+      <span className="pointer-events-none absolute -top-px left-6 right-6 h-px bg-white/30 opacity-40" />
+      {icon && <span className="text-white/90">{icon}</span>}
+      <span className="font-medium">{label}</span>
+      {/* tiny arrow on hover */}
+      <svg className="ml-1 size-4 opacity-0 transition group-hover:opacity-100 group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="none">
+        <path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      </svg>
+    </button>
+  );
+};
+
+// Services Strip Component - Superhuman Style with Marquee
+const ServicesStrip = () => {
+  const services = [
+    { label: 'Web Development', icon: '💻', gradient: 'violet' as const },
+    { label: 'Mobile Apps', icon: '📱', gradient: 'teal' as const },
+    { label: 'Design', icon: '🎨', gradient: 'blue' as const },
+    { label: 'Writing', icon: '✍️', gradient: 'violet' as const },
+    { label: 'Marketing', icon: '📢', gradient: 'teal' as const },
+    { label: 'Video', icon: '🎬', gradient: 'blue' as const },
+    { label: 'Photo', icon: '📸', gradient: 'violet' as const },
+    { label: 'Data & Analytics', icon: '📊', gradient: 'teal' as const },
+    { label: 'SEO', icon: '🔍', gradient: 'blue' as const },
+    { label: 'DevOps', icon: '⚙️', gradient: 'violet' as const },
+    { label: 'Testing', icon: '🧪', gradient: 'teal' as const },
+    { label: 'Support', icon: '🎧', gradient: 'blue' as const },
+    { label: 'Translation', icon: '🌐', gradient: 'violet' as const },
+    { label: 'Consulting', icon: '💼', gradient: 'teal' as const },
+  ];
+
+  return (
+    <section className="relative overflow-hidden bg-superhuman">
+      {/* floating stickers (emoji-style) */}
+      <div className="pointer-events-none absolute -top-6 left-[8%] translate-y-2 animate-float text-5xl">💡</div>
+      <div className="pointer-events-none absolute top-10 right-[10%] -translate-y-2 animate-float text-5xl" style={{animationDelay: '1s'}}>🔍</div>
+      <div className="pointer-events-none absolute top-20 left-[15%] translate-y-1 animate-float text-4xl" style={{animationDelay: '2s'}}>✨</div>
+
+      <div className="mx-auto max-w-7xl px-6 py-24">
+        <h2 className="text-center text-3xl md:text-4xl font-black text-white tracking-tight">Expert Skills</h2>
+        <p className="mt-4 text-center text-lg md:text-xl text-text-soft font-medium max-w-2xl mx-auto leading-relaxed">Connect with skilled freelancers who bring your projects to life</p>
+
+        {/* Marquee Skills Section - Like "Meet our customers" */}
+        <div className="mt-12 mb-8">
+          <div className="relative overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
+            <div className="flex gap-8 animate-marquee">
+              {/* Skills marquee - seamless loop with proper duplication */}
+              {services.map((service) => (
+                <div key={`${service.label}-1`} className="flex items-center gap-2 flex-shrink-0">
+                  <span className="text-lg">{service.icon}</span>
+                  <span className="text-text-soft font-medium">{service.label}</span>
+                </div>
+              ))}
+              {services.map((service) => (
+                <div key={`${service.label}-2`} className="flex items-center gap-2 flex-shrink-0">
+                  <span className="text-lg">{service.icon}</span>
+                  <span className="text-text-soft font-medium">{service.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  );
+};
 
 interface Testimonial {
   id: string;
@@ -28,6 +125,7 @@ interface HomePageProps {
 const HomePage = ({ testimonials, stats }: HomePageProps) => {
   const [currentTestimonialIndex, setCurrentTestimonialIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  const [showQuoteForm, setShowQuoteForm] = useState(false);
 
   // Auto-rotate testimonials every 5 seconds
   useEffect(() => {
@@ -50,7 +148,6 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
     if (endIndex <= testimonials.length) {
       return testimonials.slice(currentTestimonialIndex, endIndex);
     } else {
-      // Handle wrap-around
       return [
         ...testimonials.slice(currentTestimonialIndex),
         ...testimonials.slice(0, endIndex - testimonials.length)
@@ -61,106 +158,318 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
   const currentTestimonials = getCurrentTestimonials();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-cyan-50 to-blue-50 relative overflow-hidden">
-      {/* Animated Background Elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-emerald-400/20 to-cyan-500/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-br from-blue-400/20 to-indigo-500/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-br from-teal-400/10 to-emerald-500/10 rounded-full blur-3xl animate-pulse delay-500"></div>
-      </div>
-
+    <div className="min-h-screen bg-bg-base">
       <Header />
       
-      {/* Hero Section */}
-      <section className="relative overflow-hidden">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-20">
-          <div className="text-center animate-fade-in">
-            <div className="inline-block mb-4 px-4 py-2 bg-gradient-to-r from-emerald-100 to-cyan-100 rounded-full border border-emerald-200">
-              <span className="text-emerald-700 font-semibold text-sm">🚀 #1 Freelance Marketplace</span>
+      {/* Hero Section - Framer Style */}
+      <section className="relative overflow-hidden bg-bg-base">
+        {/* Animated metallic gradient background */}
+        <div 
+          className="absolute inset-0"
+          style={{
+            background: `
+              radial-gradient(
+                80% 120% at 50% 0%,
+                rgba(139,92,246,0.25),
+                rgba(59,130,246,0.15) 45%,
+                rgba(6,182,212,0.12) 70%,
+                transparent 80%
+              ),
+              #0B0C0F
+            `,
+            animation: 'gradientShift 12s ease-in-out infinite alternate'
+          }}
+        />
+
+        {/* Single slow glow orb - breathing blur */}
+        <div className="absolute w-[400px] h-[400px] rounded-full bg-gradient-to-r from-cyan-500/15 via-blue-500/10 to-violet-500/15 blur-[140px] top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-slow-pulse"></div>
+
+        <div className="relative mx-auto max-w-7xl px-6 pt-32 pb-32 text-center">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-white leading-[1.05] font-display fade-up" style={{animationDelay: '100ms'}}>
+            Where Businesses Meet <span className="bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500 bg-clip-text text-transparent">World-Class Talent</span>
+          </h1>
+          <p className="mx-auto mt-8 max-w-3xl text-lg text-white/70 leading-[1.7] font-medium fade-up" style={{animationDelay: '200ms'}}>
+            Connect with vetted freelancers. Get quotes. Start projects — all in one platform.
+          </p>
+
+            <div className="mt-16 flex flex-col sm:flex-row gap-4 justify-center fade-up" style={{animationDelay: '300ms'}}>
+              <button
+              onClick={() => setShowQuoteForm(true)}
+              className="group inline-flex items-center gap-2 rounded-xl px-8 py-4 text-lg font-semibold text-white bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500 shadow-[0_0_24px_rgba(96,165,250,0.35)] transition-all duration-300 hover:scale-[1.05] hover:shadow-[0_0_40px_rgba(96,165,250,0.7)] hover:-translate-y-1"
+            >
+              Request a Quote
+              <svg className="size-5 transition group-hover:translate-x-1 group-hover:scale-110" viewBox="0 0 24 24" fill="none">
+                <path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+            </button>
+            <Link
+              href="/freelancers"
+              className="rounded-full px-8 py-4 text-lg font-medium border border-white/10 bg-white/5 text-white/80 backdrop-blur-sm hover:bg-white/10 hover:border-white/20 hover:shadow-[0_0_20px_rgba(255,255,255,0.15)] transition-all duration-300 hover:-translate-y-0.5"
+            >
+              Browse Freelancers
+            </Link>
             </div>
-            <h1 className="text-4xl md:text-6xl font-extrabold text-gray-900 mb-6 leading-tight">
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 via-cyan-600 to-blue-600">
-                TalentHub Pro
-              </span>
-              <br />
-              <span className="text-gray-800">Where Talent Meets Opportunity</span>
-            </h1>
-            <p className="mt-4 max-w-xl mx-auto text-lg md:text-xl text-gray-600 leading-relaxed">
-              Connect with world-class freelancers and transform your business with expert services at unbeatable prices.
-            </p>
             
-            {/* Price Beat Guarantee Badge - Dynamic & Moving */}
-            <div className="mt-8 inline-flex items-center bg-gradient-to-r from-emerald-500 via-cyan-500 to-blue-500 text-white px-8 py-4 rounded-2xl shadow-xl transform hover:scale-105 transition-all duration-300 animate-pulse hover:animate-none relative overflow-hidden animate-glow">
-              {/* Animated background gradient */}
-              <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 via-cyan-400 to-blue-400 opacity-0 hover:opacity-100 transition-opacity duration-500 animate-gradient-x"></div>
-              
-              <div className="w-12 h-12 mr-4 bg-white/20 rounded-full flex items-center justify-center relative z-10 animate-float">
-                <svg className="w-6 h-6 animate-wiggle" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-                </svg>
+          {/* Price Beat Guarantee */}
+          <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-gradient-to-r from-blue-500/10 to-violet-500/10 px-4 py-2 text-sm text-white/80 fade-up" style={{animationDelay: '400ms'}}>
+            <span className="text-lg">💰</span>
+            <span><span className="font-medium">Found cheaper?</span> We'll beat it by 10%.</span>
+            <span className="underline text-cyan-400 ml-1">Learn more</span>
+          </div>
+        </div>
+      </section>
+
+      {/* What we offer - Superhuman Style */}
+      <ServicesStrip />
+
+      {/* Product Proof Section */}
+      <section className="bg-bg-base">
+        <div className="mx-auto max-w-6xl px-6 py-24 grid md:grid-cols-2 gap-12 items-center">
+          <div>
+            <h2 className="text-3xl md:text-4xl font-black text-white tracking-tight leading-[1.1]">Quote. Connect. Deliver.</h2>
+            <p className="mt-4 text-lg md:text-xl text-text-soft font-medium leading-relaxed">Get quotes from skilled freelancers, connect with the perfect match, and watch your project come to life.</p>
+            <ul className="mt-8 space-y-4 text-lg text-text-soft font-medium">
+              <li className="flex items-center gap-3">
+                <span className="w-2 h-2 bg-brand-b rounded-full"></span>
+                Get instant quotes from verified freelancers
+              </li>
+              <li className="flex items-center gap-3">
+                <span className="w-2 h-2 bg-brand-c rounded-full"></span>
+                Secure escrow protection for your projects
+              </li>
+              <li className="flex items-center gap-3">
+                <span className="w-2 h-2 bg-brand-a rounded-full"></span>
+                Track progress with real-time updates
+              </li>
+            </ul>
+          </div>
+          <div className="relative rounded-2xl bg-bg-surface shadow-card border border-white/10 p-2">
+            <div className="rounded-xl w-full h-64 bg-gradient-to-br from-brand-a/20 via-brand-b/20 to-brand-c/20 relative overflow-hidden">
+              {/* Animated UI Mockup */}
+              <div className="absolute inset-4 bg-bg-base/80 rounded-lg border border-white/10">
+                {/* Chat Interface Mockup */}
+                <div className="p-4 space-y-3">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-gradient-to-br from-brand-a to-brand-b rounded-full animate-pulse"></div>
+                    <div className="flex-1 h-3 bg-white/20 rounded animate-pulse delay-200"></div>
+                  </div>
+                  <div className="flex items-center space-x-3 ml-8">
+                    <div className="flex-1 h-3 bg-white/15 rounded animate-pulse delay-400"></div>
+                    <div className="w-6 h-6 bg-gradient-to-br from-brand-b to-brand-c rounded animate-bounce"></div>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-gradient-to-br from-brand-c to-brand-a rounded-full animate-pulse delay-600"></div>
+                    <div className="flex-1 h-3 bg-white/20 rounded animate-pulse delay-800"></div>
+                  </div>
+                  
+                  {/* Quote Request Mockup */}
+                  <div className="mt-6 p-3 bg-white/5 rounded-lg border border-white/10">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="h-2 w-16 bg-white/20 rounded animate-pulse delay-1000"></div>
+                      <div className="h-2 w-12 bg-brand-b/40 rounded animate-pulse delay-1200"></div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="h-2 w-full bg-white/15 rounded animate-pulse delay-1400"></div>
+                      <div className="h-2 w-3/4 bg-white/15 rounded animate-pulse delay-1600"></div>
+                    </div>
+                  </div>
               </div>
-              <div className="text-left relative z-10">
-                <div className="font-bold text-xl mb-1 animate-pulse">Price Beat Guarantee</div>
-                <div className="text-sm font-semibold animate-bounce">Find cheaper? Get 10% more off! 💰</div>
-                <div className="text-xs mt-1 opacity-90 animate-pulse">100% Money Back Guarantee</div>
               </div>
               
-              {/* Floating elements */}
-              <div className="absolute -top-2 -right-2 w-4 h-4 bg-yellow-400 rounded-full animate-ping"></div>
-              <div className="absolute -bottom-1 -left-1 w-3 h-3 bg-green-400 rounded-full animate-ping animation-delay-200"></div>
-              <div className="absolute top-1/2 -left-2 w-2 h-2 bg-pink-400 rounded-full animate-ping animation-delay-400"></div>
-              
-              {/* Moving sparkle effects */}
-              <div className="absolute top-2 right-4 text-yellow-300 animate-ping animation-delay-200">✨</div>
-              <div className="absolute bottom-2 left-6 text-green-300 animate-ping animation-delay-400">⭐</div>
+              {/* Floating Elements */}
+              <div className="absolute top-2 right-2 w-4 h-4 bg-brand-a/40 rounded-full animate-bounce delay-300"></div>
+              <div className="absolute bottom-2 left-2 w-3 h-3 bg-brand-c/40 rounded-full animate-pulse delay-500"></div>
+              <div className="absolute top-1/2 right-1 w-2 h-2 bg-brand-b/40 rounded-full animate-bounce delay-700"></div>
+            </div>
+            <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-white/10" />
+          </div>
+        </div>
+      </section>
+
+      {/* Dynamic Pages Showcase - Framer Style */}
+      <section className="bg-bg-base py-24">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-20">
+            <h2 className="text-lg text-brand-b font-bold tracking-wide uppercase mb-4">Dynamic Pages</h2>
+            <p className="mt-2 text-3xl md:text-4xl lg:text-5xl font-black text-white leading-[1.1] tracking-tight">
+              Create, collaborate,<br/>
+              and <span className="bg-gradient-to-r from-brand-a to-brand-c bg-clip-text text-transparent">go live</span>
+            </p>
+            <p className="mt-4 text-lg md:text-xl text-text-soft max-w-3xl mx-auto font-medium leading-relaxed">
+              Generate site layouts and advanced components in seconds with AI, so you can skip the blank canvas and start designing with confidence.
+            </p>
+          </div>
+
+
+          {/* Dynamic Pages Interface - Framer Style */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[600px]">
+            {/* Left Panel - AI Features */}
+            <div className="lg:col-span-1 bg-bg-surface rounded-2xl border border-white/10 p-6 flex flex-col">
+              <div className="mb-8">
+                <h3 className="text-2xl font-bold text-white mb-3">AI</h3>
+                <p className="text-text-mute text-sm leading-relaxed">
+                  Generate site layouts and advanced components in seconds with AI, so you can skip the blank canvas and start designing with confidence.
+                </p>
+                <Link href="/freelancers" className="inline-block mt-4 text-brand-b hover:text-brand-a transition-colors text-sm font-medium">
+                  Learn more →
+              </Link>
+            </div>
+            
+              <div className="space-y-4 flex-1">
+                <Link href="/freelancers" className="block text-text-mute hover:text-white transition-colors text-sm font-medium">
+                  Design
+                </Link>
+                <Link href="/products" className="block text-text-mute hover:text-white transition-colors text-sm font-medium">
+                  CMS
+                </Link>
+                <Link href="/admin" className="block text-text-mute hover:text-white transition-colors text-sm font-medium">
+                  Collaborate
+                </Link>
+              </div>
             </div>
 
-            <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
-              <Link
-                href="/freelancers"
-                className="group relative inline-flex items-center justify-center px-8 py-3 text-lg font-semibold text-white bg-gradient-to-r from-emerald-500 via-cyan-500 to-blue-500 rounded-xl hover:from-emerald-600 hover:via-cyan-600 hover:to-blue-600 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl"
-              >
-                <span className="mr-2 text-lg">👥</span>
-                <span className="relative z-10">Browse Freelancers</span>
-                <svg className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                </svg>
-              </Link>
-              <Link
-                href="/signup"
-                className="group relative inline-flex items-center justify-center px-8 py-3 text-lg font-semibold text-emerald-600 bg-white border-2 border-emerald-500 rounded-xl hover:bg-emerald-50 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl"
-              >
-                <span className="mr-2 text-lg">🚀</span>
-                Start as Freelancer
-                <svg className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                </svg>
-              </Link>
+            {/* Middle Panel - AI Chat Interface */}
+            <div className="lg:col-span-1 bg-bg-surface rounded-2xl border border-white/10 p-6 flex flex-col">
+              {/* Chat Header */}
+              <div className="flex items-center justify-between mb-6">
+                <Link href="/freelancers" className="text-text-mute hover:text-white transition-colors text-sm">
+                  ← Wireframer
+                </Link>
+                <div className="flex items-center space-x-2">
+                  <div className="w-6 h-6 bg-brand-a/40 rounded-full animate-pulse"></div>
+                  <span className="text-text-mute text-sm">Live</span>
+                </div>
+              </div>
+
+              {/* Chat Messages */}
+              <div className="space-y-4 flex-1">
+                {/* User Message */}
+                <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+                  <p className="text-text-base text-sm">
+                    Design three unique landing pages for a modern design agency.
+                  </p>
+                </div>
+
+                {/* AI Response */}
+                <div className="bg-gradient-to-r from-brand-a/10 to-brand-b/10 rounded-xl p-4 border border-brand-b/20">
+                  <div className="flex items-center mb-2">
+                    <div className="w-6 h-6 bg-gradient-to-br from-brand-a to-brand-b rounded-lg flex items-center justify-center mr-3">
+                      <span className="text-white text-xs font-bold">T</span>
+                    </div>
+                    <span className="text-text-base text-sm font-medium">TalentHub Pro</span>
+                  </div>
+                  <p className="text-text-base text-sm">
+                    I created three unique landing pages in dark mode for your modern design startup: a main landing page, a creative-focused page, and a studio showcase page.
+                  </p>
+                </div>
+              </div>
+
+              {/* Chat Input */}
+              <div className="mt-4 bg-white/5 rounded-xl p-3 border border-white/10">
+                <div className="flex items-center space-x-3">
+                  <div className="flex-1 h-4 bg-white/20 rounded animate-pulse"></div>
+                  <div className="w-6 h-6 bg-brand-b/40 rounded animate-pulse"></div>
+                </div>
+              </div>
             </div>
-            
-            <div className="mt-8 text-sm text-gray-500">
-              ✨ Join {stats.totalReviews.toLocaleString()}+ satisfied clients worldwide
+
+            {/* Right Panel - Live Preview */}
+            <div className="lg:col-span-1 bg-bg-surface rounded-2xl border border-white/10 overflow-hidden">
+              {/* Preview Header */}
+              <div className="p-4 border-b border-white/10">
+                <div className="flex items-center justify-between">
+                  <div className="flex space-x-2">
+                    <div className="px-3 py-1 bg-brand-b/20 text-brand-b rounded-lg text-xs font-medium">
+                      Landing Page 1
+                    </div>
+                    <div className="px-3 py-1 bg-white/5 text-text-mute rounded-lg text-xs font-medium">
+                      Landing Page 2
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-6 h-6 bg-brand-a/40 rounded animate-pulse"></div>
+                    <span className="text-text-mute text-xs">Live Preview</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Preview Content */}
+              <div className="p-6 h-full bg-gradient-to-br from-bg-base to-bg-surface relative">
+                <div className="space-y-6">
+                  {/* Header */}
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xl font-bold text-white">Nuance®</h4>
+                    <div className="flex space-x-4">
+                      <span className="text-text-mute text-sm">Features</span>
+                      <span className="text-text-mute text-sm">Pricing</span>
+                    </div>
+                  </div>
+
+                  {/* Hero Section */}
+                  <div className="space-y-4">
+                    <h1 className="text-3xl font-bold text-white leading-tight">
+                      Modern studio design.
+                    </h1>
+                    <p className="text-text-mute text-lg">
+                      Distinct visuals. Lasting impact.
+                    </p>
+                  </div>
+
+                  {/* Feature Cards */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                      <div className="w-8 h-8 bg-brand-a/20 rounded-lg mb-3 flex items-center justify-center">
+                        <span className="text-brand-a text-lg">🎨</span>
+                      </div>
+                      <div className="h-3 w-16 bg-white/20 rounded animate-pulse mb-2"></div>
+                      <div className="h-2 w-full bg-white/15 rounded animate-pulse"></div>
+                    </div>
+                    <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                      <div className="w-8 h-8 bg-brand-b/20 rounded-lg mb-3 flex items-center justify-center">
+                        <span className="text-brand-b text-lg">⚡</span>
+                      </div>
+                      <div className="h-3 w-14 bg-white/20 rounded animate-pulse mb-2"></div>
+                      <div className="h-2 w-full bg-white/15 rounded animate-pulse"></div>
+                    </div>
+                  </div>
+
+                  {/* CTA Section */}
+                  <div className="pt-4">
+                    <div className="flex space-x-3">
+                      <div className="flex-1 h-10 bg-gradient-to-r from-brand-a to-brand-b rounded-lg animate-pulse"></div>
+                      <div className="w-10 h-10 bg-white/10 rounded-lg animate-pulse"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Stats Section - DYNAMIC */}
-      <section className="py-20 bg-white/60 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Stats Section */}
+      <section className="bg-bg-surface/60 backdrop-blur-sm">
+        <div className="max-w-7xl mx-auto px-6 py-24">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {[
-              { label: 'Active Freelancers', value: `${stats.totalFreelancers}+`, icon: '👥', color: 'from-emerald-500 to-cyan-500' },
-              { label: 'Projects Completed', value: `${stats.totalProjects.toLocaleString()}+`, icon: '✨', color: 'from-cyan-500 to-blue-500' },
-              { label: 'Happy Clients', value: `${stats.totalReviews.toLocaleString()}+`, icon: '😊', color: 'from-blue-500 to-indigo-500' },
-              { label: 'Countries', value: `${stats.countries}+`, icon: '🌍', color: 'from-indigo-500 to-purple-500' },
+              { label: 'Active Freelancers', value: `${stats.totalFreelancers}+`, icon: '👥', delay: 'delay-0' },
+              { label: 'Projects Completed', value: `${stats.totalProjects.toLocaleString()}+`, icon: '✨', delay: 'delay-200' },
+              { label: 'Happy Clients', value: `${stats.totalReviews.toLocaleString()}+`, icon: '😊', delay: 'delay-400' },
+              { label: 'Countries', value: `${stats.countries}+`, icon: '🌍', delay: 'delay-600' },
             ].map((stat, index) => (
-              <div key={index} className="text-center p-8 rounded-3xl bg-white/80 backdrop-blur-sm shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-white/50">
-                <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-emerald-100 to-cyan-100 rounded-2xl flex items-center justify-center">
-                  <span className="text-3xl">{stat.icon}</span>
+              <div key={index} className={`relative text-center p-8 rounded-2xl bg-bg-surface shadow-card border border-white/5 hover:scale-105 transition-all duration-300 ${stat.delay}`}>
+                <div className="absolute inset-0 rounded-2xl bg-metal-sheen pointer-events-none"></div>
+                <div className="absolute -top-px left-6 right-6 h-px bg-specular-line opacity-30"></div>
+                
+                {/* Animated background elements */}
+                <div className="absolute top-2 right-2 w-2 h-2 bg-brand-a/30 rounded-full animate-pulse"></div>
+                <div className="absolute bottom-2 left-2 w-1 h-1 bg-brand-c/40 rounded-full animate-bounce"></div>
+                
+                <div className="relative w-20 h-20 mx-auto mb-6 bg-gradient-to-r from-brand-a/20 to-brand-c/20 rounded-2xl flex items-center justify-center hover:rotate-12 transition-transform duration-300">
+                  <span className="text-4xl animate-bounce">{stat.icon}</span>
                 </div>
-                <div className={`text-4xl md:text-5xl font-black bg-gradient-to-r ${stat.color} bg-clip-text text-transparent mb-3`}>{stat.value}</div>
-                <div className="text-gray-700 font-semibold text-lg">{stat.label}</div>
+                <div className="text-5xl md:text-6xl lg:text-7xl font-black bg-gradient-to-r from-brand-a via-brand-b to-brand-c bg-clip-text text-transparent mb-4 animate-pulse">{stat.value}</div>
+                <div className="text-text-base font-bold text-xl">{stat.label}</div>
               </div>
             ))}
           </div>
@@ -168,301 +477,232 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
       </section>
 
       {/* Features Section */}
-      <section className="py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-base text-indigo-600 font-semibold tracking-wide uppercase mb-3">Why Choose Us</h2>
-            <p className="mt-2 text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight">
-              Everything you need to <span className="text-indigo-600">succeed</span>
+      <section className="bg-bg-base py-24">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-20">
+            <h2 className="text-lg text-brand-b font-bold tracking-wide uppercase mb-4">Why Choose Us</h2>
+            <p className="mt-2 text-5xl md:text-6xl lg:text-7xl font-black text-white leading-[0.9] tracking-tight">
+              Everything you need to<br/>
+              <span className="bg-gradient-to-r from-brand-a to-brand-c bg-clip-text text-transparent">succeed</span>
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[
               {
                 title: 'Verified Freelancers',
-                description: 'Every freelancer is vetted with verified portfolios and skills.',
-                icon: (
-                  <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-                  </svg>
-                ),
-                gradient: 'from-blue-500 to-cyan-500',
-              },
-              {
-                title: 'Price Beat Guarantee',
-                description: 'Found cheaper? We\'ll beat it by 10% or your money back!',
-                icon: (
-                  <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                ),
-                gradient: 'from-green-500 to-emerald-500',
-              },
-              {
-                title: '24/7 Support',
-                description: 'Round-the-clock customer support for any questions or issues.',
-                icon: (
-                  <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
-                  </svg>
-                ),
-                gradient: 'from-yellow-500 to-orange-500',
+                description: 'All freelancers go through our rigorous verification process',
+                icon: '✅',
+                delay: 'delay-0',
+                color: 'from-green-500 to-emerald-600'
               },
               {
                 title: 'Secure Payments',
-                description: 'Escrow protection and secure payment processing for peace of mind.',
-                icon: (
-                  <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
-                ),
-                gradient: 'from-purple-500 to-pink-500',
+                description: 'Escrow protection ensures you only pay for completed work',
+                icon: '🔒',
+                delay: 'delay-200',
+                color: 'from-blue-500 to-cyan-600'
               },
+              {
+                title: '24/7 Support',
+                description: 'Round-the-clock customer support for all your needs',
+                icon: '🛟',
+                delay: 'delay-400',
+                color: 'from-purple-500 to-violet-600'
+              },
+              {
+                title: 'Quality Guarantee',
+                description: '100% satisfaction guarantee or your money back',
+                icon: '💯',
+                delay: 'delay-600',
+                color: 'from-orange-500 to-red-600'
+              },
+              {
+                title: 'Fast Delivery',
+                description: 'Get your projects delivered on time, every time',
+                icon: '⚡'
+              },
+              {
+                title: 'Global Network',
+                description: 'Access to talent from around the world',
+                icon: '🌍'
+              }
             ].map((feature, index) => (
-              <div
-                key={index}
-                className="relative group bg-white rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2"
-              >
-                <div className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-10 rounded-2xl transition-opacity duration-300`}></div>
-                <div className={`inline-flex p-4 rounded-xl bg-gradient-to-br ${feature.gradient} text-white mb-6 shadow-lg`}>
-                  {feature.icon}
+              <div key={index} className="relative p-6 rounded-2xl bg-bg-surface shadow-card border border-white/5 hover:shadow-xl transition-all duration-300">
+                <div className="absolute inset-0 rounded-2xl bg-metal-sheen pointer-events-none"></div>
+                <div className="absolute -top-px left-6 right-6 h-px bg-specular-line opacity-30"></div>
+                <div className="relative">
+                  <div className="text-5xl mb-6">{feature.icon}</div>
+                  <h3 className="text-2xl font-bold text-white mb-4">{feature.title}</h3>
+                  <p className="text-lg text-text-soft font-medium leading-relaxed">{feature.description}</p>
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">{feature.title}</h3>
-                <p className="text-gray-600 leading-relaxed">{feature.description}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Testimonials - DYNAMIC FROM DATABASE */}
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4">
-              Loved by <span className="text-indigo-600">thousands</span>
-            </h2>
-            <p className="text-xl text-gray-600">See what our clients say about us</p>
+      {/* Testimonials Section */}
+      <section className="bg-bg-surface/60 backdrop-blur-sm py-24">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-20">
+            <h2 className="text-5xl md:text-6xl lg:text-7xl font-black text-white tracking-tight leading-[0.9] mb-6">What our clients say</h2>
+            <p className="text-xl md:text-2xl text-text-soft font-medium">Don't just take our word for it</p>
           </div>
-          {/* Testimonials Carousel */}
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {currentTestimonials.map((testimonial, index) => (
+              <div key={testimonial.id} className="relative p-6 rounded-2xl bg-bg-surface shadow-card border border-white/5">
+                <div className="absolute inset-0 rounded-2xl bg-metal-sheen pointer-events-none"></div>
+                <div className="absolute -top-px left-6 right-6 h-px bg-specular-line opacity-30"></div>
           <div className="relative">
-            <div className="overflow-hidden">
-              <div 
-                className="flex transition-transform duration-1000 ease-in-out"
-                style={{ transform: `translateX(-${currentTestimonialIndex * (100 / 3)}%)` }}
-              >
-                {testimonials.map((testimonial) => (
-                  <div key={testimonial.id} className="w-1/3 flex-shrink-0 px-4">
-                    <div className="bg-gradient-to-br from-gray-50 to-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2">
-                      <div className="flex mb-4">
-                        {[...Array(testimonial.rating)].map((_, i) => (
-                          <svg key={i} className="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                          </svg>
+                  <div className="flex items-center mb-4">
+                    {[...Array(5)].map((_, i) => (
+                      <span key={i} className="text-yellow-400 text-lg">⭐</span>
                         ))}
                       </div>
-                      <p className="text-gray-700 mb-4 italic">"{testimonial.testimonial_text}"</p>
-                      <div className="flex items-center">
-                        <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold mr-3">
-                          {testimonial.client_name.charAt(0)}
-                        </div>
+                  <p className="text-text-soft mb-4 italic">"{testimonial.testimonial_text}"</p>
                         <div>
-                          <div className="font-semibold text-gray-900">{testimonial.client_name}</div>
-                          <div className="text-sm text-gray-500">{testimonial.client_role}{testimonial.client_company && `, ${testimonial.client_company}`}</div>
-                        </div>
+                    <p className="font-semibold text-text-base">{testimonial.client_name}</p>
+                    <p className="text-sm text-text-mute">{testimonial.client_role} at {testimonial.client_company}</p>
                       </div>
                     </div>
                   </div>
                 ))}
-              </div>
-            </div>
-
-            {/* Navigation Dots */}
-            {testimonials.length > 3 && (
-              <div className="flex justify-center mt-8 space-x-2">
-                {Array.from({ length: testimonials.length - 2 }, (_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => {
-                      setCurrentTestimonialIndex(i);
-                      setIsAutoPlaying(false);
-                      setTimeout(() => setIsAutoPlaying(true), 10000); // Resume auto-play after 10 seconds
-                    }}
-                    className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                      i === currentTestimonialIndex 
-                        ? 'bg-indigo-600 w-8' 
-                        : 'bg-gray-300 hover:bg-gray-400'
-                    }`}
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* Play/Pause Button */}
-            {testimonials.length > 3 && (
-              <div className="flex justify-center mt-4">
-                <button
-                  onClick={() => setIsAutoPlaying(!isAutoPlaying)}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center space-x-2"
-                >
-                  {isAutoPlaying ? (
-                    <>
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                      </svg>
-                      <span>Pause</span>
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-                      </svg>
-                      <span>Play</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            )}
           </div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="relative py-24 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-purple-600"></div>
-        <div className="absolute inset-0 bg-black opacity-20"></div>
-        <div className="relative max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
-          <h2 className="text-4xl md:text-5xl font-extrabold text-white mb-6">
+      <section className="bg-bg-base py-24">
+        <div className="max-w-5xl mx-auto px-6 text-center">
+          <h2 className="text-5xl md:text-6xl lg:text-7xl font-black text-white tracking-tight leading-[0.9] mb-8">
             Ready to get started?
           </h2>
-          <p className="mt-4 text-xl text-indigo-100 mb-10 leading-relaxed max-w-2xl mx-auto">
-            Join thousands of successful businesses and freelancers. Start your journey today with TalentHub Pro.
+          <p className="text-xl md:text-2xl text-text-soft mb-12 font-medium leading-relaxed max-w-4xl mx-auto">
+            Join thousands of satisfied clients and freelancers who trust TalentHub Pro
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex flex-col sm:flex-row gap-6 justify-center">
             <Link
-              href="/freelancers"
-              className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-indigo-600 bg-white rounded-xl hover:bg-gray-50 transform hover:scale-105 transition-all duration-200 shadow-xl hover:shadow-2xl"
+              href="/signup"
+              className="group inline-flex items-center justify-center gap-3 rounded-2xl px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-brand-a via-brand-b to-brand-c shadow-[0_0_32px_rgba(96,165,250,0.4)] hover:scale-[1.05] transition-all duration-300"
             >
-              Browse Freelancers
-              <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+              Start free
+              <svg className="size-5 transition group-hover:translate-x-1" viewBox="0 0 24 24" fill="none">
+                <path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
               </svg>
             </Link>
             <Link
-              href="/apply"
-              className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-white bg-indigo-800 rounded-xl hover:bg-indigo-900 transform hover:scale-105 transition-all duration-200 shadow-xl hover:shadow-2xl border-2 border-indigo-400"
+              href="/freelancers"
+              className="rounded-2xl border-2 border-white/20 bg-white/10 text-white px-8 py-4 text-lg font-semibold hover:bg-white/20 hover:border-white/30 transition-all duration-300 backdrop-blur-sm"
             >
-              Apply as Freelancer
+              Browse freelancers
             </Link>
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-            <div>
-              <h3 className="text-2xl font-bold mb-4">TalentHub Pro</h3>
-              <p className="text-gray-400">Connecting talent with opportunity worldwide.</p>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">Platform</h4>
-              <ul className="space-y-2">
-                <li><Link href="/freelancers" className="text-gray-400 hover:text-white transition-colors">Browse Freelancers</Link></li>
-                <li><Link href="/apply" className="text-gray-400 hover:text-white transition-colors">Become a Freelancer</Link></li>
-                <li><Link href="/admin" className="text-gray-400 hover:text-white transition-colors">Admin Dashboard</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">Company</h4>
-              <ul className="space-y-2">
-                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">About Us</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Price Beat Guarantee</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Contact</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">Legal</h4>
-              <ul className="space-y-2">
-                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Privacy Policy</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Terms of Service</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Cookie Policy</a></li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t border-gray-800 pt-8 text-center">
-            <p className="text-gray-500 text-sm">
-              © 2025 TalentHub Pro. All rights reserved. | Built with ❤️ for freelancers and businesses worldwide.
-            </p>
-          </div>
-        </div>
-      </footer>
+      {/* Quote Request Form Modal */}
+      {showQuoteForm && (
+        <QuoteRequestForm
+          onClose={() => setShowQuoteForm(false)}
+          onSuccess={() => {
+            setShowQuoteForm(false);
+            // You can add a success notification here
+          }}
+        />
+      )}
     </div>
   );
 };
 
 export const getServerSideProps: GetServerSideProps = async () => {
   try {
-    // Fetch testimonials
-    const { data: testimonials, error: testimonialsError } = await supabase
+    // Fetch testimonials from Supabase
+    const { data: testimonialsData, error: testimonialsError } = await supabase
       .from('testimonials')
       .select('*')
-      .eq('is_featured', true)
-      .order('display_order')
       .limit(6);
 
-    if (testimonialsError) throw testimonialsError;
+    if (testimonialsError) {
+      console.error('Error fetching testimonials:', testimonialsError);
+    }
 
-    // Fetch stats
-    const { data: freelancersCount } = await supabase
-      .from('freelancers')
-      .select('id', { count: 'exact', head: true })
-      .eq('status', 'approved');
-
-    const { data: projectsData } = await supabase
-      .from('freelancers')
-      .select('completed_projects')
-      .eq('status', 'approved');
-
-    const { data: reviewsData } = await supabase
-      .from('reviews')
-      .select('id', { count: 'exact', head: true });
-
-    const { data: countriesData } = await supabase
-      .from('freelancers')
-      .select('country')
-      .eq('status', 'approved');
-
-    const totalProjects = projectsData?.reduce((sum, f) => sum + (f.completed_projects || 0), 0) || 0;
-    const uniqueCountries = new Set(countriesData?.map(f => f.country) || []).size;
-
-    const stats = {
-      totalFreelancers: freelancersCount || 0,
-      totalProjects,
-      totalReviews: reviewsData || 0,
-      countries: uniqueCountries,
+    // Fetch real stats from database via API
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    let stats = {
+      totalFreelancers: 0,
+      totalProjects: 0,
+      totalReviews: 0,
+      countries: 0
     };
+
+    try {
+      const statsResponse = await fetch(`${baseUrl}/api/homepage-stats`);
+      if (statsResponse.ok) {
+        const statsData = await statsResponse.json();
+        stats = statsData;
+      }
+    } catch (apiError) {
+      console.error('Error fetching stats from API:', apiError);
+      // Use fallback stats if API fails
+      stats = {
+        totalFreelancers: 0,
+        totalProjects: 0,
+        totalReviews: 0,
+        countries: 0
+      };
+    }
 
     return {
       props: {
-        testimonials: testimonials || [],
-        stats,
-      },
+        testimonials: testimonialsData || [],
+        stats
+      }
     };
   } catch (error) {
-    console.error('Error fetching data:', error);
+    console.error('Error in getServerSideProps:', error);
+    
+    // Return mock data as fallback
+    const mockTestimonials = [
+      {
+        id: '1',
+        client_name: 'Sarah Johnson',
+        client_role: 'CEO',
+        client_company: 'TechStart Inc',
+        testimonial_text: 'TalentHub Pro has revolutionized how we find and work with freelancers. The quality is exceptional!',
+        rating: 5
+      },
+      {
+        id: '2',
+        client_name: 'Michael Chen',
+        client_role: 'Marketing Director',
+        client_company: 'GrowthCorp',
+        testimonial_text: 'The escrow system gives us peace of mind. We always get exactly what we pay for.',
+        rating: 5
+      },
+      {
+        id: '3',
+        client_name: 'Emily Rodriguez',
+        client_role: 'Product Manager',
+        client_company: 'InnovateLab',
+        testimonial_text: 'Fast, reliable, and professional. This platform has become essential to our workflow.',
+        rating: 5
+      }
+    ];
+
+    const stats = {
+      totalFreelancers: 0,
+      totalProjects: 0,
+      totalReviews: 0,
+      countries: 0
+    };
+
     return {
       props: {
-        testimonials: [],
-        stats: {
-          totalFreelancers: 0,
-          totalProjects: 0,
-          totalReviews: 0,
-          countries: 0,
-        },
-      },
+        testimonials: mockTestimonials,
+        stats
+      }
     };
   }
 };

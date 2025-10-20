@@ -3,7 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useState } from 'react';
 import Header from '../src/components/Header';
-import QuoteRequestModal from '../src/components/QuoteRequestModal';
+import QuoteRequestForm from '../src/components/QuoteRequestForm';
 import { getProducts } from '../src/lib/api';
 import { Product } from '../src/lib/api';
 
@@ -26,22 +26,22 @@ export default function ProductsPage({ products }: ProductsPageProps) {
         <meta name="description" content="Browse our collection of digital products and services" />
       </Head>
 
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-bg-base">
         <Header />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-28">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">Our Products</h1>
-            <p className="mt-2 text-gray-600">Discover amazing digital products and services</p>
+            <h1 className="text-4xl font-bold text-white">Our Products</h1>
+            <p className="mt-2 text-text-soft">Discover amazing digital products and services</p>
             <nav className="mt-2">
               <ol className="flex items-center space-x-2 text-sm">
                 <li>
-                  <Link href="/" className="text-gray-500 hover:text-gray-700">
+                  <Link href="/" className="text-text-mute hover:text-white transition-colors">
                     Home
                   </Link>
                 </li>
-                <li className="text-gray-400">/</li>
-                <li className="text-gray-900 font-medium">Products</li>
+                <li className="text-text-mute">/</li>
+                <li className="text-white font-medium">Products</li>
               </ol>
             </nav>
           </div>
@@ -107,12 +107,15 @@ export default function ProductsPage({ products }: ProductsPageProps) {
         </div>
       </div>
 
-      {/* Quote Request Modal */}
-      <QuoteRequestModal
-        isOpen={showQuoteModal}
-        onClose={() => setShowQuoteModal(false)}
-        productName={selectedProduct?.name}
-      />
+      {/* Quote Request Form Modal */}
+      {showQuoteModal && (
+        <QuoteRequestForm
+          onClose={() => setShowQuoteModal(false)}
+          onSuccess={() => {
+            setShowQuoteModal(false);
+          }}
+        />
+      )}
     </>
   );
 }

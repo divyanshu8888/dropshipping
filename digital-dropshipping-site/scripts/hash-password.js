@@ -1,7 +1,7 @@
 const bcrypt = require('bcryptjs');
 
 // Replace 'your_password_here' with your actual password
-const plainPassword = 'admin123'; // Change this to your desired password
+const plainPassword = process.argv[2] || 'changeme123'; // Use command line argument or default
 const saltRounds = 12;
 
 async function hashPassword() {
@@ -10,7 +10,7 @@ async function hashPassword() {
     console.log('Original password:', plainPassword);
     console.log('Hashed password:', hashedPassword);
     console.log('\nSQL INSERT statement:');
-    console.log(`INSERT INTO users (email, name, password, role) VALUES ('divyanshu.mishra8@gmail.com', 'dmishra', '${hashedPassword}', 'admin');`);
+    console.log(`INSERT INTO users (email, name, password, role) VALUES ('admin@platform.com', 'Admin User', '${hashedPassword}', 'ADMIN');`);
   } catch (error) {
     console.error('Error hashing password:', error);
   }

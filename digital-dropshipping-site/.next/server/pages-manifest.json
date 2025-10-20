@@ -2,10 +2,6 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/freelancers": "pages/freelancers.js",
-  "/freelancer/[id]": "pages/freelancer/[id].js",
-  "/products": "pages/products.js",
   "/": "pages/index.js",
-  "/products/[id]": "pages/products/[id].js",
-  "/api/products": "pages/api/products.js"
+  "/api/homepage-stats": "pages/api/homepage-stats.js"
 }

@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { supabase } from '../../../lib/supabase'
-import { FreelancerPublic } from '../../../types'
+import { supabase } from '../../../src/lib/supabase'
+import { FreelancerPublic } from '../../../src/types'
 
 export default async function handler(
   req: NextApiRequest,

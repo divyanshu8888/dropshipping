@@ -34,11 +34,11 @@ export default function LoginPage() {
         // Store user data in localStorage for session management
         localStorage.setItem('user', JSON.stringify(data.user));
         
-        // Redirect based on user type
-        if (data.user.role === 'freelancer') {
-          router.push('/freelancer-dashboard');
-        } else if (data.user.role === 'admin') {
+        // Redirect based on user role
+        if (data.user.role === 'ADMIN' || data.user.role === 'TEAM_MEMBER') {
           router.push('/admin');
+        } else if (data.user.role === 'FREELANCER') {
+          router.push('/freelancer-dashboard');
         } else {
           router.push('/client-dashboard');
         }
@@ -59,13 +59,12 @@ export default function LoginPage() {
         <meta name="description" content="Login to your TalentHub Pro account" />
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-cyan-50 to-blue-50 relative overflow-hidden">
+      <div className="min-h-screen bg-bg-base relative overflow-hidden">
         {/* Animated Background Elements */}
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-emerald-400/30 to-cyan-500/30 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-blue-400/30 to-indigo-500/30 rounded-full blur-3xl animate-pulse delay-1000"></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-br from-teal-400/20 to-emerald-500/20 rounded-full blur-3xl animate-pulse delay-500"></div>
-          <div className="absolute top-20 left-20 w-60 h-60 bg-gradient-to-br from-violet-400/25 to-purple-500/25 rounded-full blur-3xl animate-pulse delay-700"></div>
+          <div className="absolute inset-0 bg-hero-gradient"></div>
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-accent-blue/20 to-accent-violet/20 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-accent-violet/20 to-accent-cyan/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
         </div>
 
         <Header />
@@ -73,10 +72,10 @@ export default function LoginPage() {
         <div className="flex items-center justify-center min-h-screen py-12 pt-28 px-4 sm:px-6 lg:px-8 relative">
           <div className="max-w-md w-full space-y-8">
             <div className="text-center">
-              <div className="mx-auto w-20 h-20 bg-gradient-to-br from-emerald-500 via-cyan-500 to-blue-500 rounded-3xl flex items-center justify-center shadow-2xl mb-8 animate-bounce">
+              <div className="mx-auto w-20 h-20 bg-gradient-to-br from-accent-blue via-accent-violet to-accent-cyan rounded-3xl flex items-center justify-center shadow-metallic mb-8">
                 <span className="text-white text-3xl font-bold">✨</span>
               </div>
-              <h2 className="text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 via-cyan-600 to-blue-600 mb-4">
+              <h2 className="text-5xl font-bold text-text-base mb-4">
                 Welcome Back
               </h2>
               <p className="text-gray-700 text-xl font-medium">

@@ -6,25 +6,62 @@ import { useRouter } from 'next/router'
 import Header from '../src/components/Header'
 import { supabase } from '../src/lib/supabase'
 
-interface Freelancer {
+interface DashboardMetrics {
+  totalProjects: number;
+  revenueThisMonth: number;
+  pendingPayouts: number;
+  activeOrders: number;
+  activeUsers: number;
+  flaggedChats: number;
+  openDisputes: number;
+  avgResponseTime: number;
+  newRequests: number;
+  quotesUnderReview: number;
+  sowSigned: number;
+  inDelivery: number;
+  completed: number;
+  messagesBlocked: number;
+  mutedUsers: number;
+  topViolationType: string;
+  chatsUnderReview: number;
+  activeFreelancers: number;
+  activeClients: number;
+  verifiedSuppliers: number;
+  applicationsPending: number;
+  suspendedAccounts: number;
+  totalUsers: number;
+  totalOrders: number;
+  pendingOrders: number;
+  completedOrders: number;
+  totalProducts: number;
+  pendingQuoteRequests: number;
+  systemHealth: {
+    databaseLatency: number;
+    edgeFunctionErrors: number;
+    emailApiUptime: number;
+    paymentWebhook: string;
+    fileScanService: string;
+  };
+  moderation: {
+    messagesBlocked: number;
+    mutedUsers: number;
+    topViolationType: string;
+    chatsUnderReview: number;
+  };
+}
+
+interface ActivityFeedItem {
   id: string;
-  display_name: string;
-  title: string;
-  country: string;
-  skills: string[];
-  hourly_rate: number;
-  base_fee: number;
-  contact_email: string;
-  contact_phone: string | null;
-  rating: number;
-  total_reviews: number;
-  completed_projects: number;
-  status: string;
-  created_at: string;
+  type: 'user_registered' | 'work_request' | 'order_placed' | 'service_created' | 'escrow_funded' | 'chat_flagged' | 'dispute_opened';
+  message: string;
+  timestamp: string;
+  user?: string;
+  amount?: number;
+  createdAt: string;
 }
 
 interface AdminProps {
-  freelancers: Freelancer[];
+  freelancers: any[];
   pendingCount: number;
   approvedCount: number;
   quoteRequests: number;
@@ -32,13 +69,17 @@ interface AdminProps {
 
 export default function AdminDashboard({ freelancers, pendingCount, approvedCount, quoteRequests }: AdminProps) {
   const router = useRouter()
-  const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all')
-  const [selectedFreelancer, setSelectedFreelancer] = useState<Freelancer | null>(null)
   const [loading, setLoading] = useState(true)
+  const [dataLoading, setDataLoading] = useState(true)
   const [user, setUser] = useState<{name: string, role: string} | null>(null)
+  const [activeTab, setActiveTab] = useState('overview')
+  
+  // Real data from database
+  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null)
+  const [activityFeed, setActivityFeed] = useState<ActivityFeedItem[]>([])
+  const [lastUpdated, setLastUpdated] = useState<string>('')
 
   useEffect(() => {
-    // Check if user is logged in and is an admin
     const userData = localStorage.getItem('user')
     if (!userData) {
       router.push('/login')
@@ -46,7 +87,7 @@ export default function AdminDashboard({ freelancers, pendingCount, approvedCoun
     }
     
     const userObj = JSON.parse(userData)
-    if (userObj.role !== 'admin') {
+    if (userObj.role !== 'ADMIN' && userObj.role !== 'TEAM_MEMBER') {
       router.push('/login')
       return
     }
@@ -55,63 +96,149 @@ export default function AdminDashboard({ freelancers, pendingCount, approvedCoun
     setLoading(false)
   }, [router])
 
-  if (loading) {
+  // Fetch dashboard data
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setDataLoading(true)
+        
+        // Fetch metrics and activity feed in parallel
+        const [metricsResponse, activityResponse] = await Promise.all([
+          fetch('/api/admin/dashboard-metrics'),
+          fetch('/api/admin/activity-feed')
+        ])
+
+        if (metricsResponse.ok) {
+          const metricsData = await metricsResponse.json()
+          setMetrics(metricsData.metrics)
+          setLastUpdated(metricsData.lastUpdated)
+        }
+
+        if (activityResponse.ok) {
+          const activityData = await activityResponse.json()
+          setActivityFeed(activityData.activities)
+        }
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error)
+      } finally {
+        setDataLoading(false)
+      }
+    }
+
+    if (!loading) {
+      fetchDashboardData()
+      
+      // Set up auto-refresh every 30 seconds
+      const interval = setInterval(fetchDashboardData, 30000)
+      return () => clearInterval(interval)
+    }
+  }, [loading])
+
+
+  const getActivityIcon = (type: string) => {
+    switch (type) {
+      case 'user_registered': return '👨‍💻'
+      case 'work_request': return '💬'
+      case 'order_placed': return '🛒'
+      case 'service_created': return '🔧'
+      case 'escrow_funded': return '💰'
+      case 'chat_flagged': return '🚫'
+      case 'dispute_opened': return '⚖️'
+      default: return '📢'
+    }
+  }
+
+  if (loading || dataLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="min-h-screen bg-bg-base flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-accent-cyan mx-auto"></div>
+          <p className="mt-4 text-text-soft">Loading dashboard...</p>
         </div>
       </div>
     )
   }
 
-  const filteredFreelancers = freelancers.filter(f => filter === 'all' || f.status === filter)
-
-  const updateStatus = async (id: string, status: 'approved' | 'rejected') => {
-    try {
-      const response = await fetch('/api/admin/freelancers', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, status }),
-      })
-
-      if (response.ok) {
-        alert(`Freelancer ${status} successfully!`)
-        window.location.reload()
-      } else {
-        alert('Error updating freelancer')
-      }
-    } catch (error) {
-      alert('Error updating freelancer')
-    }
+  if (!metrics) {
+    return (
+      <div className="min-h-screen bg-bg-base flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-400 text-6xl mb-4">⚠️</div>
+          <p className="text-text-soft">Failed to load dashboard data</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="mt-4 px-4 py-2 bg-accent-blue text-white rounded-lg hover:bg-accent-violet transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    )
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'approved': return 'bg-green-100 text-green-800 border-green-200'
-      case 'rejected': return 'bg-red-100 text-red-800 border-red-200'
-      case 'pending': return 'bg-yellow-100 text-yellow-800 border-yellow-200'
-      default: return 'bg-gray-100 text-gray-800 border-gray-200'
-    }
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)
   }
+
+  const StatCard = ({ title, value, icon, color, change, onClick }: any) => (
+    <div 
+      className="relative bg-bg-surface rounded-2xl shadow-card border border-white/5 p-6 transform hover:-translate-y-1 transition-all cursor-pointer group"
+      onClick={onClick}
+    >
+      <div className="absolute inset-0 rounded-2xl bg-metal-sheen pointer-events-none"></div>
+      <div className="absolute -top-px left-6 right-6 h-px bg-specular-line opacity-30"></div>
+      <div className="relative flex items-center justify-between">
+        <div>
+          <div className="text-3xl font-bold text-text-base">{value}</div>
+          <div className="text-text-soft font-medium">{title}</div>
+          {change && (
+            <div className={`text-sm font-semibold ${change > 0 ? 'text-accent-cyan' : 'text-red-400'}`}>
+              {change > 0 ? '+' : ''}{change}% vs last week
+            </div>
+          )}
+        </div>
+        <div className={`w-16 h-16 bg-gradient-to-br ${color} rounded-xl flex items-center justify-center text-3xl shadow-metallic group-hover:animate-metallic-glow`}>
+          {icon}
+        </div>
+      </div>
+    </div>
+  )
+
+  const PipelineStage = ({ stage, count, change, color }: any) => (
+    <div className="bg-white rounded-xl p-4 shadow-lg">
+      <div className="flex items-center justify-between mb-2">
+        <div className={`w-4 h-4 rounded-full ${color}`}></div>
+        <span className="text-2xl font-bold text-gray-900">{count}</span>
+      </div>
+      <div className="text-sm text-gray-600">{stage}</div>
+      <div className={`text-xs font-semibold ${change > 0 ? 'text-green-600' : 'text-red-600'}`}>
+        {change > 0 ? '+' : ''}{change}%
+      </div>
+    </div>
+  )
 
   return (
     <>
       <Head>
         <title>Admin Dashboard - TalentHub Pro</title>
       </Head>
-
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-100">
+      <div className="min-h-screen bg-bg-base">
         <Header />
 
         {/* Hero */}
-        <section className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-12 pt-24">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <section className="relative overflow-hidden">
+          <div className="absolute inset-0 bg-hero-gradient"></div>
+          <div className="relative bg-gradient-to-r from-accent-blue to-accent-violet text-white py-12 pt-24">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-4xl font-extrabold mb-2">Admin Dashboard</h1>
-                <p className="text-xl text-indigo-100">Welcome back, {user?.name}! Manage freelancer applications and platform</p>
+                <h1 className="text-4xl font-extrabold mb-2">🧭 Admin Command Center</h1>
+                <p className="text-xl text-white/80">Welcome back, {user?.name}! Platform health overview & management</p>
+                {lastUpdated && (
+                  <p className="text-sm text-white/60 mt-2">
+                    Last updated: {new Date(lastUpdated).toLocaleString()}
+                  </p>
+                )}
               </div>
               <div className="flex items-center space-x-4">
                 <button
@@ -123,284 +250,412 @@ export default function AdminDashboard({ freelancers, pendingCount, approvedCoun
                 >
                   Logout
                 </button>
-                <Link
-                href="/admin/quotes"
-                className="px-6 py-3 bg-white text-indigo-600 rounded-xl font-bold hover:bg-gray-50 transition-all shadow-lg flex items-center"
-              >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                </svg>
-                View Quote Requests ({quoteRequests})
-                </Link>
               </div>
+            </div>
             </div>
           </div>
         </section>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            {[
-              { label: 'Total Applications', value: freelancers.length, color: 'from-blue-500 to-cyan-500', icon: '👥' },
-              { label: 'Pending Review', value: pendingCount, color: 'from-yellow-500 to-orange-500', icon: '⏳' },
-              { label: 'Approved', value: approvedCount, color: 'from-green-500 to-emerald-500', icon: '✅' },
-              { label: 'Quote Requests', value: quoteRequests, color: 'from-purple-500 to-pink-500', icon: '💬' },
-            ].map((stat, index) => (
-              <div key={index} className="bg-white rounded-2xl shadow-lg p-6 transform hover:-translate-y-1 transition-all">
-                <div className={`w-12 h-12 bg-gradient-to-br ${stat.color} rounded-xl flex items-center justify-center text-2xl mb-4`}>
-                  {stat.icon}
-                </div>
-                <div className="text-3xl font-bold text-gray-900">{stat.value}</div>
-                <div className="text-gray-600 font-medium">{stat.label}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* Admin Navigation */}
-          <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Admin Sections</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Link
-                href="/admin/products"
-                className="flex items-center p-4 border-2 border-gray-200 rounded-xl hover:border-indigo-300 hover:bg-indigo-50 transition-all"
-              >
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center text-2xl text-white mr-4">
-                  📦
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900">Manage Products</h3>
-                  <p className="text-sm text-gray-600">Add, edit, and manage store products</p>
-                </div>
-              </Link>
-              
-              <Link
-                href="/admin/orders"
-                className="flex items-center p-4 border-2 border-gray-200 rounded-xl hover:border-indigo-300 hover:bg-indigo-50 transition-all"
-              >
-                <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center text-2xl text-white mr-4">
-                  🛒
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900">Manage Orders</h3>
-                  <p className="text-sm text-gray-600">View and update order status</p>
-                </div>
-              </Link>
-              
-              <Link
-                href="/admin/quotes"
-                className="flex items-center p-4 border-2 border-gray-200 rounded-xl hover:border-indigo-300 hover:bg-indigo-50 transition-all"
-              >
-                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center text-2xl text-white mr-4">
-                  💬
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900">Quote Requests</h3>
-                  <p className="text-sm text-gray-600">Manage client quote requests</p>
-                </div>
-              </Link>
-            </div>
-          </div>
-
-          {/* Filters */}
+          {/* Navigation Tabs */}
           <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
             <div className="flex space-x-4">
-              {(['all', 'pending', 'approved', 'rejected'] as const).map((status) => (
+              {[
+                { id: 'overview', label: '📊 Overview', icon: '📊' },
+                { id: 'finance', label: '💰 Finance', icon: '💰' },
+                { id: 'moderation', label: '🛡️ Moderation', icon: '🛡️' },
+                { id: 'operations', label: '⚙️ Operations', icon: '⚙️' },
+                { id: 'users', label: '👥 Users', icon: '👥' }
+              ].map((tab) => (
                 <button
-                  key={status}
-                  onClick={() => setFilter(status)}
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
                   className={`px-6 py-3 rounded-xl font-semibold transition-all ${
-                    filter === status
+                    activeTab === tab.id
                       ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                  {tab.label}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Freelancers Table */}
-          <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Freelancer</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Country</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Skills</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Hourly Rate</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Min Fee</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredFreelancers.map((freelancer) => (
-                    <tr key={freelancer.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold">
-                            {freelancer.display_name.charAt(0)}
+          {activeTab === 'overview' && (
+            <>
+              {/* Top-Level Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <StatCard
+                  title="Total Projects"
+                  value={metrics.totalProjects}
+                  icon="🧾"
+                  color="from-blue-500 to-cyan-500"
+                />
+                <StatCard
+                  title="Revenue (This Month)"
+                  value={formatCurrency(metrics.revenueThisMonth)}
+                  icon="💸"
+                  color="from-green-500 to-emerald-500"
+                />
+                <StatCard
+                  title="Pending Payouts"
+                  value={formatCurrency(metrics.pendingPayouts)}
+                  icon="💰"
+                  color="from-yellow-500 to-orange-500"
+                />
+                <StatCard
+                  title="Active Orders"
+                  value={metrics.activeOrders}
+                  icon="📦"
+                  color="from-purple-500 to-pink-500"
+                />
+                <StatCard
+                  title="Active Users"
+                  value={metrics.activeUsers}
+                  icon="👥"
+                  color="from-indigo-500 to-purple-500"
+                />
+                <StatCard
+                  title="Flagged Chats"
+                  value={metrics.flaggedChats}
+                  icon="⚠️"
+                  color="from-red-500 to-pink-500"
+                />
+                <StatCard
+                  title="Open Disputes"
+                  value={metrics.openDisputes}
+                  icon="💬"
+                  color="from-orange-500 to-red-500"
+                />
+                <StatCard
+                  title="Avg Response Time"
+                  value={`${metrics.avgResponseTime}h`}
+                  icon="⏱️"
+                  color="from-teal-500 to-cyan-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+                {/* Activity Feed */}
+                <div className="lg:col-span-2">
+                  <div className="bg-white rounded-2xl shadow-lg p-6">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-6">📢 Live Activity Feed</h2>
+                    <div className="space-y-4">
+                      {activityFeed.map((item) => (
+                        <div key={item.id} className="flex items-start space-x-3 p-4 bg-gray-50 rounded-xl">
+                          <div className="text-2xl">{getActivityIcon(item.type)}</div>
+                          <div className="flex-1">
+                            <p className="text-gray-900 font-medium">{item.message}</p>
+                            <div className="flex items-center justify-between mt-1">
+                              <span className="text-sm text-gray-500">{item.timestamp}</span>
+                              {item.amount && (
+                                <span className="text-sm font-semibold text-green-600">{formatCurrency(item.amount)}</span>
+                              )}
+                            </div>
                           </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-bold text-gray-900">{freelancer.display_name}</div>
-                            <div className="text-sm text-gray-500">{freelancer.title}</div>
-                            <div className="text-xs text-gray-400">{freelancer.contact_email}</div>
-                          </div>
                         </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{freelancer.country}</td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-wrap gap-1">
-                          {freelancer.skills.slice(0, 2).map((skill) => (
-                            <span key={skill} className="px-2 py-1 bg-indigo-50 text-indigo-700 text-xs rounded-full">
-                              {skill}
-                            </span>
-                          ))}
-                          {freelancer.skills.length > 2 && (
-                            <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
-                              +{freelancer.skills.length - 2}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                        ${(freelancer.hourly_rate / 100).toFixed(0)}/hr
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                        ${(freelancer.base_fee / 100).toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-3 py-1 text-xs font-bold rounded-full border-2 ${getStatusColor(freelancer.status)}`}>
-                          {freelancer.status.toUpperCase()}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() => setSelectedFreelancer(freelancer)}
-                            className="text-indigo-600 hover:text-indigo-900 font-semibold"
-                          >
-                            View
-                          </button>
-                          {freelancer.status === 'pending' && (
-                            <>
-                              <button
-                                onClick={() => updateStatus(freelancer.id, 'approved')}
-                                className="text-green-600 hover:text-green-900 font-semibold"
-                              >
-                                Approve
-                              </button>
-                              <button
-                                onClick={() => updateStatus(freelancer.id, 'rejected')}
-                                className="text-red-600 hover:text-red-900 font-semibold"
-                              >
-                                Reject
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        {/* Detail Modal */}
-        {selectedFreelancer && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
-              <div className="p-8">
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-3xl font-bold text-gray-900">Freelancer Details</h2>
-                  <button
-                    onClick={() => setSelectedFreelancer(null)}
-                    className="text-gray-400 hover:text-gray-600 text-2xl"
-                  >
-                    ✕
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700">Name</label>
-                      <p className="text-gray-900 text-lg">{selectedFreelancer.display_name}</p>
+                      ))}
                     </div>
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700">Email</label>
-                      <p className="text-gray-900">{selectedFreelancer.contact_email}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700">Phone</label>
-                      <p className="text-gray-900">{selectedFreelancer.contact_phone || 'Not provided'}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700">Hourly Rate</label>
-                      <p className="text-2xl font-bold text-indigo-600">${(selectedFreelancer.hourly_rate / 100).toFixed(0)}/hour</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700">Minimum Project Fee</label>
-                      <p className="text-2xl font-bold text-green-600">${(selectedFreelancer.base_fee / 100).toLocaleString()}</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700">Country</label>
-                      <p className="text-gray-900">{selectedFreelancer.country}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700">Status</label>
-                      <span className={`px-3 py-1 text-sm font-bold rounded-full border-2 ${getStatusColor(selectedFreelancer.status)}`}>
-                        {selectedFreelancer.status.toUpperCase()}
-                      </span>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700">Skills</label>
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {selectedFreelancer.skills.map((skill) => (
-                          <span key={skill} className="px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-sm font-medium">
-                            {skill}
-                          </span>
-                        ))}
-                      </div>
+                    <div className="mt-4 text-center">
+                      <button className="text-indigo-600 hover:text-indigo-800 font-semibold">View All Activity</button>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex justify-end space-x-4 mt-8">
-                  {selectedFreelancer.status === 'pending' && (
-                    <>
-                      <button
-                        onClick={() => { updateStatus(selectedFreelancer.id, 'approved'); setSelectedFreelancer(null); }}
-                        className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-bold"
-                      >
-                        Approve
-                      </button>
-                      <button
-                        onClick={() => { updateStatus(selectedFreelancer.id, 'rejected'); setSelectedFreelancer(null); }}
-                        className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold"
-                      >
-                        Reject
-                      </button>
-                    </>
-                  )}
-                  <button
-                    onClick={() => setSelectedFreelancer(null)}
-                    className="px-6 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-50 font-bold"
-                  >
-                    Close
+                {/* Pipeline Snapshot */}
+                <div className="bg-white rounded-2xl shadow-lg p-6">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-6">🔄 Project Pipeline</h2>
+                  <div className="space-y-4">
+                    <PipelineStage stage="New Requests" count={metrics.newRequests} change={0} color="bg-green-500" />
+                    <PipelineStage stage="Quotes Under Review" count={metrics.quotesUnderReview} change={0} color="bg-yellow-500" />
+                    <PipelineStage stage="SOW Signed" count={metrics.sowSigned} change={0} color="bg-blue-500" />
+                    <PipelineStage stage="In Delivery" count={metrics.inDelivery} change={0} color="bg-purple-500" />
+                    <PipelineStage stage="Completed" count={metrics.completed} change={0} color="bg-gray-800" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Actions */}
+              <div className="relative bg-bg-surface rounded-2xl shadow-card border border-white/5 p-6">
+                <div className="absolute inset-0 rounded-2xl bg-metal-sheen pointer-events-none"></div>
+                <div className="absolute -top-px left-6 right-6 h-px bg-specular-line opacity-30"></div>
+                <div className="relative">
+                  <h2 className="text-2xl font-bold text-text-base mb-6">⚡ Quick Actions</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                  <Link href="/admin/quotes" className="group p-4 border-2 border-white/10 rounded-xl hover:border-accent-blue/50 hover:bg-white/5 transition-all text-center">
+                    <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">💬</div>
+                    <div className="font-semibold text-text-base">Quote Requests</div>
+                    <div className="text-sm text-text-mute">{quoteRequests} pending</div>
+                  </Link>
+                  <Link href="/admin/products" className="group p-4 border-2 border-white/10 rounded-xl hover:border-accent-violet/50 hover:bg-white/5 transition-all text-center">
+                    <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">📦</div>
+                    <div className="font-semibold text-text-base">Manage Products</div>
+                    <div className="text-sm text-text-mute">Add & edit items</div>
+                  </Link>
+                  <Link href="/admin/orders" className="group p-4 border-2 border-white/10 rounded-xl hover:border-accent-cyan/50 hover:bg-white/5 transition-all text-center">
+                    <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">🛒</div>
+                    <div className="font-semibold text-text-base">Order Management</div>
+                    <div className="text-sm text-text-mute">{metrics.activeOrders} active</div>
+                  </Link>
+                  <button className="group p-4 border-2 border-white/10 rounded-xl hover:border-red-400/50 hover:bg-red-500/10 transition-all text-center">
+                    <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">🛡️</div>
+                    <div className="font-semibold text-text-base">Moderation</div>
+                    <div className="text-sm text-text-mute">{metrics.chatsUnderReview} under review</div>
                   </button>
+                  <Link href="/admin/team" className="group p-4 border-2 border-white/10 rounded-xl hover:border-accent-blue/50 hover:bg-white/5 transition-all text-center">
+                    <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">👥</div>
+                    <div className="font-semibold text-text-base">Team Management</div>
+                    <div className="text-sm text-text-mute">Manage team members</div>
+                  </Link>
+                </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {activeTab === 'finance' && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="bg-white rounded-2xl shadow-lg p-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">💰 Escrow & Payouts</h2>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
+                    <span className="font-medium">Total Escrow Balance</span>
+                    <span className="text-2xl font-bold text-green-600">{formatCurrency(125000)}</span>
+                  </div>
+                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
+                    <span className="font-medium">Pending Release Approvals</span>
+                    <span className="text-xl font-semibold text-orange-600">{formatCurrency(metrics.pendingPayouts)}</span>
+                  </div>
+                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
+                    <span className="font-medium">Upcoming Payout Runs</span>
+                    <span className="text-xl font-semibold text-blue-600">3 scheduled</span>
+                  </div>
+                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
+                    <span className="font-medium">Refunds This Week</span>
+                    <span className="text-xl font-semibold text-red-600">{formatCurrency(2400)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-2xl shadow-lg p-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">📈 Revenue Analytics</h2>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
+                    <span className="font-medium">Platform Commission</span>
+                    <span className="text-xl font-semibold text-purple-600">15.2%</span>
+                  </div>
+                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
+                    <span className="font-medium">Net Payouts to Freelancers</span>
+                    <span className="text-xl font-semibold text-green-600">{formatCurrency(40100)}</span>
+                  </div>
+                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
+                    <span className="font-medium">Refund Ratio</span>
+                    <span className="text-xl font-semibold text-orange-600">2.1%</span>
+                  </div>
+                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
+                    <span className="font-medium">Revenue Trend</span>
+                    <span className="text-xl font-semibold text-green-600">↗ +18% MoM</span>
+                  </div>
                 </div>
               </div>
             </div>
+          )}
+
+          {activeTab === 'moderation' && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="bg-white rounded-2xl shadow-lg p-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">🛡️ Moderation Overview</h2>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
+                    <span className="font-medium">Messages Blocked</span>
+                    <span className="text-xl font-semibold text-red-600">{metrics.moderation.messagesBlocked} this week</span>
+                  </div>
+                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
+                    <span className="font-medium">Muted Users</span>
+                    <span className="text-xl font-semibold text-orange-600">{metrics.moderation.mutedUsers}</span>
+                  </div>
+                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
+                    <span className="font-medium">Top Violation Type</span>
+                    <span className="text-xl font-semibold text-purple-600">{metrics.moderation.topViolationType}</span>
+                  </div>
+                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
+                    <span className="font-medium">Chats Under Review</span>
+                    <span className="text-xl font-semibold text-blue-600">{metrics.moderation.chatsUnderReview}</span>
+                  </div>
+                </div>
+                <div className="mt-6">
+                  <button className="w-full px-6 py-3 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 transition-colors">
+                    View Flagged Chats
+                  </button>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-2xl shadow-lg p-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">📊 Violation Breakdown</h2>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
+                    <span className="font-medium">Contact Sharing</span>
+                    <span className="text-xl font-semibold text-red-600">61%</span>
+                  </div>
+                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
+                    <span className="font-medium">Pricing Language</span>
+                    <span className="text-xl font-semibold text-orange-600">23%</span>
+                  </div>
+                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
+                    <span className="font-medium">External URLs</span>
+                    <span className="text-xl font-semibold text-yellow-600">12%</span>
+                  </div>
+                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
+                    <span className="font-medium">PII Sharing</span>
+                    <span className="text-xl font-semibold text-purple-600">4%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'users' && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="bg-white rounded-2xl shadow-lg p-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">👥 User Analytics</h2>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
+                    <span className="font-medium">Active Freelancers</span>
+                    <span className="text-xl font-semibold text-blue-600">{metrics.activeFreelancers} (▲15% MoM)</span>
+                  </div>
+                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
+                    <span className="font-medium">Active Clients</span>
+                    <span className="text-xl font-semibold text-green-600">{metrics.activeClients} (▲10% MoM)</span>
+                  </div>
+                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
+                    <span className="font-medium">Verified Suppliers</span>
+                    <span className="text-xl font-semibold text-purple-600">{metrics.verifiedSuppliers}</span>
+                  </div>
+                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
+                    <span className="font-medium">Applications Pending</span>
+                    <span className="text-xl font-semibold text-orange-600">{metrics.applicationsPending}</span>
+                  </div>
+                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
+                    <span className="font-medium">Suspended Accounts</span>
+                    <span className="text-xl font-semibold text-red-600">{metrics.suspendedAccounts}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-2xl shadow-lg p-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">📦 Dropshipping Summary</h2>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
+                    <span className="font-medium">Orders in Fulfillment</span>
+                    <span className="text-xl font-semibold text-blue-600">32</span>
+                  </div>
+                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
+                    <span className="font-medium">Avg Fulfillment Time</span>
+                    <span className="text-xl font-semibold text-green-600">19 hrs</span>
+                  </div>
+                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
+                    <span className="font-medium">Supplier Fill Rate</span>
+                    <span className="text-xl font-semibold text-purple-600">98%</span>
+                  </div>
+                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
+                    <span className="font-medium">Avg Margin per Order</span>
+                    <span className="text-xl font-semibold text-green-600">18.4%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'operations' && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="bg-white rounded-2xl shadow-lg p-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">⚙️ Platform Operations</h2>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
+                    <span className="font-medium">Freelancer Approvals</span>
+                    <span className="text-xl font-semibold text-orange-600">{metrics.applicationsPending} pending</span>
+                  </div>
+                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
+                    <span className="font-medium">Product Updates</span>
+                    <span className="text-xl font-semibold text-blue-600">3 pending</span>
+                  </div>
+                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
+                    <span className="font-medium">Unreplied Quotes</span>
+                    <span className="text-xl font-semibold text-yellow-600">6 overdue</span>
+                  </div>
+                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
+                    <span className="font-medium">System Flags</span>
+                    <span className="text-xl font-semibold text-red-600">2 active</span>
+                  </div>
+                </div>
+                <div className="mt-6 space-y-2">
+                  <button className="w-full px-6 py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 transition-colors">
+                    Approve All Pending
+                  </button>
+                  <button className="w-full px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors">
+                    Review System Flags
+                  </button>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-2xl shadow-lg p-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">🔧 System Health</h2>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
+                    <span className="font-medium">Database Latency</span>
+                    <span className="text-xl font-semibold text-green-600">✅ {metrics.systemHealth.databaseLatency}ms</span>
+                  </div>
+                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
+                    <span className="font-medium">Edge Function Errors</span>
+                    <span className={`text-xl font-semibold ${metrics.systemHealth.edgeFunctionErrors > 0 ? 'text-yellow-600' : 'text-green-600'}`}>
+                      {metrics.systemHealth.edgeFunctionErrors > 0 ? '⚠️' : '✅'} {metrics.systemHealth.edgeFunctionErrors} today
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
+                    <span className="font-medium">Email API Uptime</span>
+                    <span className="text-xl font-semibold text-green-600">✅ {metrics.systemHealth.emailApiUptime}%</span>
+                  </div>
+                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
+                    <span className="font-medium">Payment Webhook</span>
+                    <span className="text-xl font-semibold text-green-600">✅ {metrics.systemHealth.paymentWebhook}</span>
+                  </div>
+                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
+                    <span className="font-medium">File Scan Service</span>
+                    <span className="text-xl font-semibold text-green-600">✅ {metrics.systemHealth.fileScanService}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Notifications & Tasks Panel */}
+          <div className="mt-8 bg-white rounded-2xl shadow-lg p-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">📋 Notifications & Tasks</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="p-4 border-2 border-orange-200 rounded-xl bg-orange-50">
+                <div className="text-2xl mb-2">👥</div>
+                <div className="font-semibold text-gray-900">Approve Pending Freelancers</div>
+                <div className="text-sm text-gray-600">{metrics.applicationsPending} waiting</div>
+              </div>
+              <div className="p-4 border-2 border-red-200 rounded-xl bg-red-50">
+                <div className="text-2xl mb-2">🛡️</div>
+                <div className="font-semibold text-gray-900">Review Flagged Chats</div>
+                <div className="text-sm text-gray-600">{metrics.chatsUnderReview} under review</div>
+              </div>
+              <div className="p-4 border-2 border-green-200 rounded-xl bg-green-50">
+                <div className="text-2xl mb-2">💰</div>
+                <div className="font-semibold text-gray-900">Release Escrow</div>
+                <div className="text-sm text-gray-600">3 completed projects</div>
+              </div>
+              <div className="p-4 border-2 border-purple-200 rounded-xl bg-purple-50">
+                <div className="text-2xl mb-2">⚖️</div>
+                <div className="font-semibold text-gray-900">Respond to Disputes</div>
+                <div className="text-sm text-gray-600">{metrics.openDisputes} open cases</div>
+              </div>
+            </div>
           </div>
-        )}
+        </div>
       </div>
     </>
   )
@@ -408,18 +663,33 @@ export default function AdminDashboard({ freelancers, pendingCount, approvedCoun
 
 export const getServerSideProps: GetServerSideProps = async () => {
   try {
-    // Fetch all freelancers (including private data)
-    const { data: freelancers, error } = await supabase
-      .from('freelancers')
-      .select('*')
-      .order('created_at', { ascending: false })
+    let freelancers = []
+    let quoteRequests = 0
 
-    if (error) throw error
+    try {
+      const { data: freelancersData, error } = await supabase
+        .from('freelancers')
+        .select('*')
+        .order('created_at', { ascending: false })
 
-    // Get counts
-    const { count: quoteCount } = await supabase
-      .from('quote_requests')
-      .select('*', { count: 'exact', head: true })
+      if (!error && freelancersData) {
+        freelancers = freelancersData
+      }
+
+      // Fetch quote requests count from Supabase
+      try {
+        const { count: quoteCount } = await supabase
+          .from('quote_requests')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'pending');
+
+        quoteRequests = quoteCount || 0;
+      } catch (supabaseError) {
+        console.log('Error fetching quote requests count:', supabaseError);
+      }
+    } catch (supabaseError) {
+      console.log('Supabase not configured, using fallback data')
+    }
 
     const pendingCount = freelancers?.filter(f => f.status === 'pending').length || 0
     const approvedCount = freelancers?.filter(f => f.status === 'approved').length || 0
@@ -429,11 +699,11 @@ export const getServerSideProps: GetServerSideProps = async () => {
         freelancers: freelancers || [],
         pendingCount,
         approvedCount,
-        quoteRequests: quoteCount || 0,
+        quoteRequests,
       },
     }
   } catch (error) {
-    console.error('Error fetching admin data:', error)
+    console.error('Error in admin page:', error)
     return {
       props: {
         freelancers: [],

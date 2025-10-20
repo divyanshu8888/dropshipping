@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { supabaseAdmin } from '../../../src/lib/supabase-admin';
+import { supabase } from '../../../src/lib/supabase';
 import bcrypt from 'bcryptjs';
 
 export default async function handler(
@@ -20,14 +20,29 @@ export default async function handler(
       });
     }
 
-    // Find user by email
-    const { data: user, error: userError } = await supabaseAdmin
-      .from('users')
+    // Find user by email in freelancers table first
+    let { data: freelancer, error: freelancerError } = await supabase
+      .from('freelancers')
       .select('*')
-      .eq('email', email)
+      .eq('email', email.toLowerCase())
       .single();
 
-    if (userError || !user) {
+    // If not found in freelancers, check clients table
+    let { data: client, error: clientError } = null;
+    if (!freelancer) {
+      const result = await supabase
+        .from('clients')
+        .select('*')
+        .eq('email', email.toLowerCase())
+        .single();
+      client = result.data;
+      clientError = result.error;
+    }
+
+    const user = freelancer || client;
+    const userError = freelancerError || clientError;
+
+    if (!user || userError) {
       return res.status(401).json({ 
         error: 'Invalid email or password' 
       });
@@ -41,6 +56,13 @@ export default async function handler(
       });
     }
 
+    // Update last login time
+    const tableName = freelancer ? 'freelancers' : 'clients';
+    await supabase
+      .from(tableName)
+      .update({ last_login_at: new Date().toISOString() })
+      .eq('id', user.id);
+
     // Return user data (without password)
     return res.status(200).json({ 
       success: true,
@@ -49,8 +71,8 @@ export default async function handler(
         id: user.id,
         name: user.name,
         email: user.email,
-        role: user.role,
-        createdAt: user.createdAt
+        role: freelancer ? 'FREELANCER' : 'CLIENT',
+        createdAt: user.created_at
       }
     });
 
