@@ -135,7 +135,53 @@ INSERT INTO products (name, description, price, category, image_url, stock, is_a
               </div>
 
               <div className="border-t border-white/10 pt-6">
-                <h2 className="text-xl font-semibold text-white mb-4">Step 3: Verify Setup</h2>
+                <h2 className="text-xl font-semibold text-white mb-4">Step 3: Fix Image Paths (if needed)</h2>
+                <p className="text-text-mute mb-4">
+                  If you see 404 errors for images, run this additional SQL script to fix the image paths:
+                </p>
+                <div className="bg-black/20 rounded-lg p-4 border border-white/10 mb-4">
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="text-sm text-text-mute">Image Path Fix Script</span>
+                    <button
+                      onClick={() => {
+                        const fixScript = `UPDATE products SET image_url = '/images/products/content-writing.jpg' WHERE name = 'Business Analysis';
+UPDATE products SET image_url = '/images/products/OIP.jpg' WHERE name = 'Blockchain Development';
+UPDATE products SET image_url = '/images/products/data-analysis.jpg' WHERE name = 'AI/ML Development';
+UPDATE products SET image_url = '/images/products/mobile-app-development.jpg' WHERE name = 'Game Development';
+UPDATE products SET image_url = '/images/products/technical-consulting.jpg' WHERE name = 'Cybersecurity Services';
+UPDATE products SET image_url = '/images/products/devops-services.jpg' WHERE name = 'Cloud Architecture';
+UPDATE products SET image_url = '/images/products/website-development.jpg' WHERE name = 'API Development';
+UPDATE products SET image_url = '/images/products/data-analysis.jpg' WHERE name = 'Quality Assurance';
+UPDATE products SET image_url = '/images/products/digital-marketing.jpg' WHERE name = 'Project Management';
+UPDATE products SET image_url = '/images/products/logo-design.jpg' WHERE name = 'Brand Identity Design';
+UPDATE products SET image_url = '/images/products/voice-over-services.jpg' WHERE name = 'Voice Over Services';`
+                        navigator.clipboard.writeText(fixScript)
+                        setCopied(true)
+                        setTimeout(() => setCopied(false), 2000)
+                      }}
+                      className="px-3 py-1 bg-accent-blue/20 text-accent-blue text-sm rounded-lg hover:bg-accent-blue/30 transition-colors"
+                    >
+                      {copied ? 'Copied!' : 'Copy Fix Script'}
+                    </button>
+                  </div>
+                  <pre className="text-xs text-green-400 overflow-x-auto">
+                    <code>{`UPDATE products SET image_url = '/images/products/content-writing.jpg' WHERE name = 'Business Analysis';
+UPDATE products SET image_url = '/images/products/OIP.jpg' WHERE name = 'Blockchain Development';
+UPDATE products SET image_url = '/images/products/data-analysis.jpg' WHERE name = 'AI/ML Development';
+UPDATE products SET image_url = '/images/products/mobile-app-development.jpg' WHERE name = 'Game Development';
+UPDATE products SET image_url = '/images/products/technical-consulting.jpg' WHERE name = 'Cybersecurity Services';
+UPDATE products SET image_url = '/images/products/devops-services.jpg' WHERE name = 'Cloud Architecture';
+UPDATE products SET image_url = '/images/products/website-development.jpg' WHERE name = 'API Development';
+UPDATE products SET image_url = '/images/products/data-analysis.jpg' WHERE name = 'Quality Assurance';
+UPDATE products SET image_url = '/images/products/digital-marketing.jpg' WHERE name = 'Project Management';
+UPDATE products SET image_url = '/images/products/logo-design.jpg' WHERE name = 'Brand Identity Design';
+UPDATE products SET image_url = '/images/products/voice-over-services.jpg' WHERE name = 'Voice Over Services';`}</code>
+                  </pre>
+                </div>
+              </div>
+
+              <div className="border-t border-white/10 pt-6">
+                <h2 className="text-xl font-semibold text-white mb-4">Step 4: Verify Setup</h2>
                 <p className="text-text-mute mb-4">
                   After running the SQL, you should see 30 products in your products table.
                 </p>
