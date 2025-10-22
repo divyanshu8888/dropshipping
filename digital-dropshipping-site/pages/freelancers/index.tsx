@@ -297,7 +297,7 @@ export const getServerSideProps: GetServerSideProps = async () => {
   try {
     // Fetch all approved freelancers from database (NO PRICING!)
     const { data: freelancers, error } = await supabase
-      .from('freelancers')
+      .from('freelancers_public')
       .select(`
         id, 
         display_name, 

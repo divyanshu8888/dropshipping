@@ -13,7 +13,7 @@ const CartPage = () => {
         router.push('/checkout');
     };
 
-    const handleRemoveItem = (id: number) => {
+    const handleRemoveItem = (id: string) => {
         removeFromCart(id);
     };
 

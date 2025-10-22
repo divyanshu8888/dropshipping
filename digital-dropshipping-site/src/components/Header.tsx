@@ -40,10 +40,7 @@ const Header: React.FC = () => {
     };
 
     return (
-        <header className={scrolled 
-            ? 'sticky top-0 z-50 transition-all duration-500 bg-black/70 backdrop-blur-xl shadow-md border-b border-white/10'
-            : 'sticky top-0 z-50 transition-all duration-500 bg-black/60 backdrop-blur-xl border-b border-white/10'
-        }>
+        <header className="sticky top-0 z-50 bg-black/60 backdrop-blur-xl border-b border-white/10">
             {/* Soft glow divider */}
             <div className="absolute left-0 right-0 top-[100%] h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
             <div className="mx-auto max-w-7xl h-16 px-6 flex items-center justify-between">
@@ -52,32 +49,29 @@ const Header: React.FC = () => {
                         <div className="relative">
                             <div className="absolute inset-0 rounded-xl blur-md bg-gradient-to-r from-cyan-400 to-violet-500 opacity-40 group-hover:opacity-60 transition-opacity duration-300"></div>
                             <div className="relative w-10 h-10 bg-gradient-to-br from-cyan-400 via-blue-500 to-violet-500 rounded-xl flex items-center justify-center shadow-[0_4px_20px_rgba(96,165,250,0.25)] group-hover:shadow-[0_8px_40px_rgba(96,165,250,0.35)] transition-all duration-300 group-hover:scale-105">
-                                <span className="text-white font-bold text-lg">T</span>
+                                <span className="text-white font-bold text-lg">F</span>
                             </div>
                         </div>
                         <span className="text-white font-semibold text-xl tracking-tight">
-                            TalentHub Pro
+                            FoundryHQ
                         </span>
                     </Link>
                 </div>
                 
                 {/* Desktop Navigation */}
-                <nav className="hidden md:flex items-center gap-8 text-text-mute">
-                    <Link href="/freelancers" className="relative text-white/70 hover:text-white transition-colors duration-200 text-sm font-medium after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-0 after:bg-gradient-to-r after:from-cyan-400 after:to-violet-400 hover:after:w-full after:transition-all after:duration-300">
+                <nav className="hidden md:flex items-center gap-8">
+                    <Link href="/freelancers" className="relative text-white/70 hover:text-white transition after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-0 after:bg-gradient-to-r from-cyan-400 to-violet-400 hover:after:w-full after:transition-all after:duration-300 focus:ring-2 focus:ring-white/50 focus:outline-none rounded px-1 py-1">
                         Freelancers
                     </Link>
-                    <Link href="/products" className="relative text-white/70 hover:text-white transition-colors duration-200 text-sm font-medium after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-0 after:bg-gradient-to-r after:from-cyan-400 after:to-violet-400 hover:after:w-full after:transition-all after:duration-300">
+                    <Link href="/products" className="relative text-white/70 hover:text-white transition after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-0 after:bg-gradient-to-r from-cyan-400 to-violet-400 hover:after:w-full after:transition-all after:duration-300 focus:ring-2 focus:ring-white/50 focus:outline-none rounded px-1 py-1">
                         Products
-                    </Link>
-                    <Link href="/admin" className="relative text-white/70 hover:text-white transition-colors duration-200 text-sm font-medium after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-0 after:bg-gradient-to-r after:from-cyan-400 after:to-violet-400 hover:after:w-full after:transition-all after:duration-300">
-                        Admin
                     </Link>
                     
                     {/* Role-specific Dashboard Links */}
                     {canAccessAdminDashboard(user?.role || '') && (
                         <Link href="/admin" className="text-text-soft hover:text-accent-violet hover:bg-white/5 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 hover:scale-105 flex items-center">
                             <span className="mr-2">🧭</span>
-                            {user?.role === 'ADMIN' ? 'Admin Dashboard' : 'Dashboard'}
+                            Admin Dashboard
                         </Link>
                     )}
                     {user?.role === 'FREELANCER' && (
@@ -121,10 +115,10 @@ const Header: React.FC = () => {
                         </div>
                         ) : (
                             <div className="flex items-center gap-4">
-                                <Link href="/login" className="text-text-mute hover:text-white px-3 py-2 transition-colors duration-200 text-sm font-medium">
+                                <Link href="/login" className="relative text-white/70 hover:text-white transition after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-0 after:bg-gradient-to-r from-cyan-400 to-violet-400 hover:after:w-full after:transition-all after:duration-300 focus:ring-2 focus:ring-white/50 focus:outline-none rounded px-1 py-1">
                                     Log in
                                 </Link>
-                                <Link href="/signup" className="group inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500 text-white px-5 py-2.5 font-semibold text-sm shadow-[0_0_15px_rgba(96,165,250,0.35)] hover:shadow-[0_0_25px_rgba(96,165,250,0.45)] hover:scale-[1.03] transition-all duration-300">
+                                <Link href="/signup" className="group inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500 text-white px-5 py-2.5 font-semibold text-sm shadow-[0_0_15px_rgba(96,165,250,0.35)] hover:shadow-[0_0_25px_rgba(96,165,250,0.45)] hover:scale-[1.03] transition-all duration-300 focus:ring-2 focus:ring-white/50 focus:outline-none">
                                     Get started
                                     <svg className="w-3 h-3 transition-transform group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="none">
                                         <path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
@@ -138,7 +132,7 @@ const Header: React.FC = () => {
                 <div className="md:hidden">
                     <button 
                         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                        className="text-text-mute hover:text-white p-2 rounded-xl hover:bg-white/5 transition-all duration-200"
+                        className="text-text-mute hover:text-white p-2 rounded-xl hover:bg-white/5 transition-all duration-200 focus:ring-2 focus:ring-white/50 focus:outline-none"
                     >
                         <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             {isMobileMenuOpen ? (
@@ -164,15 +158,12 @@ const Header: React.FC = () => {
                             <Link href="/products" className="text-text-soft hover:text-text-base hover:bg-white/5 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200">
                                 Products
                             </Link>
-                            <Link href="/admin" className="text-text-soft hover:text-text-base hover:bg-white/5 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200">
-                                Admin
-                            </Link>
                         
                         {/* Role-specific Dashboard Links */}
                         {canAccessAdminDashboard(user?.role || '') && (
                             <Link href="/admin" className="text-text-soft hover:text-accent-violet hover:bg-white/5 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 flex items-center">
                                 <span className="mr-2">🧭</span>
-                                {user?.role === 'ADMIN' ? 'Admin Dashboard' : 'Dashboard'}
+                                Admin Dashboard
                             </Link>
                         )}
                         {user?.role === 'FREELANCER' && (

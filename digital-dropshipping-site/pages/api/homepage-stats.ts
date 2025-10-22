@@ -16,9 +16,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     ] = await Promise.all([
       // Count active freelancers
       supabase
-        .from('freelancers')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'approved'),
+        .from('freelancers_public')
+        .select('*', { count: 'exact', head: true }),
       
       // Count completed projects
       supabase
@@ -33,7 +32,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
       // Get unique countries from freelancers
       supabase
-        .from('freelancers')
+        .from('freelancers_public')
         .select('country')
         .not('country', 'is', null)
     ]);
@@ -55,7 +54,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } catch (error) {
     console.error('Error fetching homepage stats:', error);
     
-    // Return zero stats if there's an error
+    // Return zero stats when database is not connected
     res.status(200).json({
       totalFreelancers: 0,
       totalProjects: 0,

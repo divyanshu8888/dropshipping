@@ -229,7 +229,7 @@ export default function AdminDashboard({ freelancers, pendingCount, approvedCoun
         <section className="relative overflow-hidden">
           <div className="absolute inset-0 bg-hero-gradient"></div>
           <div className="relative bg-gradient-to-r from-accent-blue to-accent-violet text-white py-12 pt-24">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-4xl font-extrabold mb-2">🧭 Admin Command Center</h1>
@@ -251,7 +251,7 @@ export default function AdminDashboard({ freelancers, pendingCount, approvedCoun
                   Logout
                 </button>
               </div>
-            </div>
+              </div>
             </div>
           </div>
         </section>
@@ -352,7 +352,7 @@ export default function AdminDashboard({ freelancers, pendingCount, approvedCoun
                               {item.amount && (
                                 <span className="text-sm font-semibold text-green-600">{formatCurrency(item.amount)}</span>
                               )}
-                            </div>
+                          </div>
                           </div>
                         </div>
                       ))}
@@ -374,7 +374,7 @@ export default function AdminDashboard({ freelancers, pendingCount, approvedCoun
                     <PipelineStage stage="Completed" count={metrics.completed} change={0} color="bg-gray-800" />
                   </div>
                 </div>
-              </div>
+                        </div>
 
               {/* Quick Actions */}
               <div className="relative bg-bg-surface rounded-2xl shadow-card border border-white/5 p-6">
@@ -407,7 +407,7 @@ export default function AdminDashboard({ freelancers, pendingCount, approvedCoun
                     <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">🛡️</div>
                     <div className="font-semibold text-text-base">Moderation</div>
                     <div className="text-sm text-text-mute">{metrics.chatsUnderReview} under review</div>
-                  </button>
+                          </button>
                   <Link href="/admin/team" className="group p-4 border-2 border-white/10 rounded-xl hover:border-accent-blue/50 hover:bg-white/5 transition-all text-center">
                     <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">👥</div>
                     <div className="font-semibold text-text-base">Team Management</div>
@@ -416,8 +416,8 @@ export default function AdminDashboard({ freelancers, pendingCount, approvedCoun
                 </div>
                 </div>
               </div>
-            </>
-          )}
+                            </>
+                          )}
 
           {activeTab === 'finance' && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -435,13 +435,13 @@ export default function AdminDashboard({ freelancers, pendingCount, approvedCoun
                   <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
                     <span className="font-medium">Upcoming Payout Runs</span>
                     <span className="text-xl font-semibold text-blue-600">3 scheduled</span>
-                  </div>
+                        </div>
                   <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
                     <span className="font-medium">Refunds This Week</span>
                     <span className="text-xl font-semibold text-red-600">{formatCurrency(2400)}</span>
-                  </div>
-                </div>
-              </div>
+            </div>
+          </div>
+        </div>
 
               <div className="bg-white rounded-2xl shadow-lg p-6">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">📈 Revenue Analytics</h2>
@@ -524,7 +524,7 @@ export default function AdminDashboard({ freelancers, pendingCount, approvedCoun
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               <div className="bg-white rounded-2xl shadow-lg p-6">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">👥 User Analytics</h2>
-                <div className="space-y-4">
+                  <div className="space-y-4">
                   <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
                     <span className="font-medium">Active Freelancers</span>
                     <span className="text-xl font-semibold text-blue-600">{metrics.activeFreelancers} (▲15% MoM)</span>
@@ -532,25 +532,25 @@ export default function AdminDashboard({ freelancers, pendingCount, approvedCoun
                   <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
                     <span className="font-medium">Active Clients</span>
                     <span className="text-xl font-semibold text-green-600">{metrics.activeClients} (▲10% MoM)</span>
-                  </div>
+                    </div>
                   <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
                     <span className="font-medium">Verified Suppliers</span>
                     <span className="text-xl font-semibold text-purple-600">{metrics.verifiedSuppliers}</span>
-                  </div>
+                    </div>
                   <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
                     <span className="font-medium">Applications Pending</span>
                     <span className="text-xl font-semibold text-orange-600">{metrics.applicationsPending}</span>
-                  </div>
+                    </div>
                   <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
                     <span className="font-medium">Suspended Accounts</span>
                     <span className="text-xl font-semibold text-red-600">{metrics.suspendedAccounts}</span>
+                    </div>
+                    </div>
                   </div>
-                </div>
-              </div>
 
               <div className="bg-white rounded-2xl shadow-lg p-6">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">📦 Dropshipping Summary</h2>
-                <div className="space-y-4">
+                  <div className="space-y-4">
                   <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
                     <span className="font-medium">Orders in Fulfillment</span>
                     <span className="text-xl font-semibold text-blue-600">32</span>
@@ -558,18 +558,18 @@ export default function AdminDashboard({ freelancers, pendingCount, approvedCoun
                   <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
                     <span className="font-medium">Avg Fulfillment Time</span>
                     <span className="text-xl font-semibold text-green-600">19 hrs</span>
-                  </div>
+                    </div>
                   <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
                     <span className="font-medium">Supplier Fill Rate</span>
                     <span className="text-xl font-semibold text-purple-600">98%</span>
-                  </div>
+                    </div>
                   <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
                     <span className="font-medium">Avg Margin per Order</span>
                     <span className="text-xl font-semibold text-green-600">18.4%</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
           )}
 
           {activeTab === 'operations' && (
@@ -597,7 +597,7 @@ export default function AdminDashboard({ freelancers, pendingCount, approvedCoun
                 <div className="mt-6 space-y-2">
                   <button className="w-full px-6 py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 transition-colors">
                     Approve All Pending
-                  </button>
+                      </button>
                   <button className="w-full px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors">
                     Review System Flags
                   </button>
@@ -628,11 +628,11 @@ export default function AdminDashboard({ freelancers, pendingCount, approvedCoun
                   <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
                     <span className="font-medium">File Scan Service</span>
                     <span className="text-xl font-semibold text-green-600">✅ {metrics.systemHealth.fileScanService}</span>
-                  </div>
                 </div>
               </div>
             </div>
-          )}
+          </div>
+        )}
 
           {/* Notifications & Tasks Panel */}
           <div className="mt-8 bg-white rounded-2xl shadow-lg p-6">
@@ -673,9 +673,9 @@ export const getServerSideProps: GetServerSideProps = async () => {
 
     try {
       const { data: freelancersData, error } = await supabase
-        .from('freelancers')
-        .select('*')
-        .order('created_at', { ascending: false })
+      .from('freelancers')
+      .select('*')
+      .order('created_at', { ascending: false })
 
       if (!error && freelancersData) {
         freelancers = freelancersData
@@ -683,9 +683,9 @@ export const getServerSideProps: GetServerSideProps = async () => {
 
       // Fetch quote requests count from Supabase
       try {
-        const { count: quoteCount } = await supabase
-          .from('quote_requests')
-          .select('*', { count: 'exact', head: true })
+    const { count: quoteCount } = await supabase
+      .from('quote_requests')
+      .select('*', { count: 'exact', head: true })
           .eq('status', 'pending');
 
         quoteRequests = quoteCount || 0;

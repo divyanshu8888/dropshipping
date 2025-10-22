@@ -4,9 +4,16 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import Header from '../src/components/Header';
 
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
 export default function ClientDashboard() {
   const router = useRouter();
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

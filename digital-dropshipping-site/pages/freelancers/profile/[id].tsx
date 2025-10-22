@@ -62,8 +62,8 @@ export default function FreelancerProfile({ freelancer, reviews, portfolio }: Fr
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-100">
       <Head>
-        <title>{freelancer.display_name} - TalentHub Pro</title>
-        <meta name="description" content={freelancer.description} />
+        <title>{freelancer?.display_name || 'Freelancer'} - TalentHub Pro</title>
+        <meta name="description" content={freelancer?.description || 'Professional freelancer profile'} />
       </Head>
 
       <Header />
@@ -337,7 +337,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 
     // Fetch freelancer details with services
     const { data: freelancer, error: freelancerError } = await supabase
-      .from('freelancers')
+      .from('freelancers_public')
       .select(`
         *,
         freelancer_services (

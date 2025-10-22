@@ -92,8 +92,8 @@ export default async function handler(
       supabase.from('projects').select('*', { count: 'exact', head: true }).eq('status', 'completed')
     ]);
 
-    // Calculate average response time (mock calculation for now)
-    const avgResponseTime = 2.6; // This would need to be calculated from actual data
+    // Calculate average response time (placeholder - needs actual calculation)
+    const avgResponseTime = 0; // This would need to be calculated from actual data
 
     // Get system health metrics
     const systemHealth = {
@@ -139,7 +139,7 @@ export default async function handler(
       // System health
       systemHealth,
       
-      // Moderation metrics (mock for now)
+      // Moderation metrics
       moderation: {
         messagesBlocked: 0,
         mutedUsers: 0,

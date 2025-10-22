@@ -5,6 +5,7 @@ import Header from '../src/components/Header';
 import QuoteRequestForm from '../src/components/QuoteRequestForm';
 import { supabase } from '../src/lib/supabase';
 
+
 // Chip Component - Superhuman Style
 type ChipProps = { 
   label: string; 
@@ -117,15 +118,84 @@ interface Stats {
   countries: number;
 }
 
+interface Freelancer {
+  id: string;
+  display_name: string;
+  title: string;
+  avatar_url?: string;
+  rating: number;
+  skills: string[];
+}
+
+interface Project {
+  id: string;
+  title: string;
+  description: string;
+  status: string;
+  created_at: string;
+}
+
 interface HomePageProps {
   testimonials: Testimonial[];
   stats: Stats;
+  recentFreelancers: Freelancer[];
+  featuredProjects: Project[];
 }
 
-const HomePage = ({ testimonials, stats }: HomePageProps) => {
+// Animated Word Swap Component with Visible Effects
+const AnimatedWordSwap = () => {
+  const words = ['World-Class Talent', 'Design Experts', 'Dev Teams', 'SEO Pros', 'Data & AI'];
+  const [currentWordIndex, setCurrentWordIndex] = useState(0);
+  const [isBlinking, setIsBlinking] = useState(false);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Start blinking effect
+      setIsBlinking(true);
+      
+      // Change word after a short delay
+      setTimeout(() => {
+        setCurrentWordIndex((prevIndex) => (prevIndex + 1) % words.length);
+        setIsBlinking(false);
+      }, 400);
+    }, 2500);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <span className="relative inline-block min-h-[1.2em]">
+      {words.map((word, index) => (
+        <span
+          key={word}
+          className={`absolute inset-0 transition-all duration-600 ease-in-out ${
+            index === currentWordIndex 
+              ? `opacity-100 transform translate-y-0 scale-100 ${isBlinking ? 'animate-text-blink' : ''}` 
+              : 'opacity-0 transform translate-y-6 scale-90'
+          }`}
+          style={{
+            color: index === currentWordIndex ? '#06b6d4' : '#3b82f6',
+            textShadow: index === currentWordIndex 
+              ? '0 0 10px #06b6d4, 0 0 20px #06b6d4, 0 0 30px #06b6d4, 0 0 40px #06b6d4' 
+              : 'none',
+            filter: index === currentWordIndex 
+              ? 'drop-shadow(0 0 8px #06b6d4) drop-shadow(0 0 16px #3b82f6) drop-shadow(0 0 24px #8b5cf6)' 
+              : 'none',
+            fontWeight: index === currentWordIndex ? '700' : '600'
+          }}
+        >
+          {word}
+        </span>
+      ))}
+    </span>
+  );
+};
+
+const HomePage = ({ testimonials, stats, recentFreelancers, featuredProjects }: HomePageProps) => {
   const [currentTestimonialIndex, setCurrentTestimonialIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const [showQuoteForm, setShowQuoteForm] = useState(false);
+
 
   // Auto-rotate testimonials every 5 seconds
   useEffect(() => {
@@ -163,58 +233,134 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
       
       {/* Hero Section - Framer Style */}
       <section className="relative overflow-hidden bg-bg-base">
-        {/* Animated metallic gradient background */}
-        <div 
-          className="absolute inset-0"
+        {/* Ambient lighting behind hero */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,rgba(99,102,241,0.1),transparent_70%)] animate-pulse"></div>
+        
+        {/* Background depth - faint radial gradient for focus */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,rgba(56,189,248,0.08),transparent_70%)]"></div>
+        
+        {/* Breathing glow orbs */}
+        <div className="pointer-events-none absolute -top-48 left-[12%] w-[28rem] h-[28rem] rounded-full bg-cyan-500/12 blur-[120px] animate-[pulse_12s_ease-in-out_infinite]"></div>
+        <div className="pointer-events-none absolute -bottom-48 right-[10%] w-[26rem] h-[26rem] rounded-full bg-violet-500/12 blur-[110px] animate-[pulse_14s_ease-in-out_infinite]"></div>
+        
+        {/* Floating glow blob */}
+        <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-gradient-to-r from-cyan-400/20 via-blue-500/20 to-violet-500/20 blur-3xl animate-[pulse_8s_ease-in-out_infinite]"></div>
+        
+        {/* Slow conic halo */}
+        <div className="pointer-events-none absolute inset-0 -z-10 [mask-image:radial-gradient(60%_70%_at_50%_20%,black,transparent)]">
+          <div 
+            className="absolute left-1/2 top-[-30%] -translate-x-1/2 w-[1100px] h-[1100px] rounded-full blur-3xl opacity-20"
           style={{
-            background: `
-              radial-gradient(
-                80% 120% at 50% 0%,
-                rgba(139,92,246,0.25),
-                rgba(59,130,246,0.15) 45%,
-                rgba(6,182,212,0.12) 70%,
-                transparent 80%
-              ),
-              #0B0C0F
-            `,
-            animation: 'gradientShift 12s ease-in-out infinite alternate'
-          }}
-        />
+              background: 'conic-gradient(from 180deg,#67e8f9,#60a5fa,#a78bfa,transparent 70%)',
+              animation: 'spin 36s linear infinite'
+            }}
+          ></div>
+        </div>
 
-        {/* Single slow glow orb - breathing blur */}
-        <div className="absolute w-[400px] h-[400px] rounded-full bg-gradient-to-r from-cyan-500/15 via-blue-500/10 to-violet-500/15 blur-[140px] top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-slow-pulse"></div>
-
-        <div className="relative mx-auto max-w-7xl px-6 pt-32 pb-32 text-center">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-white leading-[1.05] font-display fade-up" style={{animationDelay: '100ms'}}>
-            Where Businesses Meet <span className="bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500 bg-clip-text text-transparent">World-Class Talent</span>
+        <div className="relative mx-auto max-w-7xl px-6 pt-28 pb-24 text-center">
+          <h1 className="text-5xl md:text-7xl font-bold tracking-tight leading-tight text-white fade-up font-display" style={{animationDelay: '100ms'}}>
+            Where Projects Get <span className="gradient-text">Forged & Shipped</span>
           </h1>
-          <p className="mx-auto mt-8 max-w-3xl text-lg text-white/70 leading-[1.7] font-medium fade-up" style={{animationDelay: '200ms'}}>
-            Connect with vetted freelancers. Get quotes. Start projects — all in one platform.
+          <p className="mt-4 text-lg text-white/70 fade-up font-body" style={{animationDelay: '200ms'}}>
+            Forge. Ship. Repeat. Verified talent, faster outcomes—projects that finish.
           </p>
 
-            <div className="mt-16 flex flex-col sm:flex-row gap-4 justify-center fade-up" style={{animationDelay: '300ms'}}>
+            <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center fade-up" style={{animationDelay: '300ms'}}>
               <button
               onClick={() => setShowQuoteForm(true)}
-              className="group inline-flex items-center gap-2 rounded-xl px-8 py-4 text-lg font-semibold text-white bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500 shadow-[0_0_24px_rgba(96,165,250,0.35)] transition-all duration-300 hover:scale-[1.05] hover:shadow-[0_0_40px_rgba(96,165,250,0.7)] hover:-translate-y-1"
+              className="group inline-flex items-center gap-2 rounded-xl px-6 py-3 font-semibold text-white bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500 shadow-[0_0_24px_rgba(96,165,250,0.35)] transition-all duration-300 hover:scale-[1.03] hover:shadow-[0_0_20px_rgba(96,165,250,0.5)] relative overflow-hidden focus:ring-2 focus:ring-white/50 focus:outline-none cta"
             >
-              Request a Quote
-              <svg className="size-5 transition group-hover:translate-x-1 group-hover:scale-110" viewBox="0 0 24 24" fill="none">
+              <span className="relative z-10">Request a Quote</span>
+              <svg className="size-4 transition-transform group-hover:translate-x-0.5 relative z-10" viewBox="0 0 24 24" fill="none">
                 <path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
               </svg>
+              {/* Shimmer effect */}
+              <div className="absolute inset-0 -top-1 -left-1 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12 animate-shimmer opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             </button>
             <Link
               href="/freelancers"
-              className="rounded-full px-8 py-4 text-lg font-medium border border-white/10 bg-white/5 text-white/80 backdrop-blur-sm hover:bg-white/10 hover:border-white/20 hover:shadow-[0_0_20px_rgba(255,255,255,0.15)] transition-all duration-300 hover:-translate-y-0.5"
+              className="rounded-xl px-6 py-3 border border-white/12 bg-white/5 text-white/85 hover:bg-white/10 transition-all duration-200 backdrop-blur-sm focus:ring-2 focus:ring-white/50 focus:outline-none"
             >
               Browse Freelancers
             </Link>
-            </div>
+          </div>
+          
+          {/* Micro-trust line for credibility */}
+          <p className="mt-8 text-sm text-white/50 fade-up" style={{animationDelay: '400ms'}}>Trusted by 200+ teams and creators worldwide</p>
             
           {/* Price Beat Guarantee */}
-          <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-gradient-to-r from-blue-500/10 to-violet-500/10 px-4 py-2 text-sm text-white/80 fade-up" style={{animationDelay: '400ms'}}>
+          <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-gradient-to-r from-blue-500/10 to-violet-500/10 px-4 py-2 text-sm text-white/80 fade-up" style={{animationDelay: '400ms'}}>
             <span className="text-lg">💰</span>
             <span><span className="font-medium">Found cheaper?</span> We'll beat it by 10%.</span>
-            <span className="underline text-cyan-400 ml-1">Learn more</span>
+            <a href="#" className="underline text-cyan-400 ml-1 hover:text-cyan-300 transition-colors duration-200 focus:ring-2 focus:ring-white/50 focus:outline-none rounded px-1 py-1">Learn more</a>
+          </div>
+        </div>
+      </section>
+
+      {/* Proof Section - Right below hero */}
+      <section className="mt-10">
+        <p className="text-center text-white/50">Trusted by teams worldwide</p>
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-10 opacity-80">
+          {/* SVG logos with hover effects */}
+          <div className="h-6 opacity-70 hover:opacity-100 transition">
+            <svg viewBox="0 0 100 30" className="h-6 w-auto fill-white/60">
+              <text x="10" y="20" fontSize="14" fontWeight="600">ACME</text>
+            </svg>
+          </div>
+          <div className="h-6 opacity-70 hover:opacity-100 transition">
+            <svg viewBox="0 0 100 30" className="h-6 w-auto fill-white/60">
+              <text x="10" y="20" fontSize="14" fontWeight="600">TECH</text>
+            </svg>
+          </div>
+          <div className="h-6 opacity-70 hover:opacity-100 transition">
+            <svg viewBox="0 0 100 30" className="h-6 w-auto fill-white/60">
+              <text x="10" y="20" fontSize="14" fontWeight="600">INNOVATE</text>
+            </svg>
+          </div>
+          <div className="h-6 opacity-70 hover:opacity-100 transition">
+            <svg viewBox="0 0 100 30" className="h-6 w-auto fill-white/60">
+              <text x="10" y="20" fontSize="14" fontWeight="600">GROWTH</text>
+            </svg>
+          </div>
+          <div className="h-6 opacity-70 hover:opacity-100 transition">
+            <svg viewBox="0 0 100 30" className="h-6 w-auto fill-white/60">
+              <text x="10" y="20" fontSize="14" fontWeight="600">STARTUP</text>
+            </svg>
+          </div>
+          <div className="h-6 opacity-70 hover:opacity-100 transition">
+            <svg viewBox="0 0 100 30" className="h-6 w-auto fill-white/60">
+              <text x="10" y="20" fontSize="14" fontWeight="600">CORP</text>
+            </svg>
+          </div>
+          <div className="h-6 opacity-70 hover:opacity-100 transition">
+            <svg viewBox="0 0 100 30" className="h-6 w-auto fill-white/60">
+              <text x="10" y="20" fontSize="14" fontWeight="600">DIGITAL</text>
+            </svg>
+          </div>
+          <div className="h-6 opacity-70 hover:opacity-100 transition">
+            <svg viewBox="0 0 100 30" className="h-6 w-auto fill-white/60">
+              <text x="10" y="20" fontSize="14" fontWeight="600">AGENCY</text>
+            </svg>
+          </div>
+        </div>
+      </section>
+
+      {/* Trust Strip - Client Logos */}
+      <section className="py-12 bg-bg-surface/30 backdrop-blur-sm border-y border-white/5">
+        <div className="max-w-7xl mx-auto px-6">
+          <p className="text-center text-sm text-white/50 mb-8 font-medium tracking-wide uppercase">
+            Trusted by leading companies
+          </p>
+          <div className="flex items-center justify-center space-x-12 opacity-40 hover:opacity-60 transition-opacity duration-300">
+            {/* Client logos - monochrome */}
+            <div className="text-white/60 text-2xl font-bold tracking-wider">ACME</div>
+            <div className="text-white/60 text-2xl font-bold tracking-wider">TECH</div>
+            <div className="text-white/60 text-2xl font-bold tracking-wider">INNOVATE</div>
+            <div className="text-white/60 text-2xl font-bold tracking-wider">GROWTH</div>
+            <div className="text-white/60 text-2xl font-bold tracking-wider">STARTUP</div>
+            <div className="text-white/60 text-2xl font-bold tracking-wider">CORP</div>
+            <div className="text-white/60 text-2xl font-bold tracking-wider">DIGITAL</div>
+            <div className="text-white/60 text-2xl font-bold tracking-wider">AGENCY</div>
           </div>
         </div>
       </section>
@@ -618,90 +764,107 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
 
 export const getServerSideProps: GetServerSideProps = async () => {
   try {
-    // Fetch testimonials from Supabase
-    const { data: testimonialsData, error: testimonialsError } = await supabase
+    // Fetch data directly from Supabase database
+    const [
+      testimonialsResult,
+      freelancersResult,
+      projectsResult,
+      reviewsResult,
+      countriesResult
+    ] = await Promise.all([
+      // Fetch testimonials
+      supabase
       .from('testimonials')
       .select('*')
-      .limit(6);
+        .limit(6),
+      
+      // Count active freelancers
+      supabase
+        .from('freelancers_public')
+        .select('*', { count: 'exact', head: true }),
+      
+      // Count completed projects
+      supabase
+        .from('projects')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'completed'),
+      
+      // Count total reviews/testimonials
+      supabase
+        .from('testimonials')
+        .select('*', { count: 'exact', head: true }),
+      
+      // Get unique countries from freelancers
+      supabase
+        .from('freelancers_public')
+        .select('country')
+        .not('country', 'is', null)
+    ]);
 
-    if (testimonialsError) {
-      console.error('Error fetching testimonials:', testimonialsError);
+    // Handle testimonials
+    if (testimonialsResult.error) {
+      console.error('Error fetching testimonials:', testimonialsResult.error);
     }
+    const testimonials = testimonialsResult.data || [];
 
-    // Fetch real stats from database via API
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-    let stats = {
-      totalFreelancers: 0,
-      totalProjects: 0,
-      totalReviews: 0,
-      countries: 0
+    // Calculate stats from database results
+    const freelancerCount = freelancersResult.count || 0;
+    const projectCount = projectsResult.count || 0;
+    const reviewCount = reviewsResult.count || 0;
+    const uniqueCountries = new Set(countriesResult.data?.map(f => f.country)).size || 0;
+
+    const stats = {
+      totalFreelancers: freelancerCount,
+      totalProjects: projectCount,
+      totalReviews: reviewCount,
+      countries: uniqueCountries
     };
 
-    try {
-      const statsResponse = await fetch(`${baseUrl}/api/homepage-stats`);
-      if (statsResponse.ok) {
-        const statsData = await statsResponse.json();
-        stats = statsData;
-      }
-    } catch (apiError) {
-      console.error('Error fetching stats from API:', apiError);
-      // Use fallback stats if API fails
-      stats = {
-        totalFreelancers: 0,
-        totalProjects: 0,
-        totalReviews: 0,
-        countries: 0
-      };
-    }
+    // Fetch additional data for homepage
+    const [
+      recentFreelancersResult,
+      featuredProjectsResult
+    ] = await Promise.all([
+      // Get recent freelancers for showcase
+      supabase
+        .from('freelancers_public')
+        .select('id, display_name, title, avatar_url, rating, skills')
+        .eq('status', 'approved')
+        .order('created_at', { ascending: false })
+        .limit(6),
+      
+      // Get featured projects
+      supabase
+        .from('projects')
+        .select('id, title, description, status, created_at')
+        .eq('status', 'completed')
+        .order('created_at', { ascending: false })
+        .limit(3)
+    ]);
 
     return {
       props: {
-        testimonials: testimonialsData || [],
-        stats
+        testimonials,
+        stats,
+        recentFreelancers: recentFreelancersResult.data || [],
+        featuredProjects: featuredProjectsResult.data || []
       }
     };
   } catch (error) {
     console.error('Error in getServerSideProps:', error);
     
-    // Return mock data as fallback
-    const mockTestimonials = [
-      {
-        id: '1',
-        client_name: 'Sarah Johnson',
-        client_role: 'CEO',
-        client_company: 'TechStart Inc',
-        testimonial_text: 'TalentHub Pro has revolutionized how we find and work with freelancers. The quality is exceptional!',
-        rating: 5
-      },
-      {
-        id: '2',
-        client_name: 'Michael Chen',
-        client_role: 'Marketing Director',
-        client_company: 'GrowthCorp',
-        testimonial_text: 'The escrow system gives us peace of mind. We always get exactly what we pay for.',
-        rating: 5
-      },
-      {
-        id: '3',
-        client_name: 'Emily Rodriguez',
-        client_role: 'Product Manager',
-        client_company: 'InnovateLab',
-        testimonial_text: 'Fast, reliable, and professional. This platform has become essential to our workflow.',
-        rating: 5
-      }
-    ];
-
-    const stats = {
+    // Return empty data when there's an error - no mock data
+    return {
+      props: {
+        testimonials: [],
+        stats: {
       totalFreelancers: 0,
       totalProjects: 0,
       totalReviews: 0,
       countries: 0
-    };
-
-    return {
-      props: {
-        testimonials: mockTestimonials,
-        stats
+        },
+        recentFreelancers: [],
+        featuredProjects: []
       }
     };
   }

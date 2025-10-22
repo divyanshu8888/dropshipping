@@ -113,9 +113,9 @@ const ChatSystem: React.FC<ChatSystemProps> = ({ conversationId, userId, isAdmin
   // Client-side moderation check
   const checkModeration = (text: string): { shouldWarn: boolean; warning: string | null } => {
     const patterns = {
-      pricing: /(?i)(\$|€|£|₹|AUD|USD|EUR)\s*\d+|\b(per\s*(hour|hr|day|week|month)|rate|quote|price|discount|invoice|payment)\b|\b\d{2,}(\.\d{1,2})?\s*(k|per\s*hour|/hr|/month)\b/,
-      contact: /(?i)[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|(\+?\d{1,3}[\s-]?)?(\(?\d{2,4}\)?[\s-]?)?\d{3,4}[\s-]?\d{3,4}|\b(whatsapp|telegram|discord|wechat|signal|meet|zoom|skype)\b/,
-      urls: /https?:\/\/|www\./
+      pricing: new RegExp(/(\$|€|£|₹|AUD|USD|EUR)\s*\d+|\b(per\s*(hour|hr|day|week|month)|rate|quote|price|discount|invoice|payment)\b|\b\d{2,}(\.\d{1,2})?\s*(k|per\s*hour|\/hr|\/month)\b/i),
+      contact: new RegExp(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|(\+?\d{1,3}[\s-]?)?(\(?\d{2,4}\)?[\s-]?)?\d{3,4}[\s-]?\d{3,4}|\b(whatsapp|telegram|discord|wechat|signal|meet|zoom|skype)\b/i),
+      urls: new RegExp(/https?:\/\/|www\./)
     };
 
     if (patterns.pricing.test(text)) {

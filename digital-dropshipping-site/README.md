@@ -33,7 +33,6 @@ digital-dropshipping-site/
 │   ├── services/           # External service integrations
 │   ├── styles/             # CSS styles
 │   └── types/              # TypeScript type definitions
-├── prisma/                 # Database schema (for e-commerce)
 ├── tests/                  # Test files
 ├── freelancer-showcase/    # Freelancer system (separate module)
 └── ...                     # Configuration files
@@ -50,8 +49,7 @@ npm install
 Create `.env.local` with your configuration:
 
 ```env
-# Database (Prisma for e-commerce)
-DATABASE_URL="your_database_url"
+# Database (Supabase)
 
 # Supabase (for freelancer showcase)
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
@@ -72,11 +70,8 @@ NEXT_PUBLIC_SITE_URL=http://localhost:3000
 
 ### 3. Database Setup
 
-#### E-commerce Database (Prisma)
-```bash
-npx prisma generate
-npx prisma db push
-```
+#### Database Setup (Supabase)
+All database operations are handled through Supabase. No additional setup required.
 
 #### Freelancer Showcase Database (Supabase)
 1. Create a Supabase project
@@ -117,7 +112,7 @@ To integrate the freelancer showcase system into your main project, follow the i
 ## Technologies Used
 
 - **Frontend**: Next.js, React, TypeScript, Tailwind CSS
-- **Database**: PostgreSQL (Prisma + Supabase)
+- **Database**: Supabase (PostgreSQL)
 - **Authentication**: NextAuth.js
 - **Payments**: Stripe
 - **Storage**: Supabase Storage
@@ -144,10 +139,8 @@ npm run build
 npm start
 ```
 
-### Database Migrations
-```bash
-npx prisma migrate dev
-```
+### Database Management
+All database operations are handled through the Supabase dashboard.
 
 ## Deployment
 

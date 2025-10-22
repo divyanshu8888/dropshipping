@@ -4,9 +4,16 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import Header from '../../src/components/Header';
 
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
 export default function FreelancerDashboard() {
   const router = useRouter();
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [freelancerData, setFreelancerData] = useState(null);
 
@@ -32,7 +39,7 @@ export default function FreelancerDashboard() {
     setLoading(false);
   }, [router]);
 
-  const checkFreelancerProfile = async (user) => {
+  const checkFreelancerProfile = async (user: any) => {
     try {
       // You would fetch freelancer data from your API here
       // For now, we'll check if they have a complete profile

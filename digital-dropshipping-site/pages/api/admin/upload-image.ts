@@ -41,7 +41,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       keepExtensions: true,
       maxFileSize: 10 * 1024 * 1024, // 10MB limit
       filter: ({ mimetype }) => {
-        return mimetype && mimetype.includes('image')
+        return Boolean(mimetype && mimetype.includes('image'))
       }
     })
 
@@ -51,7 +51,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ message: 'No image file provided' })
     }
 
-    const uploadedFile = files.image
+    const uploadedFile = files.image as any
     const fileExtension = path.extname(uploadedFile.originalFilename || '')
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}${fileExtension}`
     const newPath = path.join(uploadDir, fileName)

@@ -1,7 +1,15 @@
 import { useState, useEffect } from 'react';
 
+interface CartItem {
+    id: string;
+    name: string;
+    price: number;
+    quantity: number;
+    imageUrl: string;
+}
+
 const useCart = () => {
-    const [cartItems, setCartItems] = useState([]);
+    const [cartItems, setCartItems] = useState<CartItem[]>([]);
     const [totalAmount, setTotalAmount] = useState(0);
 
     useEffect(() => {
@@ -17,7 +25,7 @@ const useCart = () => {
         localStorage.setItem('cart', JSON.stringify(cartItems));
     }, [cartItems]);
 
-    const addToCart = (item) => {
+    const addToCart = (item: Omit<CartItem, 'quantity'>) => {
         setCartItems((prevItems) => {
             const existingItem = prevItems.find((i) => i.id === item.id);
             if (existingItem) {
@@ -29,7 +37,7 @@ const useCart = () => {
         });
     };
 
-    const removeFromCart = (id) => {
+    const removeFromCart = (id: string) => {
         setCartItems((prevItems) => prevItems.filter((item) => item.id !== id));
     };
 

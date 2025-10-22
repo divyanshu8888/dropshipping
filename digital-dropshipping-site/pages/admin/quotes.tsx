@@ -55,7 +55,7 @@ export default function QuotesPage({ initialQuoteRequests, totalPages, currentPa
     }
   };
 
-  const updateQuoteStatus = async (id: number, status: string, adminNotes?: string) => {
+  const updateQuoteStatus = async (id: string, status: string, adminNotes?: string) => {
     try {
       const response = await fetch('/api/admin/quote-requests', {
         method: 'PATCH',
@@ -240,16 +240,16 @@ export default function QuotesPage({ initialQuoteRequests, totalPages, currentPa
                     <div className="space-y-3">
                       <div>
                         <label className="text-sm text-text-mute">Name</label>
-                        <div className="text-white">{selectedQuote.clientName}</div>
+                        <div className="text-white">{selectedQuote.client_name}</div>
                       </div>
                       <div>
                         <label className="text-sm text-text-mute">Email</label>
-                        <div className="text-white">{selectedQuote.clientEmail}</div>
+                        <div className="text-white">{selectedQuote.client_email}</div>
                       </div>
-                      {selectedQuote.clientPhone && (
+                      {selectedQuote.client_phone && (
                         <div>
                           <label className="text-sm text-text-mute">Phone</label>
-                          <div className="text-white">{selectedQuote.clientPhone}</div>
+                          <div className="text-white">{selectedQuote.client_phone}</div>
                         </div>
                       )}
                     </div>
@@ -260,7 +260,7 @@ export default function QuotesPage({ initialQuoteRequests, totalPages, currentPa
                     <div className="space-y-3">
                       <div>
                         <label className="text-sm text-text-mute">Title</label>
-                        <div className="text-white">{selectedQuote.projectTitle}</div>
+                        <div className="text-white">{selectedQuote.project_title}</div>
                       </div>
                       <div>
                         <label className="text-sm text-text-mute">Category</label>
@@ -284,7 +284,7 @@ export default function QuotesPage({ initialQuoteRequests, totalPages, currentPa
                 <div>
                   <label className="text-sm text-text-mute">Project Description</label>
                   <div className="mt-2 p-4 bg-white/5 rounded-xl text-white whitespace-pre-wrap">
-                    {selectedQuote.projectDescription}
+                    {selectedQuote.project_description}
                   </div>
                 </div>
 
@@ -302,7 +302,7 @@ export default function QuotesPage({ initialQuoteRequests, totalPages, currentPa
                 <div>
                   <label className="text-sm text-text-mute">Admin Notes</label>
                   <textarea
-                    defaultValue={selectedQuote.adminNotes || ''}
+                    defaultValue={selectedQuote.admin_notes || ''}
                     className="w-full mt-2 p-4 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 resize-none"
                     rows={3}
                     placeholder="Add admin notes..."

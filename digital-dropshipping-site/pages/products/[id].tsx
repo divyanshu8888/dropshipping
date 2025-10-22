@@ -50,11 +50,10 @@ const ProductDetail = () => {
     const handleAddToCart = () => {
         if (product) {
             addToCart({
-                id: product.id,
+                id: product.id.toString(),
                 name: product.name,
                 price: product.price,
-                imageUrl: product.imageUrl,
-                quantity: quantity
+                imageUrl: product.imageUrl
             });
         }
     };

@@ -1,8 +1,111 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Manrope:wght@200;300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Custom animations for homepage polish */
+@keyframes conicRotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes slow-pulse {
+  0%, 100% {
+    opacity: 0.3;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+}
+
+.animate-conic-rotate {
+  animation: conicRotate 35s linear infinite;
+}
+
+.animate-gradient-shift {
+  animation: gradientShift 12s ease-in-out infinite alternate;
+}
+
+.animate-slow-pulse {
+  animation: slow-pulse 4s ease-in-out infinite;
+}
+
+@keyframes textGlow {
+  0%, 100% {
+    text-shadow: 0 0 5px rgba(96, 165, 250, 0.5), 0 0 10px rgba(96, 165, 250, 0.3), 0 0 15px rgba(96, 165, 250, 0.2);
+  }
+  50% {
+    text-shadow: 0 0 10px rgba(96, 165, 250, 0.8), 0 0 20px rgba(96, 165, 250, 0.6), 0 0 30px rgba(96, 165, 250, 0.4);
+  }
+}
+
+@keyframes textBlink {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.3;
+    transform: scale(0.98);
+  }
+}
+
+.animate-text-glow {
+  animation: textGlow 2s ease-in-out infinite;
+}
+
+.animate-text-blink {
+  animation: textBlink 0.3s ease-in-out;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%) skewX(12deg);
+  }
+  100% {
+    transform: translateX(200%) skewX(12deg);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 0.6s ease-out;
+}
 
 @layer base {
   html {
@@ -158,4 +261,48 @@
 
 .animation-delay-400 {
   animation-delay: 0.4s;
+}
+
+/* CTA hover animation */
+.cta:hover {
+  transform: scale(1.03);
+  box-shadow: 0 0 25px rgba(96,165,250,0.4);
+  transition: all 0.3s ease;
+}
+
+/* Animated background gradient */
+@keyframes pulse {
+  0%, 100% {
+    opacity: .7; 
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1; 
+    transform: scale(1.05);
+  }
+}
+
+.animated-bg {
+  background: radial-gradient(circle at 50% 40%, rgba(99,102,241,0.08), transparent 70%);
+  animation: pulse 10s ease-in-out infinite;
+}
+
+/* Subtle shimmer animation for gradient text */
+@keyframes shimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}
+
+.gradient-text {
+  background: linear-gradient(90deg, #06b6d4, #3b82f6, #8b5cf6, #06b6d4);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer 8s ease-in-out infinite;
+  display: inline-block;
 }

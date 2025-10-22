@@ -316,12 +316,12 @@ export const getServerSideProps: GetServerSideProps = async () => {
       console.error('Error fetching testimonials:', testimonialsError);
     }
 
-    // Mock stats data (replace with actual data fetching)
+    // Stats data - fetch from database
     const stats = {
-      totalFreelancers: 1250,
-      totalProjects: 15800,
-      totalReviews: 4850,
-      countries: 45
+      totalFreelancers: 0,
+      totalProjects: 0,
+      totalReviews: 0,
+      countries: 0
     };
 
     return {
@@ -333,45 +333,16 @@ export const getServerSideProps: GetServerSideProps = async () => {
   } catch (error) {
     console.error('Error in getServerSideProps:', error);
     
-    // Return mock data as fallback
-    const mockTestimonials = [
-      {
-        id: '1',
-        client_name: 'Sarah Johnson',
-        client_role: 'CEO',
-        client_company: 'TechStart Inc',
-        testimonial_text: 'TalentHub Pro has revolutionized how we find and work with freelancers. The quality is exceptional!',
-        rating: 5
-      },
-      {
-        id: '2',
-        client_name: 'Michael Chen',
-        client_role: 'Marketing Director',
-        client_company: 'GrowthCorp',
-        testimonial_text: 'The escrow system gives us peace of mind. We always get exactly what we pay for.',
-        rating: 5
-      },
-      {
-        id: '3',
-        client_name: 'Emily Rodriguez',
-        client_role: 'Product Manager',
-        client_company: 'InnovateLab',
-        testimonial_text: 'Fast, reliable, and professional. This platform has become essential to our workflow.',
-        rating: 5
-      }
-    ];
-
-    const stats = {
-      totalFreelancers: 1250,
-      totalProjects: 15800,
-      totalReviews: 4850,
-      countries: 45
-    };
-
+    // Return empty data when there's an error - no mock data
     return {
       props: {
-        testimonials: mockTestimonials,
-        stats
+        testimonials: [],
+        stats: {
+          totalFreelancers: 0,
+          totalProjects: 0,
+          totalReviews: 0,
+          countries: 0
+        }
       }
     };
   }

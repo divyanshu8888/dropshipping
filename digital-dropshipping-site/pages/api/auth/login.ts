@@ -20,27 +20,12 @@ export default async function handler(
       });
     }
 
-    // Find user by email in freelancers table first
-    let { data: freelancer, error: freelancerError } = await supabase
-      .from('freelancers')
+    // Find user by email in users table
+    const { data: user, error: userError } = await supabase
+      .from('users')
       .select('*')
       .eq('email', email.toLowerCase())
       .single();
-
-    // If not found in freelancers, check clients table
-    let { data: client, error: clientError } = null;
-    if (!freelancer) {
-      const result = await supabase
-        .from('clients')
-        .select('*')
-        .eq('email', email.toLowerCase())
-        .single();
-      client = result.data;
-      clientError = result.error;
-    }
-
-    const user = freelancer || client;
-    const userError = freelancerError || clientError;
 
     if (!user || userError) {
       return res.status(401).json({ 
@@ -49,7 +34,7 @@ export default async function handler(
     }
 
     // Verify password
-    const isValidPassword = await bcrypt.compare(password, user.password);
+    const isValidPassword = await bcrypt.compare(password, user.password_hash);
     if (!isValidPassword) {
       return res.status(401).json({ 
         error: 'Invalid email or password' 
@@ -57,10 +42,9 @@ export default async function handler(
     }
 
     // Update last login time
-    const tableName = freelancer ? 'freelancers' : 'clients';
     await supabase
-      .from(tableName)
-      .update({ last_login_at: new Date().toISOString() })
+      .from('users')
+      .update({ last_login: new Date().toISOString() })
       .eq('id', user.id);
 
     // Return user data (without password)
@@ -69,9 +53,10 @@ export default async function handler(
       message: 'Login successful!',
       user: {
         id: user.id,
-        name: user.name,
         email: user.email,
-        role: freelancer ? 'FREELANCER' : 'CLIENT',
+        role: user.role,
+        isActive: user.is_active,
+        emailVerified: user.email_verified,
         createdAt: user.created_at
       }
     });
