@@ -1,6 +1,6 @@
 import { GetServerSideProps } from 'next';
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Header from '../src/components/Header';
 import QuoteRequestForm from '../src/components/QuoteRequestForm';
 import { supabase } from '../src/lib/supabase';
@@ -46,62 +46,6 @@ const Chip = ({ label, icon, gradient = 'violet', onClick }: ChipProps) => {
   );
 };
 
-// Services Strip Component - Superhuman Style with Marquee
-const ServicesStrip = () => {
-  const services = [
-    { label: 'Web Development', icon: '💻', gradient: 'violet' as const },
-    { label: 'Mobile Apps', icon: '📱', gradient: 'teal' as const },
-    { label: 'Design', icon: '🎨', gradient: 'blue' as const },
-    { label: 'Writing', icon: '✍️', gradient: 'violet' as const },
-    { label: 'Marketing', icon: '📢', gradient: 'teal' as const },
-    { label: 'Video', icon: '🎬', gradient: 'blue' as const },
-    { label: 'Photo', icon: '📸', gradient: 'violet' as const },
-    { label: 'Data & Analytics', icon: '📊', gradient: 'teal' as const },
-    { label: 'SEO', icon: '🔍', gradient: 'blue' as const },
-    { label: 'DevOps', icon: '⚙️', gradient: 'violet' as const },
-    { label: 'Testing', icon: '🧪', gradient: 'teal' as const },
-    { label: 'Support', icon: '🎧', gradient: 'blue' as const },
-    { label: 'Translation', icon: '🌐', gradient: 'violet' as const },
-    { label: 'Consulting', icon: '💼', gradient: 'teal' as const },
-  ];
-
-  return (
-    <section className="relative overflow-hidden bg-superhuman">
-      {/* floating stickers (emoji-style) */}
-      <div className="pointer-events-none absolute -top-6 left-[8%] translate-y-2 animate-float text-5xl">💡</div>
-      <div className="pointer-events-none absolute top-10 right-[10%] -translate-y-2 animate-float text-5xl" style={{animationDelay: '1s'}}>🔍</div>
-      <div className="pointer-events-none absolute top-20 left-[15%] translate-y-1 animate-float text-4xl" style={{animationDelay: '2s'}}>✨</div>
-
-      <div className="mx-auto max-w-7xl px-6 py-24">
-        <h2 className="text-center text-3xl md:text-4xl font-black text-white tracking-tight">Expert Skills</h2>
-        <p className="mt-4 text-center text-lg md:text-xl text-text-soft font-medium max-w-2xl mx-auto leading-relaxed">Connect with skilled freelancers who bring your projects to life</p>
-
-        {/* Marquee Skills Section - Like "Meet our customers" */}
-        <div className="mt-12 mb-8">
-          <div className="relative overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
-            <div className="flex gap-8 animate-marquee">
-              {/* Skills marquee - seamless loop with proper duplication */}
-              {services.map((service) => (
-                <div key={`${service.label}-1`} className="flex items-center gap-2 flex-shrink-0">
-                  <span className="text-lg">{service.icon}</span>
-                  <span className="text-text-soft font-medium">{service.label}</span>
-                </div>
-              ))}
-              {services.map((service) => (
-                <div key={`${service.label}-2`} className="flex items-center gap-2 flex-shrink-0">
-                  <span className="text-lg">{service.icon}</span>
-                  <span className="text-text-soft font-medium">{service.label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </section>
-  );
-};
-
 interface Testimonial {
   id: string;
   client_name: string;
@@ -141,6 +85,261 @@ interface HomePageProps {
   recentFreelancers: Freelancer[];
   featuredProjects: Project[];
 }
+
+// Coding Showcase Component with Animated Typing
+const CodingShowcase = () => {
+  const [tab, setTab] = useState<'code' | 'api' | 'terminal'>('code');
+  const [typed, setTyped] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const iRef = useRef(0);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const snippets = {
+    code: `// FoundryHQ: Connect with verified talent
+import { createClient } from "@foundry/client";
+
+const client = createClient({
+  apiKey: process.env.FOUNDRY_API_KEY,
+  environment: "production"
+});
+
+type ProjectRequest = {
+  title: string;
+  description: string;
+  category: "Web Dev" | "Design" | "Marketing";
+  timeline: string;
+  budget?: number;
+};
+
+export async function createProject(payload: ProjectRequest) {
+  const response = await client.projects.create(payload);
+  return response.data;
+}
+
+// Example: Create a new project
+await createProject({
+  title: "Website Redesign",
+  description: "Modern responsive website with CMS",
+  category: "Web Dev",
+  timeline: "4-6 weeks",
+  budget: 5000
+});`,
+    api: `POST /api/projects
+Content-Type: application/json
+
+{
+  "title": "Website Redesign",
+  "description": "Modern responsive website with CMS",
+  "category": "Web Dev",
+  "timeline": "4-6 weeks",
+  "budget": 5000
+}
+
+Response:
+{
+  "id": "proj_123",
+  "status": "active",
+  "created_at": "2024-01-15T10:30:00Z",
+  "estimated_delivery": "2024-02-15"
+}`,
+    terminal: `$ foundry init project website-redesign
+✔ Project initialized
+✔ Connected to FoundryHQ
+
+$ foundry create --category "Web Dev" --timeline "4-6 weeks"
+✔ Project created: #PROJ-123
+✔ 3 verified professionals matched
+
+$ foundry select --id "pro_456"
+✔ Professional selected: Expert Developer
+✔ Project started with milestone tracking
+
+$ foundry status
+📊 Project Status: In Progress
+💰 Budget: $5,000 allocated
+📅 Timeline: 4-6 weeks
+👨‍💻 Professional: Expert Developer (verified)`
+  };
+
+  const startTyping = (text: string) => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    setTyped('');
+    setIsTyping(true);
+    iRef.current = 0;
+
+    intervalRef.current = setInterval(() => {
+      if (iRef.current < text.length) {
+        setTyped(text.slice(0, iRef.current + 1));
+        iRef.current++;
+      } else {
+        setIsTyping(false);
+        if (intervalRef.current) clearInterval(intervalRef.current);
+      }
+    }, 15);
+  };
+
+  useEffect(() => {
+    startTyping(snippets[tab]);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [tab]);
+
+  const highlightSyntax = (line: string) => {
+    return line
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\b(import|from|const|let|type|async|await|return|if|throw|new|export|function)\b/g, '<span class="text-cyan-300">$1</span>')
+      .replace(/\b(string|number|boolean|any|undefined|void)\b/g, '<span class="text-violet-300">$1</span>')
+      .replace(/(".*?")/g, '<span class="text-emerald-300">$1</span>')
+      .replace(/('.*?')/g, '<span class="text-emerald-300">$1</span>')
+      .replace(/(\/\/.*$)/g, '<span class="text-white/40">$1</span>')
+      .replace(/(POST|GET|PUT|DELETE)\s+\/api/g, '<span class="text-yellow-300">$1</span> <span class="text-blue-300">$2</span>')
+      .replace(/(\$\s+)/g, '<span class="text-green-300">$1</span>')
+      .replace(/(✔|📊|💰|📅|👨‍💻)/g, '<span class="text-emerald-400">$1</span>');
+  };
+
+  return (
+    <div className="relative bg-[#0B0C0F] py-20 overflow-hidden">
+      {/* slow conic halo */}
+      <div
+        className="pointer-events-none absolute -top-1/2 left-1/2 -translate-x-1/2 w-[1200px] h-[1200px] rounded-full blur-3xl opacity-20 -z-10"
+        style={{
+          background: "conic-gradient(from 180deg,#67e8f9,#60a5fa,#a78bfa,transparent 70%)",
+          animation: "spin 36s linear infinite"
+        }}
+      />
+
+      <div className="mx-auto max-w-7xl px-6">
+        <div className="grid md:grid-cols-2 gap-8 items-stretch">
+          {/* Left: editor */}
+          <div className="relative rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-xl shadow-[inset_0_1px_0_rgba(255,255,255,.06),0_30px_80px_rgba(0,0,0,.35)]">
+            {/* window controls */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+              <div className="flex gap-2">
+                <span className="size-3 rounded-full bg-red-500/70" />
+                <span className="size-3 rounded-full bg-yellow-500/70" />
+                <span className="size-3 rounded-full bg-green-500/70" />
+              </div>
+              <div className="text-xs text-white/50">foundryhq/app/quote.ts</div>
+              <div />
+            </div>
+
+            {/* tabs */}
+            <div className="flex gap-2 px-3 py-2 border-b border-white/10">
+              <button
+                onClick={() => setTab('code')}
+                className={`inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition ${
+                  tab === 'code'
+                    ? 'bg-gradient-to-r from-cyan-500/15 to-violet-500/15 text-white'
+                    : 'text-white/70 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <span>💻</span> Code
+              </button>
+              <button
+                onClick={() => setTab('api')}
+                className={`inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition ${
+                  tab === 'api'
+                    ? 'bg-gradient-to-r from-cyan-500/15 to-violet-500/15 text-white'
+                    : 'text-white/70 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <span>☁️</span> API
+              </button>
+              <button
+                onClick={() => setTab('terminal')}
+                className={`inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition ${
+                  tab === 'terminal'
+                    ? 'bg-gradient-to-r from-cyan-500/15 to-violet-500/15 text-white'
+                    : 'text-white/70 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <span>⚡</span> Terminal
+              </button>
+            </div>
+
+            {/* code area */}
+            <pre className="relative p-4 md:p-6 text-[13px] leading-relaxed overflow-auto text-white/90 min-h-[360px] font-mono">
+              <code className="[&_*]:font-mono">
+                {typed.split('\n').map((line, idx) => (
+                  <div key={idx} className="tabular-nums">
+                    <span className="select-none pr-4 text-white/30">{idx + 1}</span>
+                    <span
+                      dangerouslySetInnerHTML={{
+                        __html: highlightSyntax(line)
+                      }}
+                    />
+                    {isTyping && idx === typed.split('\n').length - 1 && (
+                      <span className="animate-pulse">|</span>
+                    )}
+                  </div>
+                ))}
+              </code>
+            </pre>
+          </div>
+
+          {/* Right: result / value prop */}
+          <div className="flex flex-col gap-4">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-xl p-6 shadow-[inset_0_1px_0_rgba(255,255,255,.06),0_30px_80px_rgba(0,0,0,.35)]">
+              <h3 className="text-xl font-semibold text-white">Scope → Create → Match → Deliver</h3>
+              <p className="mt-2 text-white/70">
+                FoundryHQ connects you to verified professionals through our secure platform.
+                Create projects, manage workflows, and ensure quality delivery with built-in protection.
+              </p>
+
+              <ul className="mt-4 space-y-2 text-white/85">
+                <li className="flex items-center gap-2">
+                  <span className="text-emerald-400">✓</span>
+                  Verified professionals with portfolio reviews and skill assessments
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-emerald-400">✓</span>
+                  Secure milestone system protects your payments until project completion
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-emerald-400">✓</span>
+                  Real-time project tracking and communication tools
+                </li>
+              </ul>
+
+              <div className="mt-6 flex flex-wrap gap-2">
+                <span className="rounded-full border border-emerald-400/20 text-emerald-300/90 bg-emerald-400/10 px-3 py-1 text-xs">Secure</span>
+                <span className="rounded-full border border-cyan-400/20 text-cyan-300/90 bg-cyan-400/10 px-3 py-1 text-xs">Fast</span>
+                <span className="rounded-full border border-violet-400/20 text-violet-300/90 bg-violet-400/10 px-3 py-1 text-xs">Reliable</span>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-cyan-500/10 via-blue-500/10 to-violet-500/10 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,.06),0_30px_80px_rgba(0,0,0,.35)]">
+              <h4 className="text-sm font-semibold text-white/80">Live Demo</h4>
+              <div className="mt-3 rounded-xl border border-white/10 bg-[#0F1216] p-4 text-white/80">
+                <div className="text-sm">
+                  <div><span className="text-white/50">Project:</span> Website Redesign</div>
+                  <div><span className="text-white/50">Category:</span> Web Development</div>
+                  <div><span className="text-white/50">Status:</span> 3 professionals matched</div>
+                  <div><span className="text-white/50">Budget:</span> $5,000 allocated</div>
+                </div>
+                <div className="mt-3">
+                  <a href="/products" className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-white bg-white/10 hover:bg-white/15 border border-white/10 transition">
+                    View Projects →
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* CTA row under the band */}
+        <div className="mt-8 flex justify-center">
+          <a href="/products" className="rounded-xl px-6 py-3 font-semibold text-white bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500 shadow-[0_0_20px_rgba(96,165,250,.35)] hover:scale-[1.02] transition">
+            Start Your Project →
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // Animated Word Swap Component with Visible Effects
 const AnimatedWordSwap = () => {
@@ -283,7 +482,7 @@ const HomePage = ({ testimonials, stats, recentFreelancers, featuredProjects }: 
             >
               Browse Freelancers
             </Link>
-          </div>
+            </div>
           
           {/* Micro-trust line for credibility */}
           <p className="mt-8 text-sm text-white/50 fade-up" style={{animationDelay: '400ms'}}>Trusted by 200+ teams and creators worldwide</p>
@@ -297,76 +496,90 @@ const HomePage = ({ testimonials, stats, recentFreelancers, featuredProjects }: 
         </div>
       </section>
 
-      {/* Proof Section - Right below hero */}
-      <section className="mt-10">
-        <p className="text-center text-white/50">Trusted by teams worldwide</p>
-        <div className="mt-4 flex flex-wrap items-center justify-center gap-10 opacity-80">
-          {/* SVG logos with hover effects */}
-          <div className="h-6 opacity-70 hover:opacity-100 transition">
-            <svg viewBox="0 0 100 30" className="h-6 w-auto fill-white/60">
-              <text x="10" y="20" fontSize="14" fontWeight="600">ACME</text>
-            </svg>
+      {/* Trusted + Skills Section */}
+      <section className="relative">
+        {/* --- Trusted by --- */}
+        <div className="relative border-t border-white/10 bg-[#0B0C0F]">
+          <div className="mx-auto max-w-7xl px-6 py-10">
+            <p className="text-center text-xs tracking-widest text-white/50 font-semibold">
+              TRUSTED BY TEAMS WORLDWIDE
+            </p>
+
+            {/* marquee */}
+            <div className="mt-6 relative overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
+              <div className="flex gap-12 whitespace-nowrap animate-[marquee_35s_linear_infinite] hover:[animation-play-state:paused]">
+                {["ACME","TECH","INNOVATE","GROWTH","STARTUP","CORP","DIGITAL","AGENCY","ACME","TECH","INNOVATE","GROWTH","STARTUP","CORP","DIGITAL","AGENCY"].map((name, i) => (
+                  <span
+                    key={i}
+                    className="text-white/35 hover:text-white/80 transition text-lg md:text-2xl font-semibold tracking-wide"
+                  >
+                    {name}
+                  </span>
+                ))}
+              </div>
+            </div>
           </div>
-          <div className="h-6 opacity-70 hover:opacity-100 transition">
-            <svg viewBox="0 0 100 30" className="h-6 w-auto fill-white/60">
-              <text x="10" y="20" fontSize="14" fontWeight="600">TECH</text>
-            </svg>
-          </div>
-          <div className="h-6 opacity-70 hover:opacity-100 transition">
-            <svg viewBox="0 0 100 30" className="h-6 w-auto fill-white/60">
-              <text x="10" y="20" fontSize="14" fontWeight="600">INNOVATE</text>
-            </svg>
-          </div>
-          <div className="h-6 opacity-70 hover:opacity-100 transition">
-            <svg viewBox="0 0 100 30" className="h-6 w-auto fill-white/60">
-              <text x="10" y="20" fontSize="14" fontWeight="600">GROWTH</text>
-            </svg>
-          </div>
-          <div className="h-6 opacity-70 hover:opacity-100 transition">
-            <svg viewBox="0 0 100 30" className="h-6 w-auto fill-white/60">
-              <text x="10" y="20" fontSize="14" fontWeight="600">STARTUP</text>
-            </svg>
-          </div>
-          <div className="h-6 opacity-70 hover:opacity-100 transition">
-            <svg viewBox="0 0 100 30" className="h-6 w-auto fill-white/60">
-              <text x="10" y="20" fontSize="14" fontWeight="600">CORP</text>
-            </svg>
-          </div>
-          <div className="h-6 opacity-70 hover:opacity-100 transition">
-            <svg viewBox="0 0 100 30" className="h-6 w-auto fill-white/60">
-              <text x="10" y="20" fontSize="14" fontWeight="600">DIGITAL</text>
-            </svg>
-          </div>
-          <div className="h-6 opacity-70 hover:opacity-100 transition">
-            <svg viewBox="0 0 100 30" className="h-6 w-auto fill-white/60">
-              <text x="10" y="20" fontSize="14" fontWeight="600">AGENCY</text>
-            </svg>
+        </div>
+
+        {/* divider glow */}
+        <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+
+        {/* --- Coding Showcase --- */}
+        <CodingShowcase />
+
+        {/* --- Expert Skills --- */}
+        <div className="relative bg-[#0B0C0F] py-20">
+          {/* subtle backdrop glow */}
+          <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(60%_110%_at_50%_0%,rgba(99,102,241,0.10),rgba(59,130,246,0.06)_45%,transparent_75%)]" />
+
+          <div className="mx-auto max-w-7xl px-6">
+            <p className="text-center text-xs tracking-widest text-white/50 font-semibold">SERVICES</p>
+            <h2 className="mt-2 text-center text-3xl md:text-4xl font-semibold text-white">Expert Skills</h2>
+            <p className="mt-2 text-center text-white/70">
+              Connect with verified freelancers across every domain—ready to build, design, and deliver.
+            </p>
+
+            {/* glass container */}
+            <div className="mt-8 rounded-2xl border border-white/10 bg-white/5 backdrop-blur p-6 md:p-8 shadow-[inset_0_1px_0_rgba(255,255,255,.06),0_30px_80px_rgba(0,0,0,.35)]">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {[
+                  { label: "Marketing", icon: "📢" },
+                  { label: "Video", icon: "🎬" },
+                  { label: "Photo", icon: "📷" },
+                  { label: "Data & Analytics", icon: "📊" },
+                  { label: "SEO", icon: "🔍" },
+                  { label: "DevOps", icon: "⚙️" },
+                  { label: "Testing", icon: "🧪" },
+                  { label: "Support", icon: "🎧" },
+                  { label: "Translation", icon: "🌍" },
+                  { label: "Design", icon: "🎨" },
+                  { label: "Web Dev", icon: "💻" },
+                  { label: "Mobile Apps", icon: "📱" },
+                ].map(({ label, icon }) => (
+                  <a
+                    key={label}
+                    href={`/freelancers?category=${encodeURIComponent(label.toLowerCase())}`}
+                    className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10
+                               px-4 py-3 text-white/85 transition focus:outline-none focus:ring-2 focus:ring-white/40"
+                  >
+                    <span className="text-white/90">{icon}</span>
+                    <span className="font-medium">{label}</span>
+                  </a>
+                ))}
+              </div>
+
+              <div className="mt-6 flex justify-center">
+                <a className="rounded-xl px-5 py-2.5 font-semibold text-white
+                              bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500
+                              shadow-[0_0_18px_rgba(96,165,250,.35)] hover:scale-[1.02] transition">
+                  Explore all categories →
+                </a>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Trust Strip - Client Logos */}
-      <section className="py-12 bg-bg-surface/30 backdrop-blur-sm border-y border-white/5">
-        <div className="max-w-7xl mx-auto px-6">
-          <p className="text-center text-sm text-white/50 mb-8 font-medium tracking-wide uppercase">
-            Trusted by leading companies
-          </p>
-          <div className="flex items-center justify-center space-x-12 opacity-40 hover:opacity-60 transition-opacity duration-300">
-            {/* Client logos - monochrome */}
-            <div className="text-white/60 text-2xl font-bold tracking-wider">ACME</div>
-            <div className="text-white/60 text-2xl font-bold tracking-wider">TECH</div>
-            <div className="text-white/60 text-2xl font-bold tracking-wider">INNOVATE</div>
-            <div className="text-white/60 text-2xl font-bold tracking-wider">GROWTH</div>
-            <div className="text-white/60 text-2xl font-bold tracking-wider">STARTUP</div>
-            <div className="text-white/60 text-2xl font-bold tracking-wider">CORP</div>
-            <div className="text-white/60 text-2xl font-bold tracking-wider">DIGITAL</div>
-            <div className="text-white/60 text-2xl font-bold tracking-wider">AGENCY</div>
-          </div>
-        </div>
-      </section>
-
-      {/* What we offer - Superhuman Style */}
-      <ServicesStrip />
 
       {/* Product Proof Section */}
       <section className="bg-bg-base">

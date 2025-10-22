@@ -306,3 +306,34 @@
   animation: shimmer 8s ease-in-out infinite;
   display: inline-block;
 }
+
+/* Trust section scroll animation */
+@keyframes scrollLeft {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.logo-row {
+  animation: scrollLeft 40s linear infinite;
+}
+
+/* Marquee animation */
+@keyframes marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* Float animation for stickers */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
