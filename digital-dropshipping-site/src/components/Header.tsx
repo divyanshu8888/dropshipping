@@ -10,6 +10,29 @@ interface User {
     role: string;
 }
 
+// Simple Uniti Logo Component
+const UniteaLogo = () => {
+    return (
+        <div
+            className="relative w-full h-full flex items-center justify-center select-none"
+            aria-label="Uniti – Where ideas unite"
+        >
+            <span
+                className="text-xl font-bold tracking-normal"
+                style={{
+                    background: 'linear-gradient(to right, #06b6d4, #3b82f6, #8b5cf6)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                    fontFamily: 'Space Grotesk, sans-serif'
+                }}
+            >
+                Unitea
+            </span>
+        </div>
+    );
+};
+
 const Header: React.FC = () => {
     const [user, setUser] = useState<User | null>(null);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -45,16 +68,15 @@ const Header: React.FC = () => {
             <div className="absolute left-0 right-0 top-[100%] h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
             <div className="mx-auto max-w-7xl h-16 px-6 flex items-center justify-between">
                 <div className="flex items-center">
-                    <Link href="/" className="flex items-center space-x-3 group">
-                        <div className="relative">
-                            <div className="absolute inset-0 rounded-xl blur-md bg-gradient-to-r from-cyan-400 to-violet-500 opacity-40 group-hover:opacity-60 transition-opacity duration-300"></div>
-                            <div className="relative w-10 h-10 bg-gradient-to-br from-cyan-400 via-blue-500 to-violet-500 rounded-xl flex items-center justify-center shadow-[0_4px_20px_rgba(96,165,250,0.25)] group-hover:shadow-[0_8px_40px_rgba(96,165,250,0.35)] transition-all duration-300 group-hover:scale-105">
-                                <span className="text-white font-bold text-lg">F</span>
-                            </div>
+                    <Link href="/" className="flex items-center gap-2 group overflow-visible">
+                        <img 
+                            src="/images/logo/logo.png" 
+                            alt="Unitea Logo" 
+                            className="h-10 w-auto group-hover:scale-105 transition-all duration-300 bg-transparent"
+                        />
+                        <div className="relative w-auto h-12 overflow-visible">
+                            <UniteaLogo />
                         </div>
-                        <span className="text-white font-semibold text-xl tracking-tight">
-                            FoundryHQ
-                        </span>
                     </Link>
                 </div>
                 

@@ -337,3 +337,50 @@
     transform: translateY(-6px);
   }
 }
+
+/* Unitea Logo Animations */
+@keyframes unity {
+  0%   { opacity:0; transform:translate(-140%, -50%) scale(.94); }
+  12%  { opacity:1; transform:translate(-60%,  -50%) scale(.98); }
+  22%  { opacity:1; transform:translate(-55%,  -50%) scale(1);   }
+  28%  { opacity:0; transform:translate(-55%,  -50%) scale(.95); }
+  100% { opacity:0; transform:translate(-140%, -50%) scale(.94); }
+}
+
+@keyframes idea {
+  0%   { opacity:0; transform:translate(140%, -50%) scale(.94); }
+  12%  { opacity:1; transform:translate( 60%, -50%)  scale(.98); }
+  22%  { opacity:1; transform:translate( 55%, -50%)  scale(1);   }
+  28%  { opacity:0; transform:translate( 55%, -50%)  scale(.95); }
+  100% { opacity:0; transform:translate(140%, -50%)  scale(.94); }
+}
+
+@keyframes smog {
+  0%,18%  { opacity:0;   transform:translateZ(0) scale(1); }
+  24%     { opacity:.55; transform:translateZ(0) scale(1.03); }
+  32%     { opacity:.35; transform:translateZ(0) scale(1.06); }
+  44%,100%{ opacity:0;   transform:translateZ(0) scale(1.08); }
+}
+
+@keyframes unitea {
+  0%,25%  { opacity:0; transform:translate(-50%, -50%) scale(.97); }
+  32%     { opacity:1; transform:translate(-50%, -50%) scale(1);    }
+  75%     { opacity:1; transform:translate(-50%, -50%) scale(1);    }
+  92%,100%{ opacity:0; transform:translate(-50%, -50%) scale(.99); }
+}
+
+@keyframes shine {
+  0%,36% { opacity:0; transform:translateX(-120%); }
+  44%    { opacity:.55; transform:translateX(20%);  }
+  52%,100% { opacity:0; transform:translateX(120%); }
+}
+
+/* Hide scrollbar for carousel */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

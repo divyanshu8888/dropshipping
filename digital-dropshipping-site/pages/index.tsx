@@ -86,6 +86,133 @@ interface HomePageProps {
   featuredProjects: Project[];
 }
 
+// Popular Services Section Component
+const PopularServicesSection = () => {
+  const scroller = useRef<HTMLDivElement>(null);
+  const [atStart, setAtStart] = useState(true);
+  const [atEnd, setAtEnd] = useState(false);
+
+  const DATA = [
+    { title: "Social Media Marketing", subtitle: "", grad: "from-yellow-100 to-lime-100", image: "social-media.png" },
+    { title: "AI Development", subtitle: "", grad: "from-teal-100 to-emerald-200", image: "ai-development.png" },
+    { title: "Logo Design", subtitle: "", grad: "from-rose-100 to-orange-100", image: "logo-design.png" },
+    { title: "Website Design", subtitle: "", grad: "from-pink-100 to-fuchsia-100", image: "website-design.png" },
+    { title: "Voice Over", subtitle: "", grad: "from-amber-100 to-orange-200", image: "voice-over.png" },
+    { title: "UGC Videos", subtitle: "", grad: "from-rose-100 to-red-100", image: "ugc-videos.png" },
+    { title: "SEO Optimization", subtitle: "", grad: "from-blue-100 to-indigo-200", image: "seo-optimization.png" },
+    { title: "Video Editing", subtitle: "", grad: "from-purple-100 to-violet-200", image: "video-editing.png" },
+    { title: "Photography", subtitle: "", grad: "from-emerald-100 to-teal-200", image: "photography.png" },
+    { title: "Data Analytics", subtitle: "", grad: "from-orange-100 to-amber-200", image: "data-analytics.png" },
+    { title: "DevOps", subtitle: "", grad: "from-cyan-100 to-blue-200", image: "devops.png" },
+    { title: "Translation", subtitle: "", grad: "from-indigo-100 to-purple-200", image: "translation.png" },
+  ];
+
+  const updateEdgeState = () => {
+    const el = scroller.current;
+    if (!el) return;
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    setAtStart(scrollLeft <= 4);
+    setAtEnd(scrollLeft + clientWidth >= scrollWidth - 4);
+  };
+
+  useEffect(() => {
+    updateEdgeState();
+    const el = scroller.current;
+    if (!el) return;
+    const onScroll = () => updateEdgeState();
+    el.addEventListener("scroll", onScroll, { passive: true });
+    const onResize = () => updateEdgeState();
+    window.addEventListener("resize", onResize);
+    return () => {
+      el.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onResize);
+    };
+  }, []);
+
+  const scrollByCards = (dir: "left" | "right") => {
+    const el = scroller.current;
+    if (!el) return;
+    const card = el.querySelector<HTMLDivElement>("[data-card]");
+    const step = (card?.offsetWidth ?? 320) + 24;
+    el.scrollBy({ left: dir === "left" ? -step * 2 : step * 2, behavior: "smooth" });
+  };
+
+  return (
+    <div className="relative bg-[#0B0C0F] py-24">
+      {/* Ambient glow */}
+      <div 
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 -z-10 top-24 mx-auto h-64 w-[34rem] bg-gradient-to-b from-sky-500/10 via-violet-500/10 to-transparent blur-3xl"
+      />
+      
+      <div className="relative mx-auto max-w-7xl px-6">
+        {/* Heading */}
+        <div className="text-center mb-8">
+          <h2 className="text-4xl sm:text-5xl font-semibold tracking-tight">
+            <span className="bg-gradient-to-r from-sky-400 to-violet-400 bg-clip-text text-transparent">Popular</span>{" "}
+            <span className="text-white/95">Services</span>
+          </h2>
+          <p className="mt-3 text-sm text-white/60">Pre-vetted freelancers across every domain—on demand.</p>
+        </div>
+
+        {/* Carousel wrapper */}
+        <div className="relative">
+          {/* Edge fades */}
+          <div className="pointer-events-none absolute left-0 top-0 h-full w-12 bg-gradient-to-r from-[#0B0C0F] to-transparent z-20" />
+          <div className="pointer-events-none absolute right-0 top-0 h-full w-12 bg-gradient-to-l from-[#0B0C0F] to-transparent z-20" />
+
+          {/* Arrows */}
+          <button
+            onClick={() => scrollByCards("left")}
+            aria-label="Previous"
+            disabled={atStart}
+            className="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white text-neutral-900 shadow-lg h-10 w-10 grid place-items-center disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100 transition-all duration-200 hover:scale-110"
+          >
+            ‹
+          </button>
+          <button
+            onClick={() => scrollByCards("right")}
+            aria-label="Next"
+            disabled={atEnd}
+            className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white text-neutral-900 shadow-lg h-10 w-10 grid place-items-center disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100 transition-all duration-200 hover:scale-110"
+          >
+            ›
+          </button>
+
+          {/* Scroller */}
+          <div
+            ref={scroller}
+            className="flex gap-6 overflow-x-auto scroll-smooth snap-x snap-mandatory px-1 py-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
+            {DATA.map(({ title, subtitle, grad, image }) => (
+              <div
+                key={title}
+                data-card
+                className="snap-start shrink-0 w-[240px] md:w-[280px] rounded-2xl border border-white/10 bg-neutral-900/50 shadow-[0_4px_12px_-4px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_16px_-4px_rgba(0,0,0,0.2)] transition-all duration-200 hover:-translate-y-1"
+              >
+                {/* Top visual */}
+                <div className={`rounded-t-2xl bg-gradient-to-br ${grad} h-32 md:h-36 grid place-items-center`}>
+                  <img src={`/images/logo/${image}`} alt={title} className="w-20 h-20 md:w-24 md:h-24 object-contain drop-shadow-sm" />
+                </div>
+
+                {/* Info slab */}
+                <div className="rounded-b-2xl bg-black/60 p-4">
+                  <h3 className="text-white font-semibold leading-tight text-sm">{title}</h3>
+                  {subtitle && <p className="mt-1 text-xs text-white/55">{subtitle}</p>}
+                  <div className="mt-3 inline-flex items-center gap-2 text-sky-300/90 hover:text-sky-200 text-xs cursor-pointer">
+                    <span>Explore</span>
+                    <span>↗</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Coding Showcase Component with Animated Typing
 const CodingShowcase = () => {
   const [tab, setTab] = useState<'code' | 'api' | 'terminal'>('code');
@@ -95,11 +222,11 @@ const CodingShowcase = () => {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const snippets = {
-    code: `// FoundryHQ: Connect with verified talent
-import { createClient } from "@foundry/client";
+    code: `// Unitea: Connect with verified talent
+import { createClient } from "@unitea/client";
 
 const client = createClient({
-  apiKey: process.env.FOUNDRY_API_KEY,
+  apiKey: process.env.UNITEA_API_KEY,
   environment: "production"
 });
 
@@ -142,19 +269,19 @@ Response:
   "created_at": "2024-01-15T10:30:00Z",
   "estimated_delivery": "2024-02-15"
 }`,
-    terminal: `$ foundry init project website-redesign
+    terminal: `$ unitea init project website-redesign
 ✔ Project initialized
-✔ Connected to FoundryHQ
+✔ Connected to Unitea
 
-$ foundry create --category "Web Dev" --timeline "4-6 weeks"
+$ unitea create --category "Web Dev" --timeline "4-6 weeks"
 ✔ Project created: #PROJ-123
 ✔ 3 verified professionals matched
 
-$ foundry select --id "pro_456"
+$ unitea select --id "pro_456"
 ✔ Professional selected: Expert Developer
 ✔ Project started with milestone tracking
 
-$ foundry status
+$ unitea status
 📊 Project Status: In Progress
 💰 Budget: $5,000 allocated
 📅 Timeline: 4-6 weeks
@@ -222,7 +349,7 @@ $ foundry status
                 <span className="size-3 rounded-full bg-yellow-500/70" />
                 <span className="size-3 rounded-full bg-green-500/70" />
               </div>
-              <div className="text-xs text-white/50">foundryhq/app/quote.ts</div>
+              <div className="text-xs text-white/50">uniteahq/app/quote.ts</div>
               <div />
             </div>
 
@@ -283,9 +410,9 @@ $ foundry status
           {/* Right: result / value prop */}
           <div className="flex flex-col gap-4">
             <div className="rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-xl p-6 shadow-[inset_0_1px_0_rgba(255,255,255,.06),0_30px_80px_rgba(0,0,0,.35)]">
-              <h3 className="text-xl font-semibold text-white">Scope → Create → Match → Deliver</h3>
+              <h3 className="text-xl font-semibold text-white">Hire. Build. Launch.</h3>
               <p className="mt-2 text-white/70">
-                FoundryHQ connects you to verified professionals through our secure platform.
+                Unitea connects you to verified professionals through our secure platform.
                 Create projects, manage workflows, and ensure quality delivery with built-in protection.
               </p>
 
@@ -458,10 +585,10 @@ const HomePage = ({ testimonials, stats, recentFreelancers, featuredProjects }: 
 
         <div className="relative mx-auto max-w-7xl px-6 pt-28 pb-24 text-center">
           <h1 className="text-5xl md:text-7xl font-bold tracking-tight leading-tight text-white fade-up font-display" style={{animationDelay: '100ms'}}>
-            Where Projects Get <span className="gradient-text">Forged & Shipped</span>
+            Your Vision, <span className="gradient-text">Built by Experts</span>
           </h1>
           <p className="mt-4 text-lg text-white/70 fade-up font-body" style={{animationDelay: '200ms'}}>
-            Forge. Ship. Repeat. Verified talent, faster outcomes—projects that finish.
+            Hire. Build. Launch. Get it done right.
           </p>
 
             <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center fade-up" style={{animationDelay: '300ms'}}>
@@ -527,59 +654,9 @@ const HomePage = ({ testimonials, stats, recentFreelancers, featuredProjects }: 
         {/* --- Coding Showcase --- */}
         <CodingShowcase />
 
-        {/* --- Expert Skills --- */}
-        <div className="relative bg-[#0B0C0F] py-20">
-          {/* subtle backdrop glow */}
-          <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(60%_110%_at_50%_0%,rgba(99,102,241,0.10),rgba(59,130,246,0.06)_45%,transparent_75%)]" />
-
-          <div className="mx-auto max-w-7xl px-6">
-            <p className="text-center text-xs tracking-widest text-white/50 font-semibold">SERVICES</p>
-            <h2 className="mt-2 text-center text-3xl md:text-4xl font-semibold text-white">Expert Skills</h2>
-            <p className="mt-2 text-center text-white/70">
-              Connect with verified freelancers across every domain—ready to build, design, and deliver.
-            </p>
-
-            {/* glass container */}
-            <div className="mt-8 rounded-2xl border border-white/10 bg-white/5 backdrop-blur p-6 md:p-8 shadow-[inset_0_1px_0_rgba(255,255,255,.06),0_30px_80px_rgba(0,0,0,.35)]">
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                {[
-                  { label: "Marketing", icon: "📢" },
-                  { label: "Video", icon: "🎬" },
-                  { label: "Photo", icon: "📷" },
-                  { label: "Data & Analytics", icon: "📊" },
-                  { label: "SEO", icon: "🔍" },
-                  { label: "DevOps", icon: "⚙️" },
-                  { label: "Testing", icon: "🧪" },
-                  { label: "Support", icon: "🎧" },
-                  { label: "Translation", icon: "🌍" },
-                  { label: "Design", icon: "🎨" },
-                  { label: "Web Dev", icon: "💻" },
-                  { label: "Mobile Apps", icon: "📱" },
-                ].map(({ label, icon }) => (
-                  <a
-                    key={label}
-                    href={`/freelancers?category=${encodeURIComponent(label.toLowerCase())}`}
-                    className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10
-                               px-4 py-3 text-white/85 transition focus:outline-none focus:ring-2 focus:ring-white/40"
-                  >
-                    <span className="text-white/90">{icon}</span>
-                    <span className="font-medium">{label}</span>
-                  </a>
-                ))}
-              </div>
-
-              <div className="mt-6 flex justify-center">
-                <a className="rounded-xl px-5 py-2.5 font-semibold text-white
-                              bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500
-                              shadow-[0_0_18px_rgba(96,165,250,.35)] hover:scale-[1.02] transition">
-                  Explore all categories →
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* --- Popular Services Carousel --- */}
+        <PopularServicesSection />
       </section>
-
 
       {/* Product Proof Section */}
       <section className="bg-bg-base">
