@@ -91,21 +91,45 @@ const PopularServicesSection = () => {
   const scroller = useRef<HTMLDivElement>(null);
   const [atStart, setAtStart] = useState(true);
   const [atEnd, setAtEnd] = useState(false);
+  const [products, setProducts] = useState<any[]>([]);
 
-  const DATA = [
-    { title: "Social Media Marketing", subtitle: "", grad: "from-yellow-100 to-lime-100", image: "social-media.png" },
-    { title: "AI Development", subtitle: "", grad: "from-teal-100 to-emerald-200", image: "ai-development.png" },
-    { title: "Logo Design", subtitle: "", grad: "from-rose-100 to-orange-100", image: "logo-design.png" },
-    { title: "Website Design", subtitle: "", grad: "from-pink-100 to-fuchsia-100", image: "website-design.png" },
-    { title: "Voice Over", subtitle: "", grad: "from-amber-100 to-orange-200", image: "voice-over.png" },
-    { title: "UGC Videos", subtitle: "", grad: "from-rose-100 to-red-100", image: "ugc-videos.png" },
-    { title: "SEO Optimization", subtitle: "", grad: "from-blue-100 to-indigo-200", image: "seo-optimization.png" },
-    { title: "Video Editing", subtitle: "", grad: "from-purple-100 to-violet-200", image: "video-editing.png" },
-    { title: "Photography", subtitle: "", grad: "from-emerald-100 to-teal-200", image: "photography.png" },
-    { title: "Data Analytics", subtitle: "", grad: "from-orange-100 to-amber-200", image: "data-analytics.png" },
-    { title: "DevOps", subtitle: "", grad: "from-cyan-100 to-blue-200", image: "devops.png" },
-    { title: "Translation", subtitle: "", grad: "from-indigo-100 to-purple-200", image: "translation.png" },
+  const SERVICE_CATEGORIES = [
+    { title: "Website Development", subtitle: "", grad: "from-yellow-100 to-lime-100", image: "website-design.png" },
+    { title: "E-commerce Platform", subtitle: "", grad: "from-teal-100 to-emerald-200", image: "ai-development.png" },
+    { title: "Mobile App Development", subtitle: "", grad: "from-rose-100 to-orange-100", image: "logo-design.png" },
+    { title: "UI/UX Design", subtitle: "", grad: "from-pink-100 to-fuchsia-100", image: "website-design.png" },
+    { title: "Logo Design", subtitle: "", grad: "from-amber-100 to-orange-200", image: "voice-over.png" },
+    { title: "SEO Optimization", subtitle: "", grad: "from-rose-100 to-red-100", image: "ugc-videos.png" },
+    { title: "Social Media Marketing", subtitle: "", grad: "from-blue-100 to-indigo-200", image: "seo-optimization.png" },
+    { title: "Content Writing", subtitle: "", grad: "from-purple-100 to-violet-200", image: "video-editing.png" },
+    { title: "Data Analysis", subtitle: "", grad: "from-emerald-100 to-teal-200", image: "photography.png" },
+    { title: "DevOps Services", subtitle: "", grad: "from-orange-100 to-amber-200", image: "data-analytics.png" },
+    { title: "API Development", subtitle: "", grad: "from-cyan-100 to-blue-200", image: "devops.png" },
+    { title: "AI/ML Development", subtitle: "", grad: "from-indigo-100 to-purple-200", image: "translation.png" },
   ];
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const response = await fetch('/api/products');
+        if (response.ok) {
+          const data = await response.json();
+          setProducts(data);
+        }
+      } catch (error) {
+        console.error('Error fetching products:', error);
+      }
+    };
+    fetchProducts();
+  }, []);
+
+  const getProductId = (serviceTitle: string) => {
+    const product = products.find(p => 
+      p.name.toLowerCase().includes(serviceTitle.toLowerCase()) ||
+      serviceTitle.toLowerCase().includes(p.name.toLowerCase())
+    );
+    return product ? product.id : null;
+  };
 
   const updateEdgeState = () => {
     const el = scroller.current;
@@ -184,11 +208,16 @@ const PopularServicesSection = () => {
             ref={scroller}
             className="flex gap-6 overflow-x-auto scroll-smooth snap-x snap-mandatory px-1 py-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
-            {DATA.map(({ title, subtitle, grad, image }) => (
-              <div
+            {SERVICE_CATEGORIES.map(({ title, subtitle, grad, image }) => {
+              const productId = getProductId(title);
+              const href = productId ? `/products/${productId}` : '/products';
+              
+              return (
+              <Link
                 key={title}
+                href={href}
                 data-card
-                className="snap-start shrink-0 w-[240px] md:w-[280px] rounded-2xl border border-white/10 bg-neutral-900/50 shadow-[0_4px_12px_-4px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_16px_-4px_rgba(0,0,0,0.2)] transition-all duration-200 hover:-translate-y-1"
+                className="snap-start shrink-0 w-[240px] md:w-[280px] rounded-2xl border border-white/10 bg-neutral-900/50 shadow-[0_4px_12px_-4px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_16px_-4px_rgba(0,0,0,0.2)] transition-all duration-200 hover:-translate-y-1 block"
               >
                 {/* Top visual */}
                 <div className={`rounded-t-2xl bg-gradient-to-br ${grad} h-32 md:h-36 grid place-items-center`}>
@@ -199,13 +228,14 @@ const PopularServicesSection = () => {
                 <div className="rounded-b-2xl bg-black/60 p-4">
                   <h3 className="text-white font-semibold leading-tight text-sm">{title}</h3>
                   {subtitle && <p className="mt-1 text-xs text-white/55">{subtitle}</p>}
-                  <div className="mt-3 inline-flex items-center gap-2 text-sky-300/90 hover:text-sky-200 text-xs cursor-pointer">
+                  <div className="mt-3 inline-flex items-center gap-2 text-sky-300/90 hover:text-sky-200 text-xs">
                     <span>Explore</span>
                     <span>↗</span>
                   </div>
                 </div>
-              </div>
-            ))}
+              </Link>
+              );
+            })}
           </div>
         </div>
       </div>
