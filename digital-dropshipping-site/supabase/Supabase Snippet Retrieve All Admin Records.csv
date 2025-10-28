@@ -60,6 +60,14 @@ public,conversations_recovery,title,character varying
 public,conversations_recovery,created_at,timestamp with time zone
 public,conversations_recovery,updated_at,timestamp with time zone
 public,conversations_recovery,recovery_imported_at,timestamp with time zone
+public,deliverables,id,uuid
+public,deliverables,project_id,uuid
+public,deliverables,name,character varying
+public,deliverables,type,character varying
+public,deliverables,url,text
+public,deliverables,description,text
+public,deliverables,uploaded_at,timestamp with time zone
+public,deliverables,uploaded_by,uuid
 public,disputes,id,uuid
 public,disputes,project_id,uuid
 public,disputes,client_id,uuid
@@ -96,6 +104,20 @@ public,escrows_recovery,status,character varying
 public,escrows_recovery,created_at,timestamp with time zone
 public,escrows_recovery,updated_at,timestamp with time zone
 public,escrows_recovery,recovery_imported_at,timestamp with time zone
+public,events,id,uuid
+public,events,event_type,character varying
+public,events,entity_type,character varying
+public,events,entity_id,uuid
+public,events,user_id,uuid
+public,events,title,character varying
+public,events,description,text
+public,events,metadata,jsonb
+public,events,priority,character varying
+public,events,status,character varying
+public,events,assigned_to,uuid
+public,events,is_pinned,boolean
+public,events,created_at,timestamp with time zone
+public,events,updated_at,timestamp with time zone
 public,freelancer_services,id,uuid
 public,freelancer_services,freelancer_id,uuid
 public,freelancer_services,title,character varying

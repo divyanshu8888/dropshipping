@@ -4,9 +4,15 @@ import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import Header from '../src/components/Header'
-import EntityDrawer from '../src/components/EntityDrawer'
-import CommandBar from '../src/components/CommandBar'
-import DataGrid from '../src/components/DataGrid'
+import { 
+  EntityDrawer, 
+  CommandBar, 
+  DataGrid, 
+  EditableCard, 
+  KanbanPipeline, 
+  EventStream 
+} from '../src/components/admin'
+import { useToast } from '../src/components/Toast'
 import { supabase } from '../src/lib/supabase'
 
 interface DashboardMetrics {
@@ -99,6 +105,7 @@ interface AdminProps {
 
 export default function AdminDashboard({ freelancers, pendingCount, approvedCount, quoteRequests }: AdminProps) {
   const router = useRouter()
+  const { addToast } = useToast()
   const [loading, setLoading] = useState(true)
   const [dataLoading, setDataLoading] = useState(true)
   const [user, setUser] = useState<{name: string, role: string} | null>(null)
@@ -123,6 +130,11 @@ export default function AdminDashboard({ freelancers, pendingCount, approvedCoun
     payoutHolds: [],
     failedWebhooks: []
   })
+  
+  // Advanced control room state
+  const [kanbanColumns, setKanbanColumns] = useState<any[]>([])
+  const [eventStream, setEventStream] = useState<any[]>([])
+  const [isStreamPaused, setIsStreamPaused] = useState(false)
 
   useEffect(() => {
     const userData = localStorage.getItem('user')
@@ -203,6 +215,15 @@ export default function AdminDashboard({ freelancers, pendingCount, approvedCoun
     }
   }, [activityTab, loading])
 
+  // Fetch work queue data on mount
+  useEffect(() => {
+    if (!loading) {
+      fetchWorkQueueData()
+      fetchKanbanData()
+      fetchEventStream()
+    }
+  }, [loading])
+
 
   const getActivityIcon = (type: string) => {
     switch (type) {
@@ -231,6 +252,9 @@ export default function AdminDashboard({ freelancers, pendingCount, approvedCoun
 
   const handleActionExecute = async (action: string, params: any) => {
     try {
+      // Optimistic update
+      addToast(`Executing ${action}...`, 'info', 1000)
+      
       const response = await fetch('/api/admin/quick-action', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -238,13 +262,16 @@ export default function AdminDashboard({ freelancers, pendingCount, approvedCoun
       })
       
       if (response.ok) {
-        // Show success toast
-        console.log(`${action} completed successfully`)
+        addToast(`${action} completed successfully`, 'success')
         // Refresh data
-        window.location.reload() // Simple refresh for now
+        fetchDashboardData()
+        fetchWorkQueueData()
+      } else {
+        throw new Error('Action failed')
       }
     } catch (error) {
       console.error(`Error executing ${action}:`, error)
+      addToast(`Failed to execute ${action}`, 'error')
     }
   }
 
@@ -266,6 +293,19 @@ export default function AdminDashboard({ freelancers, pendingCount, approvedCoun
     }
   }
 
+  const fetchDashboardData = async () => {
+    try {
+      const metricsResponse = await fetch('/api/admin/dashboard-metrics')
+      if (metricsResponse.ok) {
+        const metricsData = await metricsResponse.json()
+        setMetrics(metricsData.metrics)
+        setLastUpdated(metricsData.lastUpdated)
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error)
+    }
+  }
+
   const fetchWorkQueueData = async () => {
     try {
       const response = await fetch('/api/admin/work-queue-data')
@@ -275,6 +315,87 @@ export default function AdminDashboard({ freelancers, pendingCount, approvedCoun
       }
     } catch (error) {
       console.error('Error fetching work queue data:', error)
+    }
+  }
+
+  // Advanced control room handlers
+  const handleKPIEdit = async (field: string, newValue: string | number) => {
+    try {
+      addToast(`Updating ${field}...`, 'info', 1000)
+      
+      const response = await fetch('/api/admin/update-kpi', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ field, value: newValue })
+      })
+      
+      if (response.ok) {
+        addToast(`${field} updated successfully`, 'success')
+        fetchDashboardData()
+      } else {
+        throw new Error('Update failed')
+      }
+    } catch (error) {
+      addToast(`Failed to update ${field}`, 'error')
+    }
+  }
+
+  const handleKanbanCardMove = async (cardId: string, fromStatus: string, toStatus: string) => {
+    try {
+      addToast(`Moving card to ${toStatus}...`, 'info', 1000)
+      
+      const response = await fetch('/api/admin/move-kanban-card', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cardId, fromStatus, toStatus })
+      })
+      
+      if (response.ok) {
+        addToast('Card moved successfully', 'success')
+        fetchKanbanData()
+      } else {
+        throw new Error('Move failed')
+      }
+    } catch (error) {
+      addToast('Failed to move card', 'error')
+    }
+  }
+
+  const handleEventClick = (event: any) => {
+    // Open entity drawer based on event type
+    const entityTypeMap: Record<string, string> = {
+      'user_registered': 'user',
+      'order_placed': 'order',
+      'project_created': 'project',
+      'service_created': 'service',
+      'dispute_opened': 'dispute'
+    }
+    
+    const entityType = entityTypeMap[event.type] || 'user'
+    handleEntitySelect(entityType, event.entityId || event.id)
+  }
+
+  const fetchKanbanData = async () => {
+    try {
+      const response = await fetch('/api/admin/kanban-data')
+      const data = await response.json()
+      if (data.success) {
+        setKanbanColumns(data.columns)
+      }
+    } catch (error) {
+      console.error('Error fetching kanban data:', error)
+    }
+  }
+
+  const fetchEventStream = async () => {
+    try {
+      const response = await fetch('/api/admin/event-stream')
+      const data = await response.json()
+      if (data.success) {
+        setEventStream(data.events)
+      }
+    } catch (error) {
+      console.error('Error fetching event stream:', error)
     }
   }
 
@@ -437,238 +558,215 @@ export default function AdminDashboard({ freelancers, pendingCount, approvedCoun
               <div className="mb-8">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">📊 Key Performance Indicators</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <StatCard
+                  <EditableCard
                     title="GMV Today"
                     value={formatCurrency(metrics.gmvToday)}
                     icon="💰"
-                  color="from-green-500 to-emerald-500"
-                />
-                <StatCard
+                    color="from-green-500 to-emerald-500"
+                    editable={true}
+                    onEdit={(newValue) => handleKPIEdit('gmvToday', newValue)}
+                    fastActions={[
+                      { label: 'Export Transactions (CSV)', action: 'export_transactions', icon: '📊' },
+                      { label: 'View Transaction Details', action: 'view_transactions', icon: '👁️' }
+                    ]}
+                    onFastAction={handleActionExecute}
+                  />
+                  <EditableCard
                     title="GMV (MTD)"
                     value={formatCurrency(metrics.gmvMTD)}
                     icon="📈"
                     color="from-blue-500 to-cyan-500"
                     change={metrics.revenueChange}
-                />
-                <StatCard
+                    editable={true}
+                    onEdit={(newValue) => handleKPIEdit('gmvMTD', newValue)}
+                    fastActions={[
+                      { label: 'Adjust Revenue Target', action: 'adjust_revenue_target', icon: '🎯' },
+                      { label: 'Generate Revenue Report', action: 'generate_revenue_report', icon: '📈' }
+                    ]}
+                    onFastAction={handleActionExecute}
+                  />
+                  <EditableCard
                     title="GMV (28d)"
                     value={formatCurrency(metrics.gmvTrailing28d)}
                     icon="📊"
-                  color="from-purple-500 to-pink-500"
-                />
-                  <StatCard
+                    color="from-purple-500 to-pink-500"
+                    editable={true}
+                    onEdit={(newValue) => handleKPIEdit('gmvTrailing28d', newValue)}
+                  />
+                  <EditableCard
                     title="Net Revenue"
                     value={formatCurrency(metrics.netRevenueAfterRefunds)}
                     icon="💸"
                     color="from-indigo-500 to-purple-500"
+                    editable={true}
+                    onEdit={(newValue) => handleKPIEdit('netRevenueAfterRefunds', newValue)}
+                    fastActions={[
+                      { label: 'Adjust Platform Fee', action: 'adjust_platform_fee', icon: '⚙️' },
+                      { label: 'Process Refunds', action: 'process_refunds', icon: '💰' }
+                    ]}
+                    onFastAction={handleActionExecute}
                   />
-                  <StatCard
+                  <EditableCard
                     title="Average Order Value"
                     value={formatCurrency(metrics.aov)}
                     icon="🛒"
                     color="from-yellow-500 to-orange-500"
-                />
-                <StatCard
-                  title="Active Users"
-                  value={metrics.activeUsers}
-                  icon="👥"
-                    color="from-teal-500 to-cyan-500"
+                    editable={true}
+                    onEdit={(newValue) => handleKPIEdit('aov', newValue)}
                   />
-                  <StatCard
+                  <EditableCard
+                    title="Active Users"
+                    value={metrics.activeUsers}
+                    icon="👥"
+                    color="from-teal-500 to-cyan-500"
+                    editable={true}
+                    onEdit={(newValue) => handleKPIEdit('activeUsers', newValue)}
+                    fastActions={[
+                      { label: 'Send User Notification', action: 'send_user_notification', icon: '📧' },
+                      { label: 'Export User List', action: 'export_users', icon: '👥' }
+                    ]}
+                    onFastAction={handleActionExecute}
+                  />
+                  <EditableCard
                     title="Total Orders"
                     value={metrics.totalOrders}
                     icon="📦"
                     color="from-red-500 to-pink-500"
+                    editable={true}
+                    onEdit={(newValue) => handleKPIEdit('totalOrders', newValue)}
                   />
-                  <StatCard
+                  <EditableCard
                     title="Conversion Rate"
                     value={`${metrics.conversionRate}%`}
                     icon="🎯"
                     color="from-emerald-500 to-green-500"
+                    editable={true}
+                    onEdit={(newValue) => handleKPIEdit('conversionRate', newValue)}
+                    fastActions={[
+                      { label: 'Optimize Conversion', action: 'optimize_conversion', icon: '🚀' },
+                      { label: 'A/B Test Landing Page', action: 'ab_test_landing', icon: '🧪' }
+                    ]}
+                    onFastAction={handleActionExecute}
                   />
                 </div>
               </div>
 
-              {/* Work Queue Section */}
+              {/* Work Queue Section - Actionable Tables */}
               <div className="mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">⚡ Work Queue - Needs Review</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  <StatCard
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">⚡ Work Queue - Action Required</h2>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Pending KYC */}
+                  <DataGrid
                     title="Pending KYC"
-                    value={metrics.workQueue.pendingKYC}
-                    icon="🆔"
-                    color="from-yellow-500 to-orange-500"
-                    onClick={() => router.push('/admin/users?filter=pending_kyc')}
-                />
-                <StatCard
-                  title="Flagged Chats"
-                    value={metrics.workQueue.flaggedChats}
-                    icon="🚨"
-                  color="from-red-500 to-pink-500"
-                    onClick={() => router.push('/admin/moderation?filter=flagged_chats')}
-                />
-                <StatCard
+                    rows={workQueueData.pendingKYC}
+                    columns={[
+                      { field: 'email', headerName: 'Email' },
+                      { field: 'role', headerName: 'Role' },
+                      { field: 'created_at', headerName: 'Submitted', renderCell: (row) => 
+                        new Date(row.created_at).toLocaleDateString()
+                      },
+                      { field: 'status', headerName: 'Status', renderCell: (row) => (
+                        <span className={`px-2 py-1 rounded-full text-xs ${
+                          row.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {row.status}
+                        </span>
+                      )}
+                    ]}
+                    onRowClick={(row) => handleEntitySelect('kyc', row.id)}
+                    bulkActions={[
+                      { label: 'Approve All', action: 'approve_kyc', icon: '✅' },
+                      { label: 'Reject All', action: 'reject_kyc', icon: '❌', variant: 'destructive' }
+                    ]}
+                    onBulkAction={handleWorkQueueBulkAction}
+                    filters={[
+                      { field: 'role', label: 'Role', options: [
+                        { value: 'freelancer', label: 'Freelancer' },
+                        { value: 'client', label: 'Client' }
+                      ]},
+                      { field: 'status', label: 'Status', options: [
+                        { value: 'pending', label: 'Pending' },
+                        { value: 'approved', label: 'Approved' },
+                        { value: 'rejected', label: 'Rejected' }
+                      ]}
+                    ]}
+                  />
+
+                  {/* Refund Requests */}
+                  <DataGrid
                     title="Refund Requests"
-                    value={metrics.workQueue.refundRequests}
-                    icon="↩️"
-                  color="from-orange-500 to-red-500"
-                    onClick={() => router.push('/admin/orders?filter=refund_requests')}
-                  />
-                  <StatCard
-                    title="Chargebacks"
-                    value={metrics.workQueue.chargebacks}
-                    icon="💳"
-                    color="from-red-600 to-red-700"
-                    onClick={() => router.push('/admin/finance?filter=chargebacks')}
-                  />
-                  <StatCard
-                    title="Stock Alerts"
-                    value={metrics.workQueue.stockAlerts}
-                    icon="📦"
-                    color="from-yellow-600 to-orange-600"
-                    onClick={() => router.push('/admin/products?filter=stock_alerts')}
-                  />
-                  <StatCard
-                    title="Failed Webhooks"
-                    value={metrics.workQueue.failedWebhooks}
-                    icon="🔗"
-                    color="from-red-500 to-red-600"
-                    onClick={() => router.push('/admin/operations?filter=failed_webhooks')}
-                  />
-                  <StatCard
-                    title="Payout Holds"
-                    value={metrics.workQueue.payoutHolds}
-                    icon="⏸️"
-                    color="from-orange-600 to-red-600"
-                    onClick={() => router.push('/admin/finance?filter=payout_holds')}
-                />
-                <StatCard
-                    title="Total Items"
-                    value={metrics.workQueue.totalItems}
-                    icon="📋"
-                    color="from-gray-500 to-gray-600"
-                    onClick={() => router.push('/admin/work-queue')}
+                    rows={workQueueData.refundRequests}
+                    columns={[
+                      { field: 'id', headerName: 'Order ID' },
+                      { field: 'total_amount', headerName: 'Amount', renderCell: (row) => 
+                        `$${row.total_amount}`
+                      },
+                      { field: 'status', headerName: 'Status' },
+                      { field: 'created_at', headerName: 'Requested', renderCell: (row) => 
+                        new Date(row.created_at).toLocaleDateString()
+                      }
+                    ]}
+                    onRowClick={(row) => handleEntitySelect('order', row.id)}
+                    bulkActions={[
+                      { label: 'Approve Refunds', action: 'approve_refunds', icon: '✅' },
+                      { label: 'Reject Refunds', action: 'reject_refunds', icon: '❌', variant: 'destructive' }
+                    ]}
+                    onBulkAction={handleWorkQueueBulkAction}
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-                {/* Activity Feed */}
+                {/* Event Stream */}
                 <div className="lg:col-span-2">
-                  <div className="bg-white rounded-2xl shadow-lg p-6">
-                    <div className="flex items-center justify-between mb-6">
-                      <h2 className="text-2xl font-bold text-gray-900">📢 Live Activity Feed</h2>
-                      <div className="flex space-x-2">
-                        {[
-                          { id: 'all', label: 'All', icon: '📊' },
-                          { id: 'users', label: 'Users', icon: '👥' },
-                          { id: 'clients', label: 'Clients', icon: '🛒' },
-                          { id: 'services', label: 'Services', icon: '🔧' }
-                        ].map((tab) => (
-                          <button
-                            key={tab.id}
-                            onClick={() => setActivityTab(tab.id as any)}
-                            className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
-                              activityTab === tab.id
-                                ? 'bg-indigo-600 text-white'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                            }`}
-                          >
-                            <span className="mr-1">{tab.icon}</span>
-                            {tab.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      {activityLoading ? (
-                        <div className="text-center py-8 text-gray-500">
-                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-2"></div>
-                          <p>Loading {activityTab === 'all' ? '' : activityTab} activities...</p>
-                        </div>
-                      ) : activityFeed.length > 0 ? (
-                        activityFeed.map((item) => (
-                          <div key={item.id} className="flex items-start space-x-3 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
-                          <div className="text-2xl">{getActivityIcon(item.type)}</div>
-                          <div className="flex-1">
-                            <p className="text-gray-900 font-medium">{item.message}</p>
-                            <div className="flex items-center justify-between mt-1">
-                              <span className="text-sm text-gray-500">{item.timestamp}</span>
-                                <div className="flex items-center space-x-2">
-                              {item.amount && (
-                                <span className="text-sm font-semibold text-green-600">{formatCurrency(item.amount)}</span>
-                              )}
-                                  {item.budget && (
-                                    <span className="text-sm font-semibold text-blue-600">Budget: {formatCurrency(item.budget)}</span>
-                                  )}
-                                  {item.rating && (
-                                    <span className="text-sm font-semibold text-yellow-600">⭐ {item.rating}</span>
-                                  )}
-                                  {item.status && (
-                                    <span className={`text-xs px-2 py-1 rounded-full ${
-                                      item.status === 'completed' ? 'bg-green-100 text-green-800' :
-                                      item.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                      item.status === 'active' ? 'bg-blue-100 text-blue-800' :
-                                      'bg-gray-100 text-gray-800'
-                                    }`}>
-                                      {item.status}
-                                    </span>
-                                  )}
-                                </div>
-                          </div>
-                          </div>
-                        </div>
-                        ))
-                      ) : (
-                        <div className="text-center py-8 text-gray-500">
-                          <div className="text-4xl mb-2">📭</div>
-                          <p>No {activityTab === 'all' ? '' : activityTab} activities found</p>
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="mt-4 text-center">
-                      <button 
-                        onClick={() => {
-                          const fetchActivityData = async () => {
-                            try {
-                              setActivityLoading(true)
-                              const response = await fetch(`/api/admin/activity-feed?type=${activityTab}`)
-                              const data = await response.json()
-                              if (data.success) {
-                                setActivityFeed(data.activities)
-                              }
-                            } catch (error) {
-                              console.error('Failed to refresh activity feed:', error)
-                            } finally {
-                              setActivityLoading(false)
-                            }
-                          }
-                          fetchActivityData()
-                        }}
-                        disabled={activityLoading}
-                        className={`text-indigo-600 hover:text-indigo-800 font-semibold transition-colors ${
-                          activityLoading ? 'opacity-50 cursor-not-allowed' : ''
-                        }`}
-                      >
-                        {activityLoading ? '🔄 Refreshing...' : '🔄 Refresh Activity'}
-                      </button>
-                    </div>
-                  </div>
+                  <EventStream
+                    events={eventStream}
+                    onEventClick={handleEventClick}
+                    onAssign={(eventId, assignee) => {
+                      addToast(`Assigned event to ${assignee}`, 'success')
+                    }}
+                    onPin={(eventId) => {
+                      addToast('Event pinned', 'success')
+                    }}
+                    filters={[
+                      { field: 'event_type', label: 'Event Type', options: [
+                        { value: 'user_registered', label: 'User Registration' },
+                        { value: 'order_placed', label: 'Order Placed' },
+                        { value: 'project_created', label: 'Project Created' },
+                        { value: 'service_created', label: 'Service Created' },
+                        { value: 'kyc_submitted', label: 'KYC Submitted' },
+                        { value: 'payment_processed', label: 'Payment Processed' },
+                        { value: 'dispute_opened', label: 'Dispute Opened' },
+                        { value: 'review_posted', label: 'Review Posted' },
+                        { value: 'message_flagged', label: 'Message Flagged' }
+                      ]},
+                      { field: 'priority', label: 'Priority', options: [
+                        { value: 'high', label: 'High' },
+                        { value: 'medium', label: 'Medium' },
+                        { value: 'low', label: 'Low' }
+                      ]},
+                      { field: 'status', label: 'Status', options: [
+                        { value: 'active', label: 'Active' },
+                        { value: 'archived', label: 'Archived' },
+                        { value: 'deleted', label: 'Deleted' }
+                      ]}
+                    ]}
+                    onFilterChange={(filters) => {
+                      console.log('Event filters changed:', filters)
+                    }}
+                  />
                 </div>
 
-                {/* Pipeline Snapshot */}
-                <div className="bg-white rounded-2xl shadow-lg p-6">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-6">🔄 Project Pipeline</h2>
-                  <div className="space-y-4">
-                    <PipelineStage stage="New Requests" count={metrics.newRequests} change={metrics.newRequestsChange} color="bg-green-500" />
-                    <PipelineStage stage="Quotes Under Review" count={metrics.quotesUnderReview} change={0} color="bg-yellow-500" />
-                    <PipelineStage stage="SOW Signed" count={metrics.sowSigned} change={0} color="bg-blue-500" />
-                    <PipelineStage stage="In Delivery" count={metrics.inDelivery} change={0} color="bg-purple-500" />
-                    <PipelineStage stage="Completed" count={metrics.completed} change={metrics.completedChange} color="bg-gray-800" />
-                  </div>
-                </div>
+                {/* Kanban Pipeline */}
+                <KanbanPipeline
+                  columns={kanbanColumns}
+                  onCardMove={handleKanbanCardMove}
+                  onCardClick={(card) => handleEntitySelect('project', card.id)}
+                  onAddCard={(status) => {
+                    addToast(`Adding new card to ${status}`, 'info')
+                    // Handle add card logic
+                  }}
+                />
                         </div>
 
               {/* Quick Actions */}
