@@ -48,7 +48,7 @@ export default function ClientDashboard() {
   return (
     <>
       <Head>
-        <title>Client Dashboard - TalentHub Pro</title>
+        <title>Client Dashboard - Uniti</title>
         <meta name="description" content="Your client dashboard for finding freelancers and services" />
       </Head>
 

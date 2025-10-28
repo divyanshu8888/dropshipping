@@ -343,7 +343,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
     // Import supabase for server-side fetching
     const { createClient } = require('@supabase/supabase-js');
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ptsvsfwkxuxzwsgvqecc.supabase.co';
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
     
     const supabase = createClient(supabaseUrl, supabaseAnonKey);

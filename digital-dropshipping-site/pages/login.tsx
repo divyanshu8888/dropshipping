@@ -3,10 +3,11 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import Header from '../src/components/Header';
+import { useAuth } from '../src/contexts/AuthContext';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const { login, loading, error } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -16,47 +17,34 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
-    setLoading(true);
 
+    console.log('=== LOGIN FORM SUBMITTED ===');
+    console.log('Email:', formData.email);
+    console.log('Password length:', formData.password.length);
+    console.log('Login function from useAuth:', typeof login);
+    console.log('Login function:', login);
+    console.log('About to call login function...');
+    
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        // Store user data in localStorage for session management
-        localStorage.setItem('user', JSON.stringify(data.user));
-        
-        // Redirect based on user role
-        if (data.user.role === 'ADMIN' || data.user.role === 'TEAM_MEMBER') {
-          router.push('/admin');
-        } else if (data.user.role === 'FREELANCER') {
-          router.push('/freelancers/dashboard');
-        } else {
-          router.push('/client-dashboard');
-        }
+      const result = await login(formData.email, formData.password);
+      console.log('Login result:', result);
+      
+      if (!result.success) {
+        setErrors({ submit: result.error || 'Login failed' });
       } else {
-        setErrors({ submit: data.error || 'Invalid credentials. Please try again.' });
+        console.log('Login successful, should redirect now');
       }
     } catch (error) {
-      setErrors({ submit: 'Error logging in. Please try again.' });
-    } finally {
-      setLoading(false);
+      console.error('Login error:', error);
+      setErrors({ submit: 'Login failed. Please try again.' });
     }
   };
 
   return (
     <>
       <Head>
-        <title>Login - TalentHub Pro</title>
-        <meta name="description" content="Login to your TalentHub Pro account" />
+        <title>Login - Uniti</title>
+        <meta name="description" content="Login to your Uniti account" />
       </Head>
 
       <div className="min-h-screen bg-bg-base relative overflow-hidden">
@@ -141,13 +129,13 @@ export default function LoginPage() {
                   </div>
                 </div>
 
-                {errors.submit && (
+                {(errors.submit || error) && (
                   <div className="mt-6 p-4 bg-red-50/90 backdrop-blur-sm border border-red-200/60 rounded-xl">
                     <div className="flex items-center">
                       <svg className="h-5 w-5 text-red-500 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
-                      <p className="text-sm text-red-600 font-semibold">{errors.submit}</p>
+                      <p className="text-sm text-red-600 font-semibold">{errors.submit || error}</p>
                     </div>
                   </div>
                 )}

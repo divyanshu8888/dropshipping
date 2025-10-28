@@ -338,7 +338,7 @@
   }
 }
 
-/* Unitea Logo Animations */
+/* Uniti Logo Animations */
 @keyframes unity {
   0%   { opacity:0; transform:translate(-140%, -50%) scale(.94); }
   12%  { opacity:1; transform:translate(-60%,  -50%) scale(.98); }
@@ -362,7 +362,7 @@
   44%,100%{ opacity:0;   transform:translateZ(0) scale(1.08); }
 }
 
-@keyframes unitea {
+@keyframes uniti {
   0%,25%  { opacity:0; transform:translate(-50%, -50%) scale(.97); }
   32%     { opacity:1; transform:translate(-50%, -50%) scale(1);    }
   75%     { opacity:1; transform:translate(-50%, -50%) scale(1);    }

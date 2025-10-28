@@ -22,7 +22,7 @@ export default function ProductsPage({ products }: ProductsPageProps) {
   return (
     <>
       <Head>
-        <title>Freelancer Services & Products - TalentHub Pro</title>
+        <title>Freelancer Services & Products - Uniti</title>
         <meta name="description" content="Discover professional services and digital products from our verified freelancers. Get custom quotes and view detailed service information." />
       </Head>
 

@@ -71,8 +71,8 @@ export default function SignupPage() {
   return (
     <>
       <Head>
-        <title>Sign Up - TalentHub Pro</title>
-        <meta name="description" content="Create your TalentHub Pro account" />
+        <title>Sign Up - Uniti</title>
+        <meta name="description" content="Create your Uniti account" />
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-100">

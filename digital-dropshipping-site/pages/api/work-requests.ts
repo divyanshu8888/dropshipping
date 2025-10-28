@@ -11,14 +11,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                         *,
                         clients (
                             id,
-                            name
+                            contact_name
                         ),
                         freelancers (
                             id,
-                            name,
+                            display_name,
                             rating
-                        ),
-                        services (*)
+                        )
                     `);
                 
                 if (error) {
@@ -34,7 +33,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         case 'POST':
             try {
-                const { title, description, budget, deadline, client_id, service_id } = req.body;
+                const { title, description, budget, deadline, client_id, freelancer_id } = req.body;
                 const { data: workRequest, error } = await supabase
                     .from('projects')
                     .insert({
@@ -43,7 +42,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                         budget,
                         deadline,
                         client_id,
-                        service_id,
+                        freelancer_id: freelancer_id || null,
                         status: 'open'
                     })
                     .select()

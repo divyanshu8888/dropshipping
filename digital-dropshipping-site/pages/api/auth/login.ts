@@ -27,6 +27,10 @@ export default async function handler(
       .eq('email', email.toLowerCase())
       .single();
 
+    console.log('Login attempt for:', email.toLowerCase());
+    console.log('User found:', user ? 'Yes' : 'No');
+    console.log('User error:', userError);
+
     if (!user || userError) {
       return res.status(401).json({ 
         error: 'Invalid email or password' 
@@ -54,7 +58,8 @@ export default async function handler(
       user: {
         id: user.id,
         email: user.email,
-        role: user.role,
+        name: user.email.split('@')[0], // Use email prefix as name since users table doesn't have name column
+        role: user.role.toUpperCase(), // Convert to uppercase for consistency
         isActive: user.is_active,
         emailVerified: user.email_verified,
         createdAt: user.created_at

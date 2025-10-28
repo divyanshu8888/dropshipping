@@ -6,7 +6,7 @@ export default function ThankYouPage() {
   return (
     <>
       <Head>
-        <title>Thank You - TalentHub Pro Store</title>
+        <title>Thank You - Uniti Store</title>
         <meta name="description" content="Thank you for your order" />
       </Head>
 

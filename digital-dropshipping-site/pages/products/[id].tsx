@@ -99,7 +99,7 @@ const ProductDetail = () => {
     return (
         <>
             <Head>
-                <title>{product.name} - TalentHub Pro Store</title>
+                <title>{product.name} - Uniti Store</title>
                 <meta name="description" content={product.description} />
             </Head>
 

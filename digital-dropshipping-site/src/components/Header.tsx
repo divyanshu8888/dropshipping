@@ -2,16 +2,10 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { canAccessAdminDashboard } from '../lib/permissions';
-
-interface User {
-    id: string;
-    name: string;
-    email: string;
-    role: string;
-}
+import { useAuth } from '../contexts/AuthContext';
 
 // Simple Uniti Logo Component
-const UniteaLogo = () => {
+const UnitiLogo = () => {
     return (
         <div
             className="relative w-full h-full flex items-center justify-center select-none"
@@ -27,28 +21,34 @@ const UniteaLogo = () => {
                     fontFamily: 'Space Grotesk, sans-serif'
                 }}
             >
-                Unitea
+                Uniti
             </span>
         </div>
     );
 };
 
 const Header: React.FC = () => {
-    const [user, setUser] = useState<User | null>(null);
+    const { user, logout } = useAuth();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
     const router = useRouter();
 
-    useEffect(() => {
-        const userData = localStorage.getItem('user');
-        if (userData) {
+    // Debug logging
+    console.log('Header - user:', user);
+    console.log('Header - user type:', typeof user);
+    console.log('Header - user is null:', user === null);
+    if (typeof window !== 'undefined') {
+        const storedUser = localStorage.getItem('user');
+        console.log('Header - localStorage user:', storedUser);
+        if (storedUser) {
             try {
-                setUser(JSON.parse(userData));
-            } catch (error) {
-                console.error('Error parsing user data:', error);
+                const parsedUser = JSON.parse(storedUser);
+                console.log('Header - parsed localStorage user:', parsedUser);
+            } catch (e) {
+                console.log('Header - Error parsing localStorage user:', e);
             }
         }
-    }, []);
+    }
 
     useEffect(() => {
         const onScroll = () => setScrolled(window.scrollY > 20);
@@ -56,10 +56,13 @@ const Header: React.FC = () => {
         return () => window.removeEventListener('scroll', onScroll);
     }, []);
 
+    // Debug effect to track user state changes
+    useEffect(() => {
+        console.log('Header - User state changed:', user);
+    }, [user]);
+
     const handleLogout = () => {
-        localStorage.removeItem('user');
-        setUser(null);
-        window.location.href = '/';
+        logout();
     };
 
     return (
@@ -71,11 +74,11 @@ const Header: React.FC = () => {
                     <Link href="/" className="flex items-center gap-2 group overflow-visible">
                         <img 
                             src="/images/logo/logo.png" 
-                            alt="Unitea Logo" 
+                            alt="Uniti Logo" 
                             className="h-10 w-auto group-hover:scale-105 transition-all duration-300 bg-transparent"
                         />
                         <div className="relative w-auto h-12 overflow-visible">
-                            <UniteaLogo />
+                            <UnitiLogo />
                         </div>
                     </Link>
                 </div>

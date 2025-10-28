@@ -92,7 +92,7 @@ export default function FreelancerDashboard() {
   return (
     <>
       <Head>
-        <title>Freelancer Dashboard - TalentHub Pro</title>
+        <title>Freelancer Dashboard - Uniti</title>
         <meta name="description" content="Your freelancer dashboard for managing services and clients" />
       </Head>
 

@@ -53,7 +53,7 @@ export default function FreelancersPage({ freelancers }: FreelancersPageProps) {
   return (
     <>
       <Head>
-        <title>Find Freelancers - TalentHub Pro</title>
+        <title>Find Freelancers - Uniti</title>
         <meta name="description" content="Browse verified freelancers and hire top talent for your projects" />
       </Head>
 
@@ -264,7 +264,7 @@ export default function FreelancersPage({ freelancers }: FreelancersPageProps) {
               Are you a freelancer?
             </h2>
             <p className="text-xl text-indigo-100 mb-8">
-              Join TalentHub Pro and connect with thousands of clients worldwide
+              Join Uniti and connect with thousands of clients worldwide
             </p>
             <Link
               href="/apply"

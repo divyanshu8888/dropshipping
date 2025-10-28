@@ -3,5 +3,5 @@
 
 console.log('ℹ️  Admin setup is handled through Supabase database');
 console.log('📧 Default admin: div@admin.com');
-console.log('🔑 Password: admin123');
+console.log('🔑 Please set a secure password using: node scripts/hash-password.js YOUR_SECURE_PASSWORD');
 console.log('🌐 Login at: http://localhost:3000/login');

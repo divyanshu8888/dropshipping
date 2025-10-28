@@ -250,7 +250,7 @@ export default function ProductsManagement() {
   return (
     <>
       <Head>
-        <title>Products Management - TalentHub Pro</title>
+        <title>Products Management - Uniti</title>
       </Head>
 
       <div className="min-h-screen bg-bg-base">

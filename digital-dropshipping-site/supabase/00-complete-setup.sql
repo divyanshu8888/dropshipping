@@ -1353,11 +1353,11 @@ INSERT INTO reviews (id, freelancer_id, client_id, project_id, rating, review_te
 
 -- Sample testimonials
 INSERT INTO testimonials (id, client_name, client_title, client_company, content, rating, is_featured, is_active) VALUES
-('00000000-0000-0000-0000-000000000601', 'Sarah Williams', 'CEO', 'TechStart Inc', 'The team at TalentHub Pro transformed our business. Their developers are incredibly skilled and delivered exactly what we needed.', 5, true, true),
+('00000000-0000-0000-0000-000000000601', 'Sarah Williams', 'CEO', 'TechStart Inc', 'The team at Uniti transformed our business. Their developers are incredibly skilled and delivered exactly what we needed.', 5, true, true),
 ('00000000-0000-0000-0000-000000000602', 'Michael Brown', 'Marketing Director', 'Creative Solutions', 'Outstanding service and results. Our website traffic increased by 300% after working with their marketing team.', 5, true, true),
 ('00000000-0000-0000-0000-000000000603', 'Emily Davis', 'Founder', 'StartupXYZ', 'Professional, reliable, and incredibly talented. They helped us launch our mobile app successfully.', 5, true, true),
 ('00000000-0000-0000-0000-000000000604', 'David Wilson', 'CTO', 'Enterprise Corp', 'The quality of work and attention to detail is exceptional. Highly recommend for any development project.', 5, true, true),
-('00000000-0000-0000-0000-000000000605', 'Jessica Taylor', 'Product Manager', 'Innovation Labs', 'Working with TalentHub Pro was a game-changer for our business. Their expertise and dedication are unmatched.', 5, true, true);
+('00000000-0000-0000-0000-000000000605', 'Jessica Taylor', 'Product Manager', 'Innovation Labs', 'Working with Uniti was a game-changer for our business. Their expertise and dedication are unmatched.', 5, true, true);
 
 -- Sample portfolio items
 INSERT INTO portfolio_items (id, freelancer_id, title, summary, description, thumbnail_url, gallery_urls, tags, is_public) VALUES
@@ -2412,7 +2412,7 @@ GRANT EXECUTE ON FUNCTION check_auto_sync_status() TO authenticated;
 DO $$
 BEGIN
     RAISE NOTICE '================================================';
-    RAISE NOTICE '✅ DIGITAL DROPSHIPPING PLATFORM SETUP COMPLETE!';
+    RAISE NOTICE '✅ UNITI PLATFORM SETUP COMPLETE!';
     RAISE NOTICE '================================================';
     RAISE NOTICE '';
     RAISE NOTICE '🎉 Your platform now includes:';
@@ -2433,7 +2433,7 @@ BEGIN
     RAISE NOTICE '';
     RAISE NOTICE '🔑 Admin Login:';
     RAISE NOTICE '   Email: div@admin.com';
-    RAISE NOTICE '   Password: admin123';
+    RAISE NOTICE '   Password: [SET YOUR SECURE PASSWORD]';
     RAISE NOTICE '   User ID: 00000000-0000-0000-0000-000000000001';
     RAISE NOTICE '';
     RAISE NOTICE '🌐 Features Ready:';
@@ -2473,7 +2473,7 @@ BEGIN
     RAISE NOTICE '   1. Run: SELECT * FROM bulk_sync_all_to_recovery();';
     RAISE NOTICE '   2. Update your .env.local with Supabase credentials';
     RAISE NOTICE '   3. Run: npm run dev';
-    RAISE NOTICE '   4. Login with div@admin.com / admin123';
+    RAISE NOTICE '   4. Login with div@admin.com / [YOUR_SECURE_PASSWORD]';
     RAISE NOTICE '   5. Start building your platform!';
     RAISE NOTICE '================================================';
 END $$;

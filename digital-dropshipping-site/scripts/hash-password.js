@@ -1,7 +1,12 @@
 const bcrypt = require('bcryptjs');
 
 // Replace 'your_password_here' with your actual password
-const plainPassword = process.argv[2] || 'changeme123'; // Use command line argument or default
+const plainPassword = process.argv[2];
+if (!plainPassword) {
+  console.error('❌ Error: Password is required');
+  console.log('Usage: node scripts/hash-password.js YOUR_PASSWORD');
+  process.exit(1);
+}
 const saltRounds = 12;
 
 async function hashPassword() {

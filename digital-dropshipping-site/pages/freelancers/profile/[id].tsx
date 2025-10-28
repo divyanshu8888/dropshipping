@@ -62,7 +62,7 @@ export default function FreelancerProfile({ freelancer, reviews, portfolio }: Fr
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-100">
       <Head>
-        <title>{freelancer?.display_name || 'Freelancer'} - TalentHub Pro</title>
+        <title>{freelancer?.display_name || 'Freelancer'} - Uniti</title>
         <meta name="description" content={freelancer?.description || 'Professional freelancer profile'} />
       </Head>
 

@@ -9,6 +9,7 @@ import { supabase } from '../src/lib/supabase'
 interface DashboardMetrics {
   totalProjects: number;
   revenueThisMonth: number;
+  revenueChange: number;
   pendingPayouts: number;
   activeOrders: number;
   activeUsers: number;
@@ -16,10 +17,12 @@ interface DashboardMetrics {
   openDisputes: number;
   avgResponseTime: number;
   newRequests: number;
+  newRequestsChange: number;
   quotesUnderReview: number;
   sowSigned: number;
   inDelivery: number;
   completed: number;
+  completedChange: number;
   messagesBlocked: number;
   mutedUsers: number;
   topViolationType: string;
@@ -297,6 +300,7 @@ export default function AdminDashboard({ freelancers, pendingCount, approvedCoun
                   value={formatCurrency(metrics.revenueThisMonth)}
                   icon="💸"
                   color="from-green-500 to-emerald-500"
+                  change={metrics.revenueChange}
                 />
                 <StatCard
                   title="Pending Payouts"
@@ -367,11 +371,11 @@ export default function AdminDashboard({ freelancers, pendingCount, approvedCoun
                 <div className="bg-white rounded-2xl shadow-lg p-6">
                   <h2 className="text-2xl font-bold text-gray-900 mb-6">🔄 Project Pipeline</h2>
                   <div className="space-y-4">
-                    <PipelineStage stage="New Requests" count={metrics.newRequests} change={0} color="bg-green-500" />
+                    <PipelineStage stage="New Requests" count={metrics.newRequests} change={metrics.newRequestsChange} color="bg-green-500" />
                     <PipelineStage stage="Quotes Under Review" count={metrics.quotesUnderReview} change={0} color="bg-yellow-500" />
                     <PipelineStage stage="SOW Signed" count={metrics.sowSigned} change={0} color="bg-blue-500" />
                     <PipelineStage stage="In Delivery" count={metrics.inDelivery} change={0} color="bg-purple-500" />
-                    <PipelineStage stage="Completed" count={metrics.completed} change={0} color="bg-gray-800" />
+                    <PipelineStage stage="Completed" count={metrics.completed} change={metrics.completedChange} color="bg-gray-800" />
                   </div>
                 </div>
                         </div>

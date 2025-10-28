@@ -129,8 +129,8 @@ export default function ApplyPage() {
   return (
     <>
       <Head>
-        <title>Apply as Freelancer - TalentHub Pro</title>
-        <meta name="description" content="Join TalentHub Pro and connect with clients worldwide" />
+        <title>Apply as Freelancer - Uniti</title>
+        <meta name="description" content="Join Uniti and connect with clients worldwide" />
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-100">
@@ -140,7 +140,7 @@ export default function ApplyPage() {
         <section className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-16">
           <div className="max-w-4xl mx-auto px-4 text-center">
             <h1 className="text-4xl md:text-5xl font-extrabold mb-4">
-              Join TalentHub Pro
+              Join Uniti
             </h1>
             <p className="text-xl text-indigo-100">
               Connect with thousands of clients and grow your freelance business

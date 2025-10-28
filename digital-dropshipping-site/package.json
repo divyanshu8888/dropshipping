@@ -1,7 +1,7 @@
 {
   "name": "digital-dropshipping-site",
   "version": "1.0.0",
-  "description": "A digital dropshipping website built with Next.js and TypeScript.",
+  "description": "Uniti - A comprehensive platform connecting clients with verified professionals.",
   "main": "index.js",
   "scripts": {
     "dev": "next dev",

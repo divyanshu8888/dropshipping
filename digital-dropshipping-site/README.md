@@ -1,4 +1,4 @@
-# Digital Dropshipping Site
+# Uniti Platform
 
 A comprehensive e-commerce platform with integrated freelancer showcase system.
 

@@ -95,17 +95,16 @@ const PopularServicesSection = () => {
 
   const SERVICE_CATEGORIES = [
     { title: "Website Development", subtitle: "", grad: "from-yellow-100 to-lime-100", image: "website-design.png" },
-    { title: "E-commerce Platform", subtitle: "", grad: "from-teal-100 to-emerald-200", image: "ai-development.png" },
-    { title: "Mobile App Development", subtitle: "", grad: "from-rose-100 to-orange-100", image: "logo-design.png" },
-    { title: "UI/UX Design", subtitle: "", grad: "from-pink-100 to-fuchsia-100", image: "website-design.png" },
-    { title: "Logo Design", subtitle: "", grad: "from-amber-100 to-orange-200", image: "voice-over.png" },
-    { title: "SEO Optimization", subtitle: "", grad: "from-rose-100 to-red-100", image: "ugc-videos.png" },
-    { title: "Social Media Marketing", subtitle: "", grad: "from-blue-100 to-indigo-200", image: "seo-optimization.png" },
-    { title: "Content Writing", subtitle: "", grad: "from-purple-100 to-violet-200", image: "video-editing.png" },
-    { title: "Data Analysis", subtitle: "", grad: "from-emerald-100 to-teal-200", image: "photography.png" },
-    { title: "DevOps Services", subtitle: "", grad: "from-orange-100 to-amber-200", image: "data-analytics.png" },
-    { title: "API Development", subtitle: "", grad: "from-cyan-100 to-blue-200", image: "devops.png" },
-    { title: "AI/ML Development", subtitle: "", grad: "from-indigo-100 to-purple-200", image: "translation.png" },
+    { title: "AI/ML Development", subtitle: "", grad: "from-teal-100 to-emerald-200", image: "ai-development.png" },
+    { title: "Logo Design", subtitle: "", grad: "from-rose-100 to-orange-100", image: "logo-design.png" },
+    { title: "UX/UI Design", subtitle: "", grad: "from-pink-100 to-fuchsia-100", image: "ui-ux-design.png" },
+    { title: "Voice Over Services", subtitle: "", grad: "from-amber-100 to-orange-200", image: "voice-over.png" },
+    { title: "UGC Videos", subtitle: "", grad: "from-rose-100 to-red-100", image: "ugc-videos.png" },
+    { title: "Social Media Marketing", subtitle: "", grad: "from-blue-100 to-indigo-200", image: "social-media.png" },
+    { title: "SEO Optimization", subtitle: "", grad: "from-purple-100 to-violet-200", image: "seo-optimization.png" },
+    { title: "Data Analytics", subtitle: "", grad: "from-emerald-100 to-teal-200", image: "data-analytics.png" },
+    { title: "DevOps Services", subtitle: "", grad: "from-orange-100 to-amber-200", image: "devops.png" },
+    { title: "Brand Identity", subtitle: "", grad: "from-cyan-100 to-blue-200", image: "logo.png" },
   ];
 
   useEffect(() => {
@@ -124,6 +123,28 @@ const PopularServicesSection = () => {
   }, []);
 
   const getProductId = (serviceTitle: string) => {
+    // Create a mapping of service titles to product names for better matching
+    const serviceToProductMap: { [key: string]: string } = {
+      'Website Development': 'Website Development',
+      'AI/ML Development': 'AI/ML Development',
+      'Logo Design': 'Logo Design',
+      'UX/UI Design': 'UI/UX Design',
+      'Voice Over Services': 'Content Writing', // Fallback to closest match
+      'UGC Videos': 'Content Writing', // Fallback to closest match
+      'Social Media Marketing': 'Social Media Marketing',
+      'SEO Optimization': 'SEO Optimization',
+      'Data Analytics': 'Data Analysis',
+      'DevOps Services': 'DevOps Services',
+      'Brand Identity': 'Logo Design', // Fallback to closest match
+    };
+
+    const mappedProductName = serviceToProductMap[serviceTitle];
+    if (mappedProductName) {
+      const product = products.find(p => p.name === mappedProductName);
+      return product ? product.id : null;
+    }
+
+    // Fallback to fuzzy matching
     const product = products.find(p => 
       p.name.toLowerCase().includes(serviceTitle.toLowerCase()) ||
       serviceTitle.toLowerCase().includes(p.name.toLowerCase())
@@ -210,7 +231,22 @@ const PopularServicesSection = () => {
           >
             {SERVICE_CATEGORIES.map(({ title, subtitle, grad, image }) => {
               const productId = getProductId(title);
-              const href = productId ? `/products/${productId}` : '/products';
+              // Create category-specific URLs for better navigation
+              const categoryMap: { [key: string]: string } = {
+                'Website Development': '/products?category=Web Development',
+                'AI/ML Development': '/products?category=AI & ML',
+                'Logo Design': '/products?category=Design',
+                'UX/UI Design': '/products?category=Design',
+                'Voice Over Services': '/products?category=Content Writing',
+                'UGC Videos': '/products?category=Content Writing',
+                'Social Media Marketing': '/products?category=Digital Marketing',
+                'SEO Optimization': '/products?category=Digital Marketing',
+                'Data Analytics': '/products?category=Data & Analytics',
+                'DevOps Services': '/products?category=DevOps & Cloud',
+                'Brand Identity': '/products?category=Design',
+              };
+              
+              const href = productId ? `/products/${productId}` : (categoryMap[title] || '/products');
               
               return (
               <Link
@@ -252,11 +288,11 @@ const CodingShowcase = () => {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const snippets = {
-    code: `// Unitea: Connect with verified talent
-import { createClient } from "@unitea/client";
+    code: `// Uniti: Connect with verified talent
+import { createClient } from "@uniti/client";
 
 const client = createClient({
-  apiKey: process.env.UNITEA_API_KEY,
+  apiKey: process.env.UNITI_API_KEY,
   environment: "production"
 });
 
@@ -299,19 +335,19 @@ Response:
   "created_at": "2024-01-15T10:30:00Z",
   "estimated_delivery": "2024-02-15"
 }`,
-    terminal: `$ unitea init project website-redesign
+    terminal: `$ uniti init project website-redesign
 ✔ Project initialized
-✔ Connected to Unitea
+✔ Connected to Uniti
 
-$ unitea create --category "Web Dev" --timeline "4-6 weeks"
+$ uniti create --category "Web Dev" --timeline "4-6 weeks"
 ✔ Project created: #PROJ-123
 ✔ 3 verified professionals matched
 
-$ unitea select --id "pro_456"
+$ uniti select --id "pro_456"
 ✔ Professional selected: Expert Developer
 ✔ Project started with milestone tracking
 
-$ unitea status
+$ uniti status
 📊 Project Status: In Progress
 💰 Budget: $5,000 allocated
 📅 Timeline: 4-6 weeks
@@ -379,7 +415,7 @@ $ unitea status
                 <span className="size-3 rounded-full bg-yellow-500/70" />
                 <span className="size-3 rounded-full bg-green-500/70" />
               </div>
-              <div className="text-xs text-white/50">uniteahq/app/quote.ts</div>
+              <div className="text-xs text-white/50">unitihq/app/quote.ts</div>
               <div />
             </div>
 
@@ -442,7 +478,7 @@ $ unitea status
             <div className="rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-xl p-6 shadow-[inset_0_1px_0_rgba(255,255,255,.06),0_30px_80px_rgba(0,0,0,.35)]">
               <h3 className="text-xl font-semibold text-white">Hire. Build. Launch.</h3>
               <p className="mt-2 text-white/70">
-                Unitea connects you to verified professionals through our secure platform.
+                Uniti connects you to verified professionals through our secure platform.
                 Create projects, manage workflows, and ensure quality delivery with built-in protection.
               </p>
 
@@ -822,7 +858,7 @@ const HomePage = ({ testimonials, stats, recentFreelancers, featuredProjects }: 
                     <div className="w-6 h-6 bg-gradient-to-br from-brand-a to-brand-b rounded-lg flex items-center justify-center mr-3">
                       <span className="text-white text-xs font-bold">T</span>
                     </div>
-                    <span className="text-text-base text-sm font-medium">TalentHub Pro</span>
+                    <span className="text-text-base text-sm font-medium">Uniti</span>
                   </div>
                   <p className="text-text-base text-sm">
                     I created three unique landing pages in dark mode for your modern design startup: a main landing page, a creative-focused page, and a studio showcase page.
@@ -1046,7 +1082,7 @@ const HomePage = ({ testimonials, stats, recentFreelancers, featuredProjects }: 
             Ready to get started?
           </h2>
           <p className="text-xl md:text-2xl text-text-soft mb-12 font-medium leading-relaxed max-w-4xl mx-auto">
-            Join thousands of satisfied clients and freelancers who trust TalentHub Pro
+            Join thousands of satisfied clients and freelancers who trust Uniti
           </p>
           <div className="flex flex-col sm:flex-row gap-6 justify-center">
             <Link

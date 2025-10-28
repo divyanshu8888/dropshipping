@@ -22,14 +22,14 @@ export default async function handler(
       // Recent freelancer registrations
       supabase
         .from('freelancers')
-        .select('id, name, email, created_at')
+        .select('id, display_name, created_at')
         .order('created_at', { ascending: false })
         .limit(5),
       
       // Recent client registrations
       supabase
         .from('clients')
-        .select('id, name, email, created_at')
+        .select('id, contact_name, created_at')
         .order('created_at', { ascending: false })
         .limit(5),
       
@@ -43,13 +43,13 @@ export default async function handler(
       // Recent orders
       supabase
         .from('orders')
-        .select('id, total_amount, status, created_at, customer_name')
+        .select('id, total_amount, status, created_at')
         .order('created_at', { ascending: false })
         .limit(5),
       
-      // Recent services
+      // Recent freelancer services (using freelancer_services table)
       supabase
-        .from('services')
+        .from('freelancer_services')
         .select('id, title, created_at, freelancer_id')
         .order('created_at', { ascending: false })
         .limit(5),
@@ -70,9 +70,9 @@ export default async function handler(
       activities.push({
         id: `freelancer_${freelancer.id}`,
         type: 'user_registered',
-        message: `${freelancer.name} registered as Freelancer`,
+        message: `${freelancer.display_name} registered as Freelancer`,
         timestamp: getTimeAgo(new Date(freelancer.created_at)),
-        user: freelancer.name,
+        user: freelancer.display_name,
         createdAt: freelancer.created_at
       });
     });
@@ -82,9 +82,9 @@ export default async function handler(
       activities.push({
         id: `client_${client.id}`,
         type: 'user_registered',
-        message: `${client.name} registered as Client`,
+        message: `${client.contact_name} registered as Client`,
         timestamp: getTimeAgo(new Date(client.created_at)),
-        user: client.name,
+        user: client.contact_name,
         createdAt: client.created_at
       });
     });
@@ -117,7 +117,6 @@ export default async function handler(
         type: 'order_placed',
         message: `Order #${order.id} was ${statusDisplay}`,
         timestamp: getTimeAgo(new Date(order.created_at)),
-        user: order.customer_name,
         amount: order.total_amount,
         createdAt: order.created_at
       });

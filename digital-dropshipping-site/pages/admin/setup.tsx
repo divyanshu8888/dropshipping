@@ -153,7 +153,7 @@ INSERT INTO products (name, description, price, category, image_url, stock, is_a
   return (
     <>
       <Head>
-        <title>Admin Setup - TalentHub Pro</title>
+        <title>Admin Setup - Uniti</title>
       </Head>
 
       <div className="min-h-screen bg-bg-base">

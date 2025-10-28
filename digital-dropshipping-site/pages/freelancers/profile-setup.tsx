@@ -199,7 +199,7 @@ export default function FreelancerProfileSetup() {
   return (
     <>
       <Head>
-        <title>Complete Your Profile - TalentHub Pro</title>
+        <title>Complete Your Profile - Uniti</title>
         <meta name="description" content="Complete your freelancer profile to start getting clients" />
       </Head>
 
