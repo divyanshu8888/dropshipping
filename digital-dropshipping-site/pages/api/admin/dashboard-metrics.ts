@@ -67,10 +67,41 @@ export default async function handler(
       supabase.from('quote_requests').select('*', { count: 'exact', head: true })
     ]);
 
-    // Calculate revenue from recent orders
-    const revenueThisMonth = recentOrders.data?.reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0;
+    // Calculate GMV (Gross Merchandise Value) - Total transaction volume
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayOrders = await supabase
+      .from('orders')
+      .select('total_amount')
+      .gte('created_at', todayStart.toISOString());
     
-    // Calculate previous month revenue for comparison
+    const gmvToday = todayOrders.data?.reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0;
+    const gmvMTD = recentOrders.data?.reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0;
+    
+    // Calculate trailing 28 days GMV
+    const trailing28DaysStart = new Date(Date.now() - 28 * 24 * 60 * 60 * 1000);
+    const trailing28DaysOrders = await supabase
+      .from('orders')
+      .select('total_amount')
+      .gte('created_at', trailing28DaysStart.toISOString());
+    
+    const gmvTrailing28d = trailing28DaysOrders.data?.reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0;
+    
+    // Calculate Net Revenue (fees - refunds)
+    const platformFeeRate = 0.05; // 5% platform fee
+    const netRevenueMTD = gmvMTD * platformFeeRate;
+    
+    // Calculate refunds
+    const refundsMTD = await supabase
+      .from('orders')
+      .select('total_amount')
+      .eq('status', 'refunded')
+      .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
+    
+    const totalRefunds = refundsMTD.data?.reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0;
+    const netRevenueAfterRefunds = netRevenueMTD - totalRefunds;
+    
+    // Calculate previous month for comparison
     const previousMonthStart = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000);
     const previousMonthEnd = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     const previousMonthOrders = await supabase
@@ -79,8 +110,15 @@ export default async function handler(
       .gte('created_at', previousMonthStart.toISOString())
       .lte('created_at', previousMonthEnd.toISOString());
     
-    const revenueLastMonth = previousMonthOrders.data?.reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0;
-    const revenueChange = revenueLastMonth > 0 ? ((revenueThisMonth - revenueLastMonth) / revenueLastMonth) * 100 : 0;
+    const gmvLastMonth = previousMonthOrders.data?.reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0;
+    const revenueChange = gmvLastMonth > 0 ? ((gmvMTD - gmvLastMonth) / gmvLastMonth) * 100 : 0;
+    
+    // Calculate AOV (Average Order Value)
+    const totalOrdersCount = totalOrders.count || 0;
+    const aov = totalOrdersCount > 0 ? gmvMTD / totalOrdersCount : 0;
+    
+    // Calculate Conversion Rate (simplified - would need visitor data)
+    const conversionRate = 0; // Would need visitor/impression data from analytics
     
     // Calculate active users by role
     const activeFreelancers = approvedFreelancers.count || 0;
@@ -132,6 +170,34 @@ export default async function handler(
         }, 0) / responseTimeData.data.length
       : 0;
 
+    // Get work queue metrics (items needing review)
+    const workQueueMetrics = await Promise.all([
+      // New seller KYC pending
+      supabase.from('freelancers').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+      // Flagged chats (would need chat system)
+      Promise.resolve({ count: 0 }), // Placeholder
+      // Refund requests
+      supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'refund_requested'),
+      // Chargebacks (would need payment integration)
+      Promise.resolve({ count: 0 }), // Placeholder
+      // Stock/out-of-stock alerts (would need inventory system)
+      Promise.resolve({ count: 0 }), // Placeholder
+      // Failed webhooks (would need webhook tracking)
+      Promise.resolve({ count: 0 }), // Placeholder
+      // Payout holds (would need payout system)
+      Promise.resolve({ count: 0 }), // Placeholder
+    ]);
+
+    const [
+      pendingKYC,
+      flaggedChats,
+      refundRequests,
+      chargebacks,
+      stockAlerts,
+      failedWebhooks,
+      payoutHolds
+    ] = workQueueMetrics;
+
     // Get system health metrics from actual data
     const systemHealth = {
       databaseLatency: Math.floor(Math.random() * 50) + 20, // Simulated latency
@@ -142,14 +208,23 @@ export default async function handler(
     };
 
     const metrics = {
+      // Real KPIs
+      gmvToday,
+      gmvMTD,
+      gmvTrailing28d,
+      netRevenueMTD,
+      netRevenueAfterRefunds,
+      revenueChange,
+      aov,
+      conversionRate,
+      
       // Top-level metrics
       totalProjects: totalProjects.count || 0,
-      revenueThisMonth,
-      revenueChange,
+      revenueThisMonth: gmvMTD,
       pendingPayouts: 0, // This would need escrow/payment integration
       activeOrders: pendingOrders.count || 0,
       activeUsers: activeUsers.count || 0,
-      flaggedChats: 0, // This would need chat moderation integration
+      flaggedChats: flaggedChats.count || 0,
       openDisputes: 0, // This would need dispute system
       avgResponseTime,
       
@@ -178,6 +253,18 @@ export default async function handler(
       
       // System health
       systemHealth,
+      
+      // Work queue metrics
+      workQueue: {
+        pendingKYC: pendingKYC.count || 0,
+        flaggedChats: flaggedChats.count || 0,
+        refundRequests: refundRequests.count || 0,
+        chargebacks: chargebacks.count || 0,
+        stockAlerts: stockAlerts.count || 0,
+        failedWebhooks: failedWebhooks.count || 0,
+        payoutHolds: payoutHolds.count || 0,
+        totalItems: (pendingKYC.count || 0) + (flaggedChats.count || 0) + (refundRequests.count || 0) + (chargebacks.count || 0) + (stockAlerts.count || 0) + (failedWebhooks.count || 0) + (payoutHolds.count || 0)
+      },
       
       // Moderation metrics
       moderation: {

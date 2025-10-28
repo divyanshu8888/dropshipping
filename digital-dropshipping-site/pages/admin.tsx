@@ -4,12 +4,24 @@ import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import Header from '../src/components/Header'
+import EntityDrawer from '../src/components/EntityDrawer'
+import CommandBar from '../src/components/CommandBar'
+import DataGrid from '../src/components/DataGrid'
 import { supabase } from '../src/lib/supabase'
 
 interface DashboardMetrics {
+  // Real KPIs
+  gmvToday: number;
+  gmvMTD: number;
+  gmvTrailing28d: number;
+  netRevenueMTD: number;
+  netRevenueAfterRefunds: number;
+  revenueChange: number;
+  aov: number;
+  conversionRate: number;
+  
   totalProjects: number;
   revenueThisMonth: number;
-  revenueChange: number;
   pendingPayouts: number;
   activeOrders: number;
   activeUsers: number;
@@ -45,6 +57,16 @@ interface DashboardMetrics {
     paymentWebhook: string;
     fileScanService: string;
   };
+  workQueue: {
+    pendingKYC: number;
+    flaggedChats: number;
+    refundRequests: number;
+    chargebacks: number;
+    stockAlerts: number;
+    failedWebhooks: number;
+    payoutHolds: number;
+    totalItems: number;
+  };
   moderation: {
     messagesBlocked: number;
     mutedUsers: number;
@@ -55,11 +77,16 @@ interface DashboardMetrics {
 
 interface ActivityFeedItem {
   id: string;
-  type: 'user_registered' | 'work_request' | 'order_placed' | 'service_created' | 'escrow_funded' | 'chat_flagged' | 'dispute_opened';
+  type: 'user_registered' | 'freelancer_registered' | 'client_registered' | 'work_request' | 'project_created' | 'order_placed' | 'service_created' | 'review_posted' | 'quote_request' | 'escrow_funded' | 'chat_flagged' | 'dispute_opened';
   message: string;
   timestamp: string;
   user?: string;
+  role?: string;
+  status?: string;
   amount?: number;
+  budget?: number;
+  rating?: number;
+  company?: string;
   createdAt: string;
 }
 
@@ -81,6 +108,21 @@ export default function AdminDashboard({ freelancers, pendingCount, approvedCoun
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null)
   const [activityFeed, setActivityFeed] = useState<ActivityFeedItem[]>([])
   const [lastUpdated, setLastUpdated] = useState<string>('')
+  const [activityTab, setActivityTab] = useState<'all' | 'users' | 'clients' | 'services'>('all')
+  const [activityLoading, setActivityLoading] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  
+  // New control room state
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [selectedEntity, setSelectedEntity] = useState<any>(null)
+  const [selectedEntityType, setSelectedEntityType] = useState<'user' | 'order' | 'project' | 'service' | 'dispute' | 'kyc'>('user')
+  const [workQueueData, setWorkQueueData] = useState<any>({
+    pendingKYC: [],
+    refundRequests: [],
+    chargebacks: [],
+    payoutHolds: [],
+    failedWebhooks: []
+  })
 
   useEffect(() => {
     const userData = localStorage.getItem('user')
@@ -99,55 +141,140 @@ export default function AdminDashboard({ freelancers, pendingCount, approvedCoun
     setLoading(false)
   }, [router])
 
-  // Fetch dashboard data
+  // Fetch dashboard data (metrics only)
   useEffect(() => {
-    const fetchDashboardData = async () => {
+    const fetchDashboardData = async (isInitialLoad = false) => {
       try {
-        setDataLoading(true)
+        if (isInitialLoad) {
+          setDataLoading(true)
+        } else {
+          setIsRefreshing(true)
+        }
         
-        // Fetch metrics and activity feed in parallel
-        const [metricsResponse, activityResponse] = await Promise.all([
-          fetch('/api/admin/dashboard-metrics'),
-          fetch('/api/admin/activity-feed')
-        ])
+        // Fetch only metrics
+        const metricsResponse = await fetch('/api/admin/dashboard-metrics')
 
         if (metricsResponse.ok) {
           const metricsData = await metricsResponse.json()
           setMetrics(metricsData.metrics)
           setLastUpdated(metricsData.lastUpdated)
         }
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error)
+      } finally {
+        if (isInitialLoad) {
+          setDataLoading(false)
+        } else {
+          setIsRefreshing(false)
+        }
+      }
+    }
 
+    if (!loading) {
+      // Initial load with loading state
+      fetchDashboardData(true)
+      
+      // Set up auto-refresh every 30 seconds (without loading state)
+      const interval = setInterval(() => fetchDashboardData(false), 30000)
+      return () => clearInterval(interval)
+    }
+  }, [loading])
+
+  // Fetch activity feed data separately
+  useEffect(() => {
+    const fetchActivityData = async () => {
+      try {
+        setActivityLoading(true)
+        const activityResponse = await fetch(`/api/admin/activity-feed?type=${activityTab}`)
+        
         if (activityResponse.ok) {
           const activityData = await activityResponse.json()
           setActivityFeed(activityData.activities)
         }
       } catch (error) {
-        console.error('Error fetching dashboard data:', error)
+        console.error('Error fetching activity data:', error)
       } finally {
-        setDataLoading(false)
+        setActivityLoading(false)
       }
     }
 
     if (!loading) {
-      fetchDashboardData()
-      
-      // Set up auto-refresh every 30 seconds
-      const interval = setInterval(fetchDashboardData, 30000)
-      return () => clearInterval(interval)
+      fetchActivityData()
     }
-  }, [loading])
+  }, [activityTab, loading])
 
 
   const getActivityIcon = (type: string) => {
     switch (type) {
       case 'user_registered': return '👨‍💻'
+      case 'freelancer_registered': return '👨‍💼'
+      case 'client_registered': return '👨‍💻'
       case 'work_request': return '💬'
+      case 'project_created': return '📋'
       case 'order_placed': return '🛒'
       case 'service_created': return '🔧'
-      case 'escrow_funded': return '💰'
+      case 'review_posted': return '⭐'
+      case 'quote_request': return '💰'
+      case 'escrow_funded': return '🔒'
       case 'chat_flagged': return '🚫'
       case 'dispute_opened': return '⚖️'
       default: return '📢'
+    }
+  }
+
+  // Control room handlers
+  const handleEntitySelect = (entityType: string, entityId: string) => {
+    setSelectedEntityType(entityType as any)
+    setSelectedEntity({ id: entityId })
+    setDrawerOpen(true)
+  }
+
+  const handleActionExecute = async (action: string, params: any) => {
+    try {
+      const response = await fetch('/api/admin/quick-action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, params })
+      })
+      
+      if (response.ok) {
+        // Show success toast
+        console.log(`${action} completed successfully`)
+        // Refresh data
+        window.location.reload() // Simple refresh for now
+      }
+    } catch (error) {
+      console.error(`Error executing ${action}:`, error)
+    }
+  }
+
+  const handleWorkQueueBulkAction = async (action: string, selectedRows: any[]) => {
+    try {
+      const response = await fetch('/api/admin/bulk-action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, rows: selectedRows })
+      })
+      
+      if (response.ok) {
+        console.log(`Bulk ${action} completed for ${selectedRows.length} items`)
+        // Refresh work queue data
+        fetchWorkQueueData()
+      }
+    } catch (error) {
+      console.error(`Error executing bulk ${action}:`, error)
+    }
+  }
+
+  const fetchWorkQueueData = async () => {
+    try {
+      const response = await fetch('/api/admin/work-queue-data')
+      const data = await response.json()
+      if (data.success) {
+        setWorkQueueData(data.data)
+      }
+    } catch (error) {
+      console.error('Error fetching work queue data:', error)
     }
   }
 
@@ -223,10 +350,24 @@ export default function AdminDashboard({ freelancers, pendingCount, approvedCoun
   return (
     <>
       <Head>
-        <title>Admin Dashboard - TalentHub Pro</title>
+        <title>Admin Dashboard - Uniti</title>
       </Head>
       <div className="min-h-screen bg-bg-base">
         <Header />
+        
+        {/* Command Bar */}
+        <CommandBar 
+          onEntitySelect={handleEntitySelect}
+          onActionExecute={handleActionExecute}
+        />
+        
+        {/* Entity Drawer */}
+        <EntityDrawer
+          open={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+          entity={selectedEntity}
+          entityType={selectedEntityType}
+        />
 
         {/* Hero */}
         <section className="relative overflow-hidden">
@@ -240,6 +381,11 @@ export default function AdminDashboard({ freelancers, pendingCount, approvedCoun
                 {lastUpdated && (
                   <p className="text-sm text-white/60 mt-2">
                     Last updated: {new Date(lastUpdated).toLocaleString()}
+                    {isRefreshing && (
+                      <span className="ml-2 text-white/80">
+                        <span className="animate-spin inline-block">🔄</span> Refreshing...
+                      </span>
+                    )}
                   </p>
                 )}
               </div>
@@ -287,82 +433,227 @@ export default function AdminDashboard({ freelancers, pendingCount, approvedCoun
 
           {activeTab === 'overview' && (
             <>
-              {/* Top-Level Summary Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              {/* Real KPIs Section */}
+              <div className="mb-8">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">📊 Key Performance Indicators</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <StatCard
-                  title="Total Projects"
-                  value={metrics.totalProjects}
-                  icon="🧾"
-                  color="from-blue-500 to-cyan-500"
-                />
-                <StatCard
-                  title="Revenue (This Month)"
-                  value={formatCurrency(metrics.revenueThisMonth)}
-                  icon="💸"
+                    title="GMV Today"
+                    value={formatCurrency(metrics.gmvToday)}
+                    icon="💰"
                   color="from-green-500 to-emerald-500"
-                  change={metrics.revenueChange}
                 />
                 <StatCard
-                  title="Pending Payouts"
-                  value={formatCurrency(metrics.pendingPayouts)}
-                  icon="💰"
-                  color="from-yellow-500 to-orange-500"
+                    title="GMV (MTD)"
+                    value={formatCurrency(metrics.gmvMTD)}
+                    icon="📈"
+                    color="from-blue-500 to-cyan-500"
+                    change={metrics.revenueChange}
                 />
                 <StatCard
-                  title="Active Orders"
-                  value={metrics.activeOrders}
-                  icon="📦"
+                    title="GMV (28d)"
+                    value={formatCurrency(metrics.gmvTrailing28d)}
+                    icon="📊"
                   color="from-purple-500 to-pink-500"
+                />
+                  <StatCard
+                    title="Net Revenue"
+                    value={formatCurrency(metrics.netRevenueAfterRefunds)}
+                    icon="💸"
+                    color="from-indigo-500 to-purple-500"
+                  />
+                  <StatCard
+                    title="Average Order Value"
+                    value={formatCurrency(metrics.aov)}
+                    icon="🛒"
+                    color="from-yellow-500 to-orange-500"
                 />
                 <StatCard
                   title="Active Users"
                   value={metrics.activeUsers}
                   icon="👥"
-                  color="from-indigo-500 to-purple-500"
+                    color="from-teal-500 to-cyan-500"
+                  />
+                  <StatCard
+                    title="Total Orders"
+                    value={metrics.totalOrders}
+                    icon="📦"
+                    color="from-red-500 to-pink-500"
+                  />
+                  <StatCard
+                    title="Conversion Rate"
+                    value={`${metrics.conversionRate}%`}
+                    icon="🎯"
+                    color="from-emerald-500 to-green-500"
+                  />
+                </div>
+              </div>
+
+              {/* Work Queue Section */}
+              <div className="mb-8">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">⚡ Work Queue - Needs Review</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <StatCard
+                    title="Pending KYC"
+                    value={metrics.workQueue.pendingKYC}
+                    icon="🆔"
+                    color="from-yellow-500 to-orange-500"
+                    onClick={() => router.push('/admin/users?filter=pending_kyc')}
                 />
                 <StatCard
                   title="Flagged Chats"
-                  value={metrics.flaggedChats}
-                  icon="⚠️"
+                    value={metrics.workQueue.flaggedChats}
+                    icon="🚨"
                   color="from-red-500 to-pink-500"
+                    onClick={() => router.push('/admin/moderation?filter=flagged_chats')}
                 />
                 <StatCard
-                  title="Open Disputes"
-                  value={metrics.openDisputes}
-                  icon="💬"
+                    title="Refund Requests"
+                    value={metrics.workQueue.refundRequests}
+                    icon="↩️"
                   color="from-orange-500 to-red-500"
+                    onClick={() => router.push('/admin/orders?filter=refund_requests')}
+                  />
+                  <StatCard
+                    title="Chargebacks"
+                    value={metrics.workQueue.chargebacks}
+                    icon="💳"
+                    color="from-red-600 to-red-700"
+                    onClick={() => router.push('/admin/finance?filter=chargebacks')}
+                  />
+                  <StatCard
+                    title="Stock Alerts"
+                    value={metrics.workQueue.stockAlerts}
+                    icon="📦"
+                    color="from-yellow-600 to-orange-600"
+                    onClick={() => router.push('/admin/products?filter=stock_alerts')}
+                  />
+                  <StatCard
+                    title="Failed Webhooks"
+                    value={metrics.workQueue.failedWebhooks}
+                    icon="🔗"
+                    color="from-red-500 to-red-600"
+                    onClick={() => router.push('/admin/operations?filter=failed_webhooks')}
+                  />
+                  <StatCard
+                    title="Payout Holds"
+                    value={metrics.workQueue.payoutHolds}
+                    icon="⏸️"
+                    color="from-orange-600 to-red-600"
+                    onClick={() => router.push('/admin/finance?filter=payout_holds')}
                 />
                 <StatCard
-                  title="Avg Response Time"
-                  value={`${metrics.avgResponseTime}h`}
-                  icon="⏱️"
-                  color="from-teal-500 to-cyan-500"
-                />
+                    title="Total Items"
+                    value={metrics.workQueue.totalItems}
+                    icon="📋"
+                    color="from-gray-500 to-gray-600"
+                    onClick={() => router.push('/admin/work-queue')}
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
                 {/* Activity Feed */}
                 <div className="lg:col-span-2">
                   <div className="bg-white rounded-2xl shadow-lg p-6">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-6">📢 Live Activity Feed</h2>
+                    <div className="flex items-center justify-between mb-6">
+                      <h2 className="text-2xl font-bold text-gray-900">📢 Live Activity Feed</h2>
+                      <div className="flex space-x-2">
+                        {[
+                          { id: 'all', label: 'All', icon: '📊' },
+                          { id: 'users', label: 'Users', icon: '👥' },
+                          { id: 'clients', label: 'Clients', icon: '🛒' },
+                          { id: 'services', label: 'Services', icon: '🔧' }
+                        ].map((tab) => (
+                          <button
+                            key={tab.id}
+                            onClick={() => setActivityTab(tab.id as any)}
+                            className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                              activityTab === tab.id
+                                ? 'bg-indigo-600 text-white'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            }`}
+                          >
+                            <span className="mr-1">{tab.icon}</span>
+                            {tab.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    
                     <div className="space-y-4">
-                      {activityFeed.map((item) => (
-                        <div key={item.id} className="flex items-start space-x-3 p-4 bg-gray-50 rounded-xl">
+                      {activityLoading ? (
+                        <div className="text-center py-8 text-gray-500">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-2"></div>
+                          <p>Loading {activityTab === 'all' ? '' : activityTab} activities...</p>
+                        </div>
+                      ) : activityFeed.length > 0 ? (
+                        activityFeed.map((item) => (
+                          <div key={item.id} className="flex items-start space-x-3 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
                           <div className="text-2xl">{getActivityIcon(item.type)}</div>
                           <div className="flex-1">
                             <p className="text-gray-900 font-medium">{item.message}</p>
                             <div className="flex items-center justify-between mt-1">
                               <span className="text-sm text-gray-500">{item.timestamp}</span>
+                                <div className="flex items-center space-x-2">
                               {item.amount && (
                                 <span className="text-sm font-semibold text-green-600">{formatCurrency(item.amount)}</span>
                               )}
+                                  {item.budget && (
+                                    <span className="text-sm font-semibold text-blue-600">Budget: {formatCurrency(item.budget)}</span>
+                                  )}
+                                  {item.rating && (
+                                    <span className="text-sm font-semibold text-yellow-600">⭐ {item.rating}</span>
+                                  )}
+                                  {item.status && (
+                                    <span className={`text-xs px-2 py-1 rounded-full ${
+                                      item.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                      item.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                      item.status === 'active' ? 'bg-blue-100 text-blue-800' :
+                                      'bg-gray-100 text-gray-800'
+                                    }`}>
+                                      {item.status}
+                                    </span>
+                                  )}
+                                </div>
                           </div>
                           </div>
                         </div>
-                      ))}
+                        ))
+                      ) : (
+                        <div className="text-center py-8 text-gray-500">
+                          <div className="text-4xl mb-2">📭</div>
+                          <p>No {activityTab === 'all' ? '' : activityTab} activities found</p>
+                        </div>
+                      )}
                     </div>
+                    
                     <div className="mt-4 text-center">
-                      <button className="text-indigo-600 hover:text-indigo-800 font-semibold">View All Activity</button>
+                      <button 
+                        onClick={() => {
+                          const fetchActivityData = async () => {
+                            try {
+                              setActivityLoading(true)
+                              const response = await fetch(`/api/admin/activity-feed?type=${activityTab}`)
+                              const data = await response.json()
+                              if (data.success) {
+                                setActivityFeed(data.activities)
+                              }
+                            } catch (error) {
+                              console.error('Failed to refresh activity feed:', error)
+                            } finally {
+                              setActivityLoading(false)
+                            }
+                          }
+                          fetchActivityData()
+                        }}
+                        disabled={activityLoading}
+                        className={`text-indigo-600 hover:text-indigo-800 font-semibold transition-colors ${
+                          activityLoading ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                      >
+                        {activityLoading ? '🔄 Refreshing...' : '🔄 Refresh Activity'}
+                      </button>
                     </div>
                   </div>
                 </div>
