@@ -474,58 +474,49 @@ $ uniti status
           </div>
 
           {/* Right: result / value prop */}
-          <div className="flex flex-col gap-4">
-            <div className="rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-xl p-6 shadow-[inset_0_1px_0_rgba(255,255,255,.06),0_30px_80px_rgba(0,0,0,.35)]">
-              <h3 className="text-xl font-semibold text-white">Hire. Build. Launch.</h3>
-              <p className="mt-2 text-white/70">
-                Uniti connects you to verified professionals through our secure platform.
-                Create projects, manage workflows, and ensure quality delivery with built-in protection.
-              </p>
-
-              <ul className="mt-4 space-y-2 text-white/85">
-                <li className="flex items-center gap-2">
-                  <span className="text-emerald-400">✓</span>
-                  Verified professionals with portfolio reviews and skill assessments
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-emerald-400">✓</span>
-                  Secure milestone system protects your payments until project completion
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-emerald-400">✓</span>
-                  Real-time project tracking and communication tools
-                </li>
-              </ul>
-
-              <div className="mt-6 flex flex-wrap gap-2">
-                <span className="rounded-full border border-emerald-400/20 text-emerald-300/90 bg-emerald-400/10 px-3 py-1 text-xs">Secure</span>
-                <span className="rounded-full border border-cyan-400/20 text-cyan-300/90 bg-cyan-400/10 px-3 py-1 text-xs">Fast</span>
-                <span className="rounded-full border border-violet-400/20 text-violet-300/90 bg-violet-400/10 px-3 py-1 text-xs">Reliable</span>
+          <div className="flex flex-col gap-6">
+            <div className="rounded-2xl ring-1 ring-white/5 bg-gradient-to-b from-[#0c0f14] to-[#0a0d12] p-6 md:p-7 shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
+              <div className="space-y-3 md:space-y-4">
+                <h2 className="text-3xl md:text-[38px] font-semibold leading-tight tracking-[-0.01em] text-white">Uniti — where ideas unite.</h2>
+                <div className="h-[2px] w-16 bg-gradient-to-r from-cyan-400 to-violet-500 rounded-full mt-2 mb-3"></div>
+                <p className="text-sm text-gray-400 mb-5">
+                  <span className="text-cyan-300 font-medium">Unit</span> (from Unity) + 
+                  <span className="text-violet-300 font-medium"> i</span> (from Idea) = 
+                  <span className="text-white font-semibold"> Uniti</span>
+                </p>
+                <p className="max-w-[58ch] text-gray-200 leading-7">
+                  Uniti connects clients with <span className="font-medium text-gray-100">verified professionals</span> in a secure, data-driven workspace. 
+                  From web and design to marketing and AI, you get work delivered right the first time—backed by milestone protection, 
+                  portfolio verification, and real-time collaboration.
+                </p>
+                <ul className="mt-4 list-disc pl-6 space-y-2 text-gray-200">
+                  <li>Top freelancers across web, design, and AI</li>
+                  <li>Simple milestones, clear billing</li>
+                  <li>One workspace for updates</li>
+                </ul>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <span className="px-3 py-1 rounded-full text-xs border border-emerald-400/25 bg-emerald-900/25 text-emerald-300">Secure</span>
+                  <span className="px-3 py-1 rounded-full text-xs border border-sky-400/25 bg-sky-900/25 text-sky-300">Fast</span>
+                  <span className="px-3 py-1 rounded-full text-xs border border-violet-400/25 bg-violet-900/25 text-violet-300">Reliable</span>
+                </div>
               </div>
             </div>
-
-            <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-cyan-500/10 via-blue-500/10 to-violet-500/10 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,.06),0_30px_80px_rgba(0,0,0,.35)]">
-              <h4 className="text-sm font-semibold text-white/80">Live Demo</h4>
-              <div className="mt-3 rounded-xl border border-white/10 bg-[#0F1216] p-4 text-white/80">
-                <div className="text-sm">
-                  <div><span className="text-white/50">Project:</span> Website Redesign</div>
-                  <div><span className="text-white/50">Category:</span> Web Development</div>
-                  <div><span className="text-white/50">Status:</span> 3 professionals matched</div>
-                  <div><span className="text-white/50">Budget:</span> $5,000 allocated</div>
-                </div>
-                <div className="mt-3">
-                  <a href="/products" className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-white bg-white/10 hover:bg-white/15 border border-white/10 transition">
-                    View Projects →
-                  </a>
-                </div>
+            <div className="p-6 rounded-2xl bg-gradient-to-br from-cyan-500/10 via-blue-500/10 to-violet-500/10 border border-gray-800/60 shadow-lg">
+              <h3 className="text-lg font-semibold text-gray-200 mb-3">Live Demo</h3>
+              <div className="space-y-1 text-gray-200 text-sm leading-relaxed">
+                <p><strong className="text-gray-100">Project:</strong> Website Redesign</p>
+                <p><strong className="text-gray-100">Category:</strong> Web Development</p>
+                <p><strong className="text-gray-100">Status:</strong> 3 experts matched</p>
+                <p><strong className="text-gray-100">Budget:</strong> <span className="text-green-400">$5,000</span></p>
               </div>
+              {/* Removed View Projects button per request */}
             </div>
           </div>
         </div>
 
         {/* CTA row under the band */}
         <div className="mt-8 flex justify-center">
-          <a href="/products" className="rounded-xl px-6 py-3 font-semibold text-white bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500 shadow-[0_0_20px_rgba(96,165,250,.35)] hover:scale-[1.02] transition">
+          <a href="/signup" className="rounded-xl px-6 py-3 font-semibold text-white bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500 shadow-[0_0_20px_rgba(96,165,250,.35)] hover:scale-[1.02] transition">
             Start Your Project →
           </a>
         </div>

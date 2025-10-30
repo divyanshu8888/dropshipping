@@ -4,25 +4,17 @@ import { useRouter } from 'next/router';
 import { canAccessAdminDashboard } from '../lib/permissions';
 import { useAuth } from '../contexts/AuthContext';
 
-// Simple Uniti Logo Component
+// Clean Uniti Logo Component
 const UnitiLogo = () => {
     return (
-        <div
-            className="relative w-full h-full flex items-center justify-center select-none"
-            aria-label="Uniti – Where ideas unite"
-        >
-            <span
-                className="text-xl font-bold tracking-normal"
-                style={{
-                    background: 'linear-gradient(to right, #06b6d4, #3b82f6, #8b5cf6)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    backgroundClip: 'text',
-                    fontFamily: 'Space Grotesk, sans-serif'
-                }}
-            >
-                Uniti
-            </span>
+        <div className="logo" aria-label="Uniti – Where ideas unite">
+            {/* Optional logo image */}
+            <img 
+                src="/images/logo/logo3.png" 
+                alt="Uniti Logo" 
+                className="logo-icon"
+            />
+            <span className="logo-text">Uniti</span>
         </div>
     );
 };
@@ -69,17 +61,11 @@ const Header: React.FC = () => {
         <header className="sticky top-0 z-50 bg-black/60 backdrop-blur-xl border-b border-white/10">
             {/* Soft glow divider */}
             <div className="absolute left-0 right-0 top-[100%] h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
-            <div className="mx-auto max-w-7xl h-16 px-6 flex items-center justify-between">
+            <div className="w-full h-16 px-40 flex items-center justify-between">
                 <div className="flex items-center">
-                    <Link href="/" className="flex items-center gap-2 group overflow-visible">
-                        <img 
-                            src="/images/logo/logo.png" 
-                            alt="Uniti Logo" 
-                            className="h-10 w-auto group-hover:scale-105 transition-all duration-300 bg-transparent"
-                        />
-                        <div className="relative w-auto h-12 overflow-visible">
-                            <UnitiLogo />
-                        </div>
+                    <Link href="/" className="flex items-center group overflow-visible">
+                        {/* UnitiLogo handles both logo and text for left corner */}
+                        <UnitiLogo />
                     </Link>
                 </div>
                 
@@ -246,5 +232,54 @@ const Header: React.FC = () => {
         </header>
     );
 };
+
+// --- ImprovedInfoPanel: Premium right-side card demo ---
+export const ImprovedInfoPanel = () => (
+  <div className="w-full max-w-xl mx-auto md:mx-0 md:w-[440px]">
+    {/* Tab bar (optional, for dev feel) */}
+    <div className="flex items-center gap-3 text-sm font-medium mb-3">
+      <span className="text-cyan-400">💻 Code</span>
+      <span className="text-gray-500">|</span>
+      <span className="text-violet-400">☁️ API</span>
+      <span className="text-gray-500">|</span>
+      <span className="text-sky-400">⚡ Terminal</span>
+    </div>
+    {/* Headline + tagline */}
+    <h2 className="text-3xl font-semibold text-white mb-2">Build Smarter. Launch Faster.</h2>
+    <p className="text-sm text-gray-500 mt-1 italic mb-1">
+      Empowering teams to hire, build, and launch — in one place.
+    </p>
+    <p className="text-gray-300 mb-6 leading-relaxed">
+      Uniti connects you with verified professionals through a secure, API-driven platform. 
+      Launch projects, manage milestones, and deliver results—all within one unified workspace.
+    </p>
+    {/* Feature list */}
+    <ul className="space-y-2 text-gray-300 mb-4">
+      <li>✅ Portfolio-verified experts across design, web, and marketing</li>
+      <li>💰 Milestone-based payment protection and real-time tracking</li>
+      <li>⚡ Instant collaboration powered by our built-in workflow tools</li>
+    </ul>
+    {/* Badges (brand palette) */}
+    <div className="flex gap-2 mb-8">
+      <span className="px-3 py-1 bg-emerald-900/40 rounded-full text-emerald-300 text-sm">Secure</span>
+      <span className="px-3 py-1 bg-sky-900/40 rounded-full text-sky-300 text-sm">Fast</span>
+      <span className="px-3 py-1 bg-violet-900/40 rounded-full text-violet-300 text-sm">Reliable</span>
+    </div>
+    {/* Live Demo Card */}
+    <div className="p-5 rounded-xl bg-gradient-to-b from-gray-900 to-gray-950 border border-gray-800/60 shadow-lg">
+      <h3 className="text-lg font-medium text-gray-100 mb-3">Live Demo</h3>
+      <div className="space-y-1 text-gray-400 text-sm">
+        <p><strong className="text-gray-200">Project:</strong> Website Redesign</p>
+        <p><strong className="text-gray-200">Category:</strong> Web Development</p>
+        <p><strong className="text-gray-200">Status:</strong> 3 experts matched</p>
+        <p><strong className="text-gray-200">Budget:</strong> <span className="text-green-400">$5,000</span></p>
+      </div>
+      <a href="#" 
+         className="inline-block mt-4 px-4 py-2 rounded-lg bg-gradient-to-r from-cyan-400 to-violet-500 text-sm font-medium text-white hover:opacity-90 transition">
+        View Projects &rarr;
+      </a>
+    </div>
+  </div>
+);
 
 export default Header;
