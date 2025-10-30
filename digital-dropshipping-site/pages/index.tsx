@@ -1,4 +1,5 @@
 import { GetServerSideProps } from 'next';
+import Head from 'next/head';
 import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
 import Header from '../src/components/Header';
@@ -257,7 +258,7 @@ const PopularServicesSection = () => {
               >
                 {/* Top visual */}
                 <div className={`rounded-t-2xl bg-gradient-to-br ${grad} h-32 md:h-36 grid place-items-center`}>
-                  <img src={`/images/logo/${image}`} alt={title} className="w-20 h-20 md:w-24 md:h-24 object-contain drop-shadow-sm" />
+                  <img src={`/images/logo/${image}`} alt={title} loading="lazy" className="w-20 h-20 md:w-24 md:h-24 object-contain drop-shadow-sm" />
                 </div>
 
                 {/* Info slab */}
@@ -285,7 +286,7 @@ const CodingShowcase = () => {
   const [typed, setTyped] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const iRef = useRef(0);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<number | null>(null);
 
   const snippets = {
     code: `// Uniti: Connect with verified talent
@@ -355,18 +356,18 @@ $ uniti status
   };
 
   const startTyping = (text: string) => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
+    if (intervalRef.current) window.clearInterval(intervalRef.current);
     setTyped('');
     setIsTyping(true);
     iRef.current = 0;
 
-    intervalRef.current = setInterval(() => {
+    intervalRef.current = window.setInterval(() => {
       if (iRef.current < text.length) {
         setTyped(text.slice(0, iRef.current + 1));
         iRef.current++;
       } else {
         setIsTyping(false);
-        if (intervalRef.current) clearInterval(intervalRef.current);
+        if (intervalRef.current) window.clearInterval(intervalRef.current);
       }
     }, 15);
   };
@@ -374,7 +375,7 @@ $ uniti status
   useEffect(() => {
     startTyping(snippets[tab]);
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (intervalRef.current) window.clearInterval(intervalRef.current);
     };
   }, [tab]);
 
@@ -388,7 +389,7 @@ $ uniti status
       .replace(/(".*?")/g, '<span class="text-emerald-300">$1</span>')
       .replace(/('.*?')/g, '<span class="text-emerald-300">$1</span>')
       .replace(/(\/\/.*$)/g, '<span class="text-white/40">$1</span>')
-      .replace(/(POST|GET|PUT|DELETE)\s+\/api/g, '<span class="text-yellow-300">$1</span> <span class="text-blue-300">$2</span>')
+      .replace(/(POST|GET|PUT|DELETE)\s+(\/[^\s]+)/g, '<span class="text-yellow-300">$1</span> <span class="text-blue-300">$2</span>')
       .replace(/(\$\s+)/g, '<span class="text-green-300">$1</span>')
       .replace(/(✔|📊|💰|📅|👨‍💻)/g, '<span class="text-emerald-400">$1</span>');
   };
@@ -483,21 +484,21 @@ $ uniti status
                   <span className="text-cyan-300 font-medium">Unit</span> (from Unity) + 
                   <span className="text-violet-300 font-medium"> i</span> (from Idea) = 
                   <span className="text-white font-semibold"> Uniti</span>
-                </p>
-                <p className="max-w-[58ch] text-gray-200 leading-7">
+              </p>
+              <p className="max-w-[58ch] text-gray-200 leading-7">
                   Uniti connects clients with <span className="font-medium text-gray-100">verified professionals</span> in a secure, data-driven workspace. 
                   From web and design to marketing and AI, you get work delivered right the first time—backed by milestone protection, 
                   portfolio verification, and real-time collaboration.
-                </p>
-                <ul className="mt-4 list-disc pl-6 space-y-2 text-gray-200">
+              </p>
+              <ul className="mt-4 list-disc pl-6 space-y-2 text-gray-200">
                   <li>Top freelancers across web, design, and AI</li>
                   <li>Simple milestones, clear billing</li>
                   <li>One workspace for updates</li>
-                </ul>
+              </ul>
                 <div className="mt-4 flex flex-wrap gap-2">
-                  <span className="px-3 py-1 rounded-full text-xs border border-emerald-400/25 bg-emerald-900/25 text-emerald-300">Secure</span>
-                  <span className="px-3 py-1 rounded-full text-xs border border-sky-400/25 bg-sky-900/25 text-sky-300">Fast</span>
-                  <span className="px-3 py-1 rounded-full text-xs border border-violet-400/25 bg-violet-900/25 text-violet-300">Reliable</span>
+                <span className="px-3 py-1 rounded-full text-xs border border-emerald-400/25 bg-emerald-900/25 text-emerald-300">Secure</span>
+                <span className="px-3 py-1 rounded-full text-xs border border-sky-400/25 bg-sky-900/25 text-sky-300">Fast</span>
+                <span className="px-3 py-1 rounded-full text-xs border border-violet-400/25 bg-violet-900/25 text-violet-300">Reliable</span>
                 </div>
               </div>
             </div>
@@ -509,16 +510,8 @@ $ uniti status
                 <p><strong className="text-gray-100">Status:</strong> 3 experts matched</p>
                 <p><strong className="text-gray-100">Budget:</strong> <span className="text-green-400">$5,000</span></p>
               </div>
-              {/* Removed View Projects button per request */}
             </div>
           </div>
-        </div>
-
-        {/* CTA row under the band */}
-        <div className="mt-8 flex justify-center">
-          <a href="/signup" className="rounded-xl px-6 py-3 font-semibold text-white bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500 shadow-[0_0_20px_rgba(96,165,250,.35)] hover:scale-[1.02] transition">
-            Start Your Project →
-          </a>
         </div>
       </div>
     </div>
@@ -532,18 +525,18 @@ const AnimatedWordSwap = () => {
   const [isBlinking, setIsBlinking] = useState(false);
 
   useEffect(() => {
-    const interval = setInterval(() => {
+    const interval = window.setInterval(() => {
       // Start blinking effect
       setIsBlinking(true);
       
       // Change word after a short delay
-      setTimeout(() => {
+      const to = window.setTimeout(() => {
         setCurrentWordIndex((prevIndex) => (prevIndex + 1) % words.length);
         setIsBlinking(false);
       }, 400);
     }, 2500);
     
-    return () => clearInterval(interval);
+    return () => { window.clearInterval(interval); };
   }, []);
 
   return (
@@ -612,6 +605,20 @@ const HomePage = ({ testimonials, stats, recentFreelancers, featuredProjects }: 
 
   return (
     <div className="min-h-screen bg-bg-base">
+      <Head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'Organization',
+              name: 'Uniti',
+              url: 'https://uniti.example.com',
+              logo: '/images/logo/logo.png'
+            })
+          }}
+        />
+      </Head>
       <Header />
       
       {/* Hero Section - Framer Style */}
@@ -640,32 +647,66 @@ const HomePage = ({ testimonials, stats, recentFreelancers, featuredProjects }: 
           ></div>
         </div>
 
-        <div className="relative mx-auto max-w-7xl px-6 pt-28 pb-24 text-center">
-          <h1 className="text-5xl md:text-7xl font-bold tracking-tight leading-tight text-white fade-up font-display" style={{animationDelay: '100ms'}}>
-            Your Vision, <span className="gradient-text">Built by Experts</span>
-          </h1>
-          <p className="mt-4 text-lg text-white/70 fade-up font-body" style={{animationDelay: '200ms'}}>
-            Hire. Build. Launch. Get it done right.
-          </p>
+        <div className="relative px-0 pt-0 pb-0 text-center">
+          {/* Full-screen video banner */}
+          <section className="relative w-screen min-h-screen overflow-hidden text-center left-1/2 -translate-x-1/2">
+            <video
+              className="absolute inset-0 w-full h-full object-cover opacity-45"
+              src="/Video/meeting.mp4"
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              poster="/images/logo/logo.png"
+            />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_55%_45%,rgba(0,0,0,.38),transparent_55%)]" />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/55 to-black/80" />
 
-            <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center fade-up" style={{animationDelay: '300ms'}}>
+            <div className="absolute inset-0 grid place-items-center px-6 text-center">
+              <h1 className="text-[36px] sm:text-5xl md:text-[56px] font-extrabold text-white tracking-tight leading-[1.05]">
+                Your Vision,{" "}
+                <span className="bg-gradient-to-r from-sky-400 via-blue-400 to-violet-400 bg-clip-text text-transparent font-semibold">Built by Experts</span>
+          </h1>
+
+              <div className="mx-auto mt-3 h-px w-16 rounded-full bg-gradient-to-r from-cyan-400 to-violet-500"></div>
+
+              <p className="mt-4 text-white/85 text-lg md:text-xl leading-7 max-w-[56ch] mx-auto">
+                Hire verified experts. Build with confidence. Launch faster—securely and transparently.
+              </p>
+
+              {/* Search box */}
+              <form className="mt-6 mx-auto flex w-full max-w-[720px] h-14 rounded-2xl bg-white/8 backdrop-blur border border-white/12 focus-within:border-white/25">
+                <input aria-label="Search services"
+                  className="flex-1 bg-transparent px-5 text-white/90 placeholder:text-white/50 focus:outline-none"
+                  placeholder="Search services (e.g., ‘Logo design’)" />
+                <button type="submit" className="m-1 px-5 rounded-xl bg-gradient-to-r from-cyan-400 to-violet-500 font-semibold">
+                  Search
+                </button>
+              </form>
+
+              <div className="mt-5 flex flex-wrap justify-center gap-3">
               <button
               onClick={() => setShowQuoteForm(true)}
-              className="group inline-flex items-center gap-2 rounded-xl px-6 py-3 font-semibold text-white bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500 shadow-[0_0_24px_rgba(96,165,250,0.35)] transition-all duration-300 hover:scale-[1.03] hover:shadow-[0_0_20px_rgba(96,165,250,0.5)] relative overflow-hidden focus:ring-2 focus:ring-white/50 focus:outline-none cta"
-            >
-              <span className="relative z-10">Request a Quote</span>
-              <svg className="size-4 transition-transform group-hover:translate-x-0.5 relative z-10" viewBox="0 0 24 24" fill="none">
-                <path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-              </svg>
-              {/* Shimmer effect */}
-              <div className="absolute inset-0 -top-1 -left-1 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12 animate-shimmer opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  type="button"
+                  className="h-12 px-6 rounded-xl bg-gradient-to-r from-cyan-400 to-violet-500 text-white font-semibold shadow-[0_8px_24px_rgba(120,90,255,.25)] hover:opacity-95 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                >
+                  Request a Quote →
             </button>
-            <Link
-              href="/freelancers"
-              className="rounded-xl px-6 py-3 border border-white/12 bg-white/5 text-white/85 hover:bg-white/10 transition-all duration-200 backdrop-blur-sm focus:ring-2 focus:ring-white/50 focus:outline-none"
-            >
+                <Link href="/freelancers" aria-label="Browse freelancers" className="h-12 inline-flex items-center px-6 rounded-xl border border-white/20 text-gray-100 hover:border-white/35 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40">
               Browse Freelancers
             </Link>
+              </div>
+              <p className="mt-3 text-white/70 text-sm">Responses in under 24h • Milestone protection • Portfolio-verified talent</p>
+            </div>
+          </section>
+
+          {/* Trust + price-match below the banner for breathing room */}
+          <div className="mt-6 flex flex-col items-center gap-2">
+            <p className="text-xs tracking-wide text-white/60">Trusted by 200+ teams and creators worldwide</p>
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-[11px] text-white/80">
+              💰 <span>Price-match guarantee — 10% better than any verified quote</span>
+            </div>
             </div>
           
           {/* Micro-trust line for credibility */}
@@ -715,230 +756,9 @@ const HomePage = ({ testimonials, stats, recentFreelancers, featuredProjects }: 
         <PopularServicesSection />
       </section>
 
-      {/* Product Proof Section */}
-      <section className="bg-bg-base">
-        <div className="mx-auto max-w-6xl px-6 py-24 grid md:grid-cols-2 gap-12 items-center">
-          <div>
-            <h2 className="text-3xl md:text-4xl font-black text-white tracking-tight leading-[1.1]">Quote. Connect. Deliver.</h2>
-            <p className="mt-4 text-lg md:text-xl text-text-soft font-medium leading-relaxed">Get quotes from skilled freelancers, connect with the perfect match, and watch your project come to life.</p>
-            <ul className="mt-8 space-y-4 text-lg text-text-soft font-medium">
-              <li className="flex items-center gap-3">
-                <span className="w-2 h-2 bg-brand-b rounded-full"></span>
-                Get instant quotes from verified freelancers
-              </li>
-              <li className="flex items-center gap-3">
-                <span className="w-2 h-2 bg-brand-c rounded-full"></span>
-                Secure escrow protection for your projects
-              </li>
-              <li className="flex items-center gap-3">
-                <span className="w-2 h-2 bg-brand-a rounded-full"></span>
-                Track progress with real-time updates
-              </li>
-            </ul>
-          </div>
-          <div className="relative rounded-2xl bg-bg-surface shadow-card border border-white/10 p-2">
-            <div className="rounded-xl w-full h-64 bg-gradient-to-br from-brand-a/20 via-brand-b/20 to-brand-c/20 relative overflow-hidden">
-              {/* Animated UI Mockup */}
-              <div className="absolute inset-4 bg-bg-base/80 rounded-lg border border-white/10">
-                {/* Chat Interface Mockup */}
-                <div className="p-4 space-y-3">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-gradient-to-br from-brand-a to-brand-b rounded-full animate-pulse"></div>
-                    <div className="flex-1 h-3 bg-white/20 rounded animate-pulse delay-200"></div>
-                  </div>
-                  <div className="flex items-center space-x-3 ml-8">
-                    <div className="flex-1 h-3 bg-white/15 rounded animate-pulse delay-400"></div>
-                    <div className="w-6 h-6 bg-gradient-to-br from-brand-b to-brand-c rounded animate-bounce"></div>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-gradient-to-br from-brand-c to-brand-a rounded-full animate-pulse delay-600"></div>
-                    <div className="flex-1 h-3 bg-white/20 rounded animate-pulse delay-800"></div>
-                  </div>
-                  
-                  {/* Quote Request Mockup */}
-                  <div className="mt-6 p-3 bg-white/5 rounded-lg border border-white/10">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="h-2 w-16 bg-white/20 rounded animate-pulse delay-1000"></div>
-                      <div className="h-2 w-12 bg-brand-b/40 rounded animate-pulse delay-1200"></div>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="h-2 w-full bg-white/15 rounded animate-pulse delay-1400"></div>
-                      <div className="h-2 w-3/4 bg-white/15 rounded animate-pulse delay-1600"></div>
-                    </div>
-                  </div>
-              </div>
-              </div>
-              
-              {/* Floating Elements */}
-              <div className="absolute top-2 right-2 w-4 h-4 bg-brand-a/40 rounded-full animate-bounce delay-300"></div>
-              <div className="absolute bottom-2 left-2 w-3 h-3 bg-brand-c/40 rounded-full animate-pulse delay-500"></div>
-              <div className="absolute top-1/2 right-1 w-2 h-2 bg-brand-b/40 rounded-full animate-bounce delay-700"></div>
-            </div>
-            <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-white/10" />
-          </div>
-        </div>
-      </section>
+      {/* Product Proof Section removed per request */}
 
-      {/* Dynamic Pages Showcase - Framer Style */}
-      <section className="bg-bg-base py-24">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-20">
-            <h2 className="text-lg text-brand-b font-bold tracking-wide uppercase mb-4">Dynamic Pages</h2>
-            <p className="mt-2 text-3xl md:text-4xl lg:text-5xl font-black text-white leading-[1.1] tracking-tight">
-              Create, collaborate,<br/>
-              and <span className="bg-gradient-to-r from-brand-a to-brand-c bg-clip-text text-transparent">go live</span>
-            </p>
-            <p className="mt-4 text-lg md:text-xl text-text-soft max-w-3xl mx-auto font-medium leading-relaxed">
-              Generate site layouts and advanced components in seconds with AI, so you can skip the blank canvas and start designing with confidence.
-            </p>
-          </div>
-
-
-          {/* Dynamic Pages Interface - Framer Style */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[600px]">
-            {/* Left Panel - AI Features */}
-            <div className="lg:col-span-1 bg-bg-surface rounded-2xl border border-white/10 p-6 flex flex-col">
-              <div className="mb-8">
-                <h3 className="text-2xl font-bold text-white mb-3">AI</h3>
-                <p className="text-text-mute text-sm leading-relaxed">
-                  Generate site layouts and advanced components in seconds with AI, so you can skip the blank canvas and start designing with confidence.
-                </p>
-                <Link href="/freelancers" className="inline-block mt-4 text-brand-b hover:text-brand-a transition-colors text-sm font-medium">
-                  Learn more →
-              </Link>
-            </div>
-            
-              <div className="space-y-4 flex-1">
-                <Link href="/freelancers" className="block text-text-mute hover:text-white transition-colors text-sm font-medium">
-                  Design
-                </Link>
-                <Link href="/products" className="block text-text-mute hover:text-white transition-colors text-sm font-medium">
-                  CMS
-                </Link>
-                <Link href="/admin" className="block text-text-mute hover:text-white transition-colors text-sm font-medium">
-                  Collaborate
-                </Link>
-              </div>
-            </div>
-
-            {/* Middle Panel - AI Chat Interface */}
-            <div className="lg:col-span-1 bg-bg-surface rounded-2xl border border-white/10 p-6 flex flex-col">
-              {/* Chat Header */}
-              <div className="flex items-center justify-between mb-6">
-                <Link href="/freelancers" className="text-text-mute hover:text-white transition-colors text-sm">
-                  ← Wireframer
-                </Link>
-                <div className="flex items-center space-x-2">
-                  <div className="w-6 h-6 bg-brand-a/40 rounded-full animate-pulse"></div>
-                  <span className="text-text-mute text-sm">Live</span>
-                </div>
-              </div>
-
-              {/* Chat Messages */}
-              <div className="space-y-4 flex-1">
-                {/* User Message */}
-                <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-                  <p className="text-text-base text-sm">
-                    Design three unique landing pages for a modern design agency.
-                  </p>
-                </div>
-
-                {/* AI Response */}
-                <div className="bg-gradient-to-r from-brand-a/10 to-brand-b/10 rounded-xl p-4 border border-brand-b/20">
-                  <div className="flex items-center mb-2">
-                    <div className="w-6 h-6 bg-gradient-to-br from-brand-a to-brand-b rounded-lg flex items-center justify-center mr-3">
-                      <span className="text-white text-xs font-bold">T</span>
-                    </div>
-                    <span className="text-text-base text-sm font-medium">Uniti</span>
-                  </div>
-                  <p className="text-text-base text-sm">
-                    I created three unique landing pages in dark mode for your modern design startup: a main landing page, a creative-focused page, and a studio showcase page.
-                  </p>
-                </div>
-              </div>
-
-              {/* Chat Input */}
-              <div className="mt-4 bg-white/5 rounded-xl p-3 border border-white/10">
-                <div className="flex items-center space-x-3">
-                  <div className="flex-1 h-4 bg-white/20 rounded animate-pulse"></div>
-                  <div className="w-6 h-6 bg-brand-b/40 rounded animate-pulse"></div>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Panel - Live Preview */}
-            <div className="lg:col-span-1 bg-bg-surface rounded-2xl border border-white/10 overflow-hidden">
-              {/* Preview Header */}
-              <div className="p-4 border-b border-white/10">
-                <div className="flex items-center justify-between">
-                  <div className="flex space-x-2">
-                    <div className="px-3 py-1 bg-brand-b/20 text-brand-b rounded-lg text-xs font-medium">
-                      Landing Page 1
-                    </div>
-                    <div className="px-3 py-1 bg-white/5 text-text-mute rounded-lg text-xs font-medium">
-                      Landing Page 2
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-6 h-6 bg-brand-a/40 rounded animate-pulse"></div>
-                    <span className="text-text-mute text-xs">Live Preview</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Preview Content */}
-              <div className="p-6 h-full bg-gradient-to-br from-bg-base to-bg-surface relative">
-                <div className="space-y-6">
-                  {/* Header */}
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-xl font-bold text-white">Nuance®</h4>
-                    <div className="flex space-x-4">
-                      <span className="text-text-mute text-sm">Features</span>
-                      <span className="text-text-mute text-sm">Pricing</span>
-                    </div>
-                  </div>
-
-                  {/* Hero Section */}
-                  <div className="space-y-4">
-                    <h1 className="text-3xl font-bold text-white leading-tight">
-                      Modern studio design.
-                    </h1>
-                    <p className="text-text-mute text-lg">
-                      Distinct visuals. Lasting impact.
-                    </p>
-                  </div>
-
-                  {/* Feature Cards */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-white/5 rounded-lg p-4 border border-white/10">
-                      <div className="w-8 h-8 bg-brand-a/20 rounded-lg mb-3 flex items-center justify-center">
-                        <span className="text-brand-a text-lg">🎨</span>
-                      </div>
-                      <div className="h-3 w-16 bg-white/20 rounded animate-pulse mb-2"></div>
-                      <div className="h-2 w-full bg-white/15 rounded animate-pulse"></div>
-                    </div>
-                    <div className="bg-white/5 rounded-lg p-4 border border-white/10">
-                      <div className="w-8 h-8 bg-brand-b/20 rounded-lg mb-3 flex items-center justify-center">
-                        <span className="text-brand-b text-lg">⚡</span>
-                      </div>
-                      <div className="h-3 w-14 bg-white/20 rounded animate-pulse mb-2"></div>
-                      <div className="h-2 w-full bg-white/15 rounded animate-pulse"></div>
-                    </div>
-                  </div>
-
-                  {/* CTA Section */}
-                  <div className="pt-4">
-                    <div className="flex space-x-3">
-                      <div className="flex-1 h-10 bg-gradient-to-r from-brand-a to-brand-b rounded-lg animate-pulse"></div>
-                      <div className="w-10 h-10 bg-white/10 rounded-lg animate-pulse"></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Dynamic Pages Showcase removed per request */}
 
       {/* Stats Section */}
       <section className="bg-bg-surface/60 backdrop-blur-sm">
@@ -1051,7 +871,7 @@ const HomePage = ({ testimonials, stats, recentFreelancers, featuredProjects }: 
           <div className="relative">
                   <div className="flex items-center mb-4">
                     {[...Array(5)].map((_, i) => (
-                      <span key={i} className="text-yellow-400 text-lg">⭐</span>
+                      <span key={i} className={`${i < testimonial.rating ? 'text-yellow-400' : 'text-white/20'} text-lg`}>⭐</span>
                         ))}
                       </div>
                   <p className="text-text-soft mb-4 italic">"{testimonial.testimonial_text}"</p>
@@ -1158,7 +978,7 @@ export const getServerSideProps: GetServerSideProps = async () => {
     const freelancerCount = freelancersResult.count || 0;
     const projectCount = projectsResult.count || 0;
     const reviewCount = reviewsResult.count || 0;
-    const uniqueCountries = new Set(countriesResult.data?.map(f => f.country)).size || 0;
+    const uniqueCountries = new Set((countriesResult.data ?? []).map((f: any) => f.country)).size || 0;
 
     const stats = {
       totalFreelancers: freelancerCount,
