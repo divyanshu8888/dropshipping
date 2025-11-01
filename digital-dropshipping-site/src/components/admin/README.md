@@ -25,7 +25,7 @@ admin/
 ## Usage
 
 ```typescript
-// Import all admin components
+// Import all admin components (from pages/)
 import { 
   EntityDrawer, 
   CommandBar, 
@@ -33,12 +33,16 @@ import {
   EditableCard, 
   KanbanPipeline, 
   EventStream 
-} from '../src/components/admin'
+} from '../../src/components/admin'
 
 // Or import specific categories
-import { DataGrid, EditableCard } from '../src/components/admin/ui'
-import { EntityDrawer, CommandBar } from '../src/components/admin/forms'
-import { EventStream } from '../src/components/admin/data'
+import { DataGrid, EditableCard } from '../../src/components/admin/ui'
+import { EntityDrawer, CommandBar } from '../../src/components/admin/forms'
+import { EventStream } from '../../src/components/admin/data'
+
+// From within src/ folder:
+import { DataGrid } from '../components/admin/ui'
+import { EntityDrawer } from '../components/admin/forms'
 ```
 
 ## Components Overview

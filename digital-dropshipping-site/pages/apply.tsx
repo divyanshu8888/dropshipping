@@ -6,20 +6,27 @@ import Header from '../src/components/Header'
 export default function ApplyPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
-
+  const [isChecking, setIsChecking] = useState(true)
   useEffect(() => {
-    // Check if user is logged in and redirect to new profile setup
-    const user = localStorage.getItem('user');
-    if (user) {
-      const userData = JSON.parse(user);
-      if (userData.role === 'freelancer') {
-        router.push('/freelancer-profile-setup');
-        return;
+    // Only redirect if user is already a freelancer (has applied before)
+    // Otherwise, show the form
+    if (typeof window !== 'undefined') {
+      const user = localStorage.getItem('user');
+      if (user) {
+        try {
+          const userData = JSON.parse(user);
+          if (userData.role === 'freelancer') {
+            router.replace('/freelancers/profile-setup');
+            return;
+          }
+        } catch (e) {
+          // Invalid user data, continue to show form
+        }
       }
+      setIsChecking(false);
     }
-    // If not logged in as freelancer, redirect to signup
-    router.push('/signup');
   }, [router]);
+
   const [formData, setFormData] = useState({
     display_name: '',
     title: '',
@@ -124,6 +131,27 @@ export default function ApplyPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  // Show loading state while checking user
+  if (isChecking) {
+    return (
+      <>
+        <Head>
+          <title>Apply as Freelancer - Uniti</title>
+          <meta name="description" content="Join Uniti and connect with clients worldwide" />
+        </Head>
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-100">
+          <Header />
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading...</p>
+            </div>
+          </div>
+        </div>
+      </>
+    );
   }
 
   return (

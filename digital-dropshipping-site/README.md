@@ -22,21 +22,78 @@ A comprehensive e-commerce platform with integrated freelancer showcase system.
 
 ```
 digital-dropshipping-site/
-├── src/
-│   ├── components/          # React components
-│   ├── hooks/              # Custom React hooks
-│   ├── lib/                # Utility libraries
-│   ├── pages/              # Next.js pages
-│   │   ├── api/            # API routes
-│   │   ├── products/       # Product pages
-│   │   └── ...             # Other pages
-│   ├── services/           # External service integrations
-│   ├── styles/             # CSS styles
-│   └── types/              # TypeScript type definitions
-├── tests/                  # Test files
-├── freelancer-showcase/    # Freelancer system (separate module)
-└── ...                     # Configuration files
+├── .github/
+│   └── workflows/          # CI/CD automation (GitHub Actions)
+├── docs/                   # 📚 Documentation
+│   ├── README.md          # Documentation index
+│   ├── SETUP.md          # Development setup guide
+│   ├── QUICK_DEPLOY.md   # Quick deployment guide
+│   ├── DEPLOYMENT.md     # Complete deployment guide
+│   └── AUTOMATION_SETUP.md # CI/CD automation guide
+├── public/                 # Static assets
+│   ├── images/            # Images and logos
+│   ├── Video/             # Video files
+│   └── uploads/           # User uploads
+├── pages/                  # Next.js pages & API routes
+│   ├── api/               # API endpoints
+│   ├── admin/             # Admin pages
+│   ├── freelancers/       # Freelancer pages
+│   └── [other pages]      # Public pages
+├── src/                    # Source code
+│   ├── components/        # React components
+│   ├── hooks/             # Custom React hooks
+│   ├── lib/               # Utilities & API clients
+│   ├── contexts/          # React contexts
+│   ├── services/          # External service integrations
+│   ├── styles/            # Global CSS
+│   ├── types/             # TypeScript types
+│   └── utils/             # Helper functions
+├── supabase/              # Database migrations & SQL
+│   ├── migrations/        # Database migrations (auto-applied)
+│   └── *.sql              # SQL setup scripts
+├── scripts/               # Utility scripts
+├── tests/                 # Test files
+│   ├── e2e/              # End-to-end tests (Playwright)
+│   └── unit/             # Unit tests (Jest)
+├── .github/               # GitHub configuration
+├── .husky/                # Git hooks (pre-commit)
+├── Configuration files:   # Root level configs
+│   ├── package.json
+│   ├── tsconfig.json
+│   ├── next.config.js
+│   ├── tailwind.config.js
+│   ├── playwright.config.ts
+│   ├── lighthouserc.json
+│   └── .prettierrc.json
+└── Documentation:         # Root level docs
+    └── README.md          # This file
 ```
+
+## Quick Start
+
+```bash
+# Install dependencies
+npm install
+
+# Copy environment template
+cp env.example .env.local
+
+# Setup Husky for pre-commit hooks
+npm run prepare
+
+# Start development server
+npm run dev
+```
+
+## 📚 Documentation
+
+All documentation is now organized in the `docs/` folder:
+
+- **[docs/SETUP.md](docs/SETUP.md)** - Complete development setup
+- **[docs/QUICK_DEPLOY.md](docs/QUICK_DEPLOY.md)** - Deploy in 10 minutes
+- **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** - Full deployment guide
+- **[docs/AUTOMATION_SETUP.md](docs/AUTOMATION_SETUP.md)** - CI/CD automation
+- **[PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md)** - File structure guide
 
 ## Setup Instructions
 
@@ -46,7 +103,7 @@ npm install
 ```
 
 ### 2. Environment Setup
-Create `.env.local` with your configuration:
+Copy `env.example` to `.env.local` and fill in your actual values:
 
 ```env
 # Database (Supabase)
@@ -130,25 +187,177 @@ To integrate the freelancer showcase system into your main project, follow the i
 
 ### Running Tests
 ```bash
+# Unit tests
 npm test
+
+# Watch mode
+npm test:watch
+
+# Coverage report
+npm test:coverage
+
+# E2E tests (Playwright)
+npm run e2e
+
+# E2E tests with UI
+npm run e2e:ui
+```
+
+### Code Quality
+```bash
+# Lint code
+npm run lint
+
+# Fix linting issues
+npm run lint:fix
+
+# Type check
+npm run typecheck
+
+# Format code (Prettier)
+npx prettier --write .
 ```
 
 ### Building for Production
 ```bash
 npm run build
 npm start
+
+# Analyze bundle size
+npm run analyze
 ```
 
 ### Database Management
-All database operations are handled through the Supabase dashboard.
+All database operations are handled through the Supabase dashboard or CLI:
+```bash
+# Push migrations
+supabase db push
 
-## Deployment
+# Seed database
+npm run db:seed
+```
 
-1. Set up production databases
-2. Configure environment variables
-3. Deploy to Vercel or your preferred platform
-4. Set up domain and SSL certificates
-5. Configure email notifications
+## CI/CD & Automation
+
+This project includes comprehensive CI/CD automation:
+
+### GitHub Actions Workflows
+
+1. **CI Pipeline** (`.github/workflows/ci.yml`)
+   - Runs on every push/PR
+   - Lints, type-checks, tests, and builds
+   - Protects `main` branch (requires passing CI)
+
+2. **Database Migrations** (`.github/workflows/db-migrate.yml`)
+   - Auto-applies migrations on `dev` and `main`
+   - Separate staging/production environments
+
+3. **Semantic Release** (`.github/workflows/release.yml`)
+   - Auto-versioning based on commit messages
+   - Generates CHANGELOG.md
+   - Creates GitHub releases
+   - Uses [Conventional Commits](https://www.conventionalcommits.org/)
+
+4. **Nightly Backups** (`.github/workflows/backup.yml`)
+   - Daily database backups at 2 AM UTC
+   - 30-day retention in GitHub artifacts
+
+5. **Lighthouse CI** (`.github/workflows/lighthouse.yml`)
+   - Performance, accessibility, SEO checks
+   - Fails PRs if scores drop below 90
+
+### Pre-commit Hooks
+
+Husky + lint-staged automatically:
+- Lints and fixes code
+- Formats with Prettier
+- Prevents bad commits
+
+### Required GitHub Secrets
+
+Add these in your GitHub repository settings:
+
+**CI/CD:**
+- `NEXT_PUBLIC_SUPABASE_URL` - Supabase project URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Supabase anon key
+
+**Database Migrations:**
+- `SUPABASE_ACCESS_TOKEN` - Supabase CLI access token
+- `SUPABASE_PROJECT_REF` - Production project reference
+- `SUPABASE_STAGING_PROJECT_REF` - Staging project reference (optional)
+
+**Backups:**
+- `SUPABASE_DB_URL` - Full PostgreSQL connection string (service role)
+
+**Releases:**
+- `GITHUB_TOKEN` - Auto-generated
+- `NPM_TOKEN` - For publishing (if needed)
+
+**Lighthouse:**
+- `LHCI_GITHUB_APP_TOKEN` - Lighthouse CI token (optional)
+
+### Deployment
+
+#### Vercel (Recommended)
+
+1. **Connect Repository:**
+   - Import your GitHub repo to Vercel
+   - Vercel auto-detects Next.js
+
+2. **Environment Variables:**
+   - Add all variables from `env.example`
+   - Set separately for Preview/Production
+
+3. **Automatic Deployments:**
+   - Every push to `main` → Production
+   - Every PR → Preview deployment
+   - Merge to `dev` → Staging environment
+
+4. **Branch Protection:**
+   - Enable "Require status checks" in GitHub
+   - Add "CI" workflow as required check
+
+#### Manual Deployment
+
+```bash
+# Build
+npm run build
+
+# Start production server
+npm start
+```
+
+### Commit Message Convention
+
+Use [Conventional Commits](https://www.conventionalcommits.org/) for auto-versioning:
+
+```
+feat: add new feature
+fix: bug fix
+docs: documentation changes
+style: formatting
+refactor: code restructuring
+test: adding tests
+chore: maintenance tasks
+
+# Examples:
+feat: add newsletter subscription
+fix: correct footer link routing
+docs: update deployment guide
+```
+
+### Monitoring & Alerts
+
+**Recommended:**
+- **Sentry** - Error tracking (frontend + API)
+- **Vercel Analytics** - Performance monitoring
+- **UptimeRobot** - Uptime monitoring (ping every minute)
+
+### Content Automation
+
+- Newsletter → Resend/Mailgun integration
+- ISR/Revalidation for dynamic content
+- Vercel Cron for scheduled tasks
 
 ## Support
 

@@ -7,9 +7,18 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "lint": "next lint",
+    "lint:fix": "next lint --fix",
+    "typecheck": "tsc --noEmit",
     "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui",
     "db:seed": "tsx scripts/seed-products.ts",
-    "setup:admin": "node scripts/setup-admin.js"
+    "setup:admin": "node scripts/setup-admin.js",
+    "analyze": "ANALYZE=true next build",
+    "prepare": "node -e \"if (require('fs').existsSync('.git')) require('child_process').execSync('husky install', {stdio: 'inherit'})\" || true"
   },
   "keywords": [
     "dropshipping",
@@ -46,15 +55,58 @@
     "@types/react": "19.2.2",
     "@types/react-syntax-highlighter": "^15.5.11",
     "@types/uuid": "^9.0.7",
+    "@lhci/cli": "^0.13.0",
+    "@playwright/test": "^1.40.0",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/commit-analyzer": "^11.1.0",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^9.2.6",
+    "@semantic-release/npm": "^11.0.2",
+    "@semantic-release/release-notes-generator": "^12.1.0",
     "autoprefixer": "^10.4.21",
     "eslint": "latest",
     "eslint-config-next": "latest",
+    "husky": "^8.0.3",
     "jest": "latest",
+    "lint-staged": "^15.2.0",
     "postcss": "^8.5.6",
+    "prettier": "^3.1.1",
+    "semantic-release": "^22.0.12",
     "supabase": "^1.123.4",
     "tailwindcss": "^3.4.18",
     "ts-jest": "latest",
     "tsx": "^4.20.6",
     "typescript": "latest"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{css,md,json,yml,yaml}": [
+      "prettier --write"
+    ]
+  },
+  "release": {
+    "branches": ["main"],
+    "plugins": [
+      "@semantic-release/commit-analyzer",
+      "@semantic-release/release-notes-generator",
+      [
+        "@semantic-release/changelog",
+        {
+          "changelogFile": "CHANGELOG.md"
+        }
+      ],
+      "@semantic-release/npm",
+      [
+        "@semantic-release/git",
+        {
+          "assets": ["CHANGELOG.md", "package.json"],
+          "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
+        }
+      ],
+      "@semantic-release/github"
+    ]
   }
 }

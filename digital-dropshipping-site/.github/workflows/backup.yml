@@ -1,0 +1,44 @@
+name: Nightly DB Backup
+
+on:
+  schedule:
+    - cron: '0 2 * * *' # 2 AM UTC daily (adjust for your timezone)
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+      
+      - name: Create database backup
+        env:
+          PGURL: ${{ secrets.SUPABASE_DB_URL }} # Full connection string with service role
+        run: |
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          pg_dump --clean --if-exists --no-owner "$PGURL" | gzip > backup_${TIMESTAMP}.sql.gz
+          echo "BACKUP_FILE=backup_${TIMESTAMP}.sql.gz" >> $GITHUB_ENV
+      
+      - name: Upload backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-db-backup
+          path: ${{ env.BACKUP_FILE }}
+          retention-days: 30
+      
+      # Optional: Upload to S3/Backblaze/Google Cloud Storage
+      # - name: Upload to S3
+      #   uses: aws-actions/configure-aws-credentials@v4
+      #   with:
+      #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      #     aws-region: us-east-1
+      # - run: aws s3 cp ${{ env.BACKUP_FILE }} s3://your-backup-bucket/db-backups/
+
