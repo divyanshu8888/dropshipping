@@ -581,7 +581,7 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
               '@type': 'Organization',
               name: 'Uniti',
               url: 'https://uniti.example.com',
-              logo: '/images/logo/logo.png'
+              logo: '/images/logo/logo2.1.png'
             })
           }}
         />
@@ -698,8 +698,16 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
             </div>
           
               {/* FOOTER MICROCOPY */}
-              <div className="footer-microcopy animate-fade-in-up animate-delay-400">
-                Fast quotes · Secure milestones · Verified portfolios
+              <div className="mt-2 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[10px] text-white/80 animate-fade-in-up animate-delay-400">
+                <span className="inline-flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400/90" />Fast quotes
+                </span>
+                <span className="inline-flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-sky-400/90" />Secure milestones
+                </span>
+                <span className="inline-flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-violet-400/90" />Verified portfolios
+                </span>
               </div>
           </div>
         </div>
@@ -1008,7 +1016,11 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
           <div className="grid gap-6 md:grid-cols-3">
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-xl bg-gradient-to-r from-[#00C6FF] to-[#7D2AE8]"></div>
+                <img 
+                  src="/images/logo/logo2.1.png" 
+                  alt="Uniti Logo" 
+                  className="h-8 w-8 object-contain"
+                />
                 <span className="text-lg font-semibold text-white">Uniti</span>
               </div>
               <p className="text-white/70 text-sm">

@@ -9,7 +9,7 @@ const UnitiLogo = () => {
         <div className="logo" aria-label="Uniti – Where ideas unite">
             {/* Optional logo image */}
             <img 
-                src="/images/logo/logo3.png" 
+                src="/images/logo/logo2.1.png" 
                 alt="Uniti Logo" 
                 className="logo-icon"
             />
