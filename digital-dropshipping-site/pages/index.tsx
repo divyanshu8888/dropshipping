@@ -636,21 +636,22 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
             <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-black/20 to-transparent" />
             <div className="absolute inset-0 hero-overlay-gradient-refined" />
 
-            {/* Local contrast overlay only behind text */}
-            <div className="pointer-events-none absolute left-1/2 top-[12vh] -translate-x-1/2 w-[900px] max-w-[90vw] h-[20vh] rounded-[32px] bg-gradient-to-b from-black/55 via-black/40 to-transparent blur-[18px]"></div>
+            {/* Light glow specifically behind gradient text area - much stronger */}
+            <div className="pointer-events-none absolute left-1/2 top-[12vh] -translate-x-1/2 w-[650px] max-w-[75vw] h-[14vh] rounded-[24px] bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-violet-500/20 blur-[32px]"></div>
 
             <div className="relative z-10 mx-auto max-w-[900px] px-6 pt-[12vh] text-center">
               {/* HEADLINE */}
               <h1
-                className="mx-auto font-extrabold text-white 
+                className="mx-auto font-extrabold 
                            text-[clamp(32px,5.5vw,48px)] leading-[1.15] whitespace-nowrap
                            animate-fade-in-up animate-delay-100 tracking-tight"
+                style={{ color: '#FFFFFF' }}
               >
-                Your Vision,{" "}
+                <span style={{ color: '#FFFFFF' }}>Your Vision,</span>{" "}
                 <span className="hero-gradient-refined animate-fade-in-up animate-delay-200">
                   Built by Experts
                 </span>
-          </h1>
+              </h1>
 
               {/* TAGLINE */}
               <p
