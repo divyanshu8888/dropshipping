@@ -5,6 +5,7 @@ import Link from 'next/link'
 import Header from '../../src/components/Header'
 import QuoteRequestForm from '../../src/components/QuoteRequestForm'
 import { query } from '../../src/lib/mysql'
+import styles from '../../src/styles/freelancers.module.css'
 
 interface Freelancer {
   id: string;
@@ -384,89 +385,77 @@ export default function FreelancersPage({ freelancers }: FreelancersPageProps) {
           {/* Content */}
           <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-10 animate-fade-in-up">
-              {/* Headline with Gradient Highlight */}
-              <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold mb-4 tracking-tight leading-tight">
+              {/* Headline with Gradient Highlight - Matching Homepage */}
+              <h1 className="mx-auto font-extrabold text-[clamp(32px,5.5vw,48px)] leading-[1.15] whitespace-nowrap animate-fade-in-up animate-delay-100 tracking-tight">
                 Find the{' '}
-                <span className="hero-gradient-refined">
+                <span className={styles.heroGradient}>
                   Perfect Freelancer
                 </span>
-            </h1>
+              </h1>
               
-              {/* Enhanced Subtext - Matching Homepage with Policy Alignment */}
-              <p className="mx-auto text-[clamp(14px,1.5vw,16px)] max-w-[600px] text-white/95 mb-8 font-normal">
+              {/* Enhanced Subtext - Matching Homepage */}
+              <p className="mx-auto text-[clamp(14px,1.5vw,16px)] max-w-[600px] animate-fade-in-up animate-delay-300 hero-tagline">
                 Discover top-rated professionals ready to design, build, and scale your vision
               </p>
               
-              {/* Trust Bar */}
+              {/* Trust Bar - Freelancer-Specific */}
               <div className="flex flex-wrap items-center justify-center gap-6 mb-12 text-white/80 text-sm">
                 <div className="flex items-center gap-2">
-                  <svg className="w-5 h-5 text-brand-a" fill="currentColor" viewBox="0 0 20 20">
+                  <svg className="w-5 h-5 text-cyan-400" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                   </svg>
-                  <span>Verified Experts</span>
+                  <span>Verified Portfolios</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <svg className="w-5 h-5 text-brand-b" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <svg className="w-5 h-5 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <span>Project-Based Pricing</span>
+                  <span>Fast Response Times</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <svg className="w-5 h-5 text-brand-c" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <span>Secure Milestones</span>
+                  <span>Top-Rated Professionals</span>
                 </div>
               </div>
               
-              {/* Enhanced Search Bar - Production Ready */}
-              <div className="max-w-4xl mx-auto animate-fade-in-up-delay" ref={searchRef}>
-                <form onSubmit={handleSearchSubmit} className="relative">
-                  <div className="relative transition-all duration-300 ease-out hover:scale-[1.02] hover:-translate-y-1">
-                    {/* Search Icon - Left */}
-                    <div className="absolute left-5 top-1/2 transform -translate-y-1/2 pointer-events-none z-10">
-                      <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                      </svg>
-                    </div>
-                    
-                <input
-                  type="text"
-                      placeholder="Try 'Web Designer', 'Logo Animation', or 'SEO Audit'..."
-                  value={searchTerm}
-                      onChange={(e) => {
-                        setSearchTerm(e.target.value)
-                        setShowSuggestions(true)
-                        setSelectedSuggestionIndex(-1)
-                      }}
-                      onKeyDown={handleKeyDown}
-                      onFocus={() => setShowSuggestions(true)}
-                      className="w-full pl-14 pr-32 py-5 rounded-2xl text-gray-900 text-lg placeholder-gray-600 focus:outline-none focus:ring-4 focus:ring-brand-b/50 shadow-2xl border border-white/20 transition-all duration-200"
-                      style={{
-                        backgroundColor: 'rgba(255, 255, 255, 0.98)',
-                        backdropFilter: 'blur(10px)',
-                        WebkitBackdropFilter: 'blur(10px)',
-                        boxShadow: '0 20px 60px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.1)'
-                      }}
-                      aria-label="Search freelancers"
-                      aria-expanded={showSuggestions}
-                      aria-haspopup="listbox"
-                    />
-                    
-                    {/* Search Button - Right */}
-                    <button
-                      type="submit"
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-brand-a to-brand-b text-white font-semibold text-sm hover:from-brand-b hover:to-brand-c transition-all duration-200 shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-brand-b/50"
-                      aria-label="Search"
+              {/* Enhanced Search Bar - Matching Homepage Style */}
+              <div className="flex items-center justify-center animate-fade-in-up animate-delay-500" ref={searchRef}>
+                <form onSubmit={handleSearchSubmit} className="relative flex w-full max-w-[680px] items-center gap-3 rounded-full px-4 h-[50px] bg-white border border-gray-200 shadow-lg transition-all duration-300 focus-within:border-blue-400 focus-within:shadow-xl">
+                  <svg className="h-5 w-5 text-gray-600 shrink-0" viewBox="0 0 24 24" fill="none">
+                    <path d="M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                  </svg>
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value)
+                      setShowSuggestions(true)
+                      setSelectedSuggestionIndex(-1)
+                    }}
+                    onKeyDown={handleKeyDown}
+                    onFocus={() => setShowSuggestions(true)}
+                    aria-label="Search freelancers"
+                    aria-expanded={showSuggestions}
+                    aria-haspopup="listbox"
+                    className="h-full flex-1 bg-transparent text-gray-900 outline-none placeholder-gray-500"
+                    placeholder="Try 'Web Designer', 'Logo Animation', or 'SEO Audit'..."
+                  />
+                  <button
+                    type="submit"
+                    className="shrink-0 h-[38px] px-4 rounded-full text-white font-medium transition-all text-sm bg-gradient-to-r from-[#00C6FF] to-[#7D2AE8] hover:shadow-lg hover:scale-105 hover:-translate-y-0.5 focus:outline-none"
+                    style={{
+                      boxShadow: '0 4px 16px rgba(125,42,232,0.25)'
+                    }}
                     >
-                      Search
-                    </button>
-                  </div>
+                    Search
+                  </button>
                   
                   {/* Inline Suggestions Dropdown */}
                   {(showSuggestions && (getSuggestions.length > 0 || recentSearches.length > 0)) && (
                     <div 
-                      className="absolute top-full left-0 right-0 mt-2 rounded-2xl bg-white/98 backdrop-blur-xl border border-white/30 shadow-2xl max-h-80 overflow-y-auto z-50"
+                      className="absolute top-full left-0 right-0 mt-2 rounded-2xl bg-white border border-gray-200 shadow-2xl max-h-80 overflow-y-auto z-50"
                       style={{
                         boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
                       }}
@@ -494,8 +483,8 @@ export default function FreelancersPage({ freelancers }: FreelancersPageProps) {
                             >
                               <div className="flex items-center gap-3">
                                 <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
                                 <span>{suggestion}</span>
                               </div>
                             </button>
@@ -548,23 +537,23 @@ export default function FreelancersPage({ freelancers }: FreelancersPageProps) {
                     </div>
                   )}
                 </form>
-                
-                {/* Quick Category Chips */}
-                <div className="mt-6 flex flex-wrap items-center justify-center gap-3 animate-fade-in-up-delay-2">
-                  <span className="text-white/90 text-sm font-medium">Popular:</span>
-                  {['UI/UX Design', 'Web Development', 'Content Writing', 'Branding', 'SEO'].map((category) => (
-                    <button
-                      key={category}
-                      onClick={() => setSearchTerm(category)}
-                      className="px-4 py-2 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/30 text-white font-medium text-sm transition-all duration-200 hover:scale-105 hover:border-white/50 hover:shadow-lg shadow-white/10"
-                      style={{
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.15), 0 0 0 1px rgba(255,255,255,0.1)'
-                      }}
-                    >
-                      {category}
-                    </button>
-                  ))}
-                </div>
+              </div>
+              
+              {/* Quick Category Chips */}
+              <div className={`mt-6 flex flex-wrap items-center justify-center gap-3 animate-fade-in-up ${styles.animateDelay2}`}>
+                <span className="text-white/90 text-sm font-medium">Popular:</span>
+                {['UI/UX Design', 'Web Development', 'Content Writing', 'Branding', 'SEO'].map((category) => (
+                  <button
+                    key={category}
+                    onClick={() => setSearchTerm(category)}
+                    className="px-4 py-2 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/30 text-white font-medium text-sm transition-all duration-200 hover:scale-105 hover:border-white/50 hover:shadow-lg shadow-white/10"
+                    style={{
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.15), 0 0 0 1px rgba(255,255,255,0.1)'
+                    }}
+                  >
+                    {category}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
@@ -577,11 +566,11 @@ export default function FreelancersPage({ freelancers }: FreelancersPageProps) {
             <div className="flex flex-wrap items-center gap-x-4 gap-y-3 pb-4 border-b border-white/10">
               {/* Availability Dropdown */}
               <div className="flex flex-col gap-1.5">
-                <label className="filter-label text-white/70">AVAILABILITY</label>
+                <label className={`${styles.filterLabel} text-white/70`}>AVAILABILITY</label>
                 <select
                   value={availabilityFilter}
                   onChange={(e) => setAvailabilityFilter(e.target.value)}
-                  className="filter-dropdown"
+                  className={styles.filterDropdown}
                   aria-label="Filter by availability"
                 >
                   <option value="all">All Availability</option>
@@ -593,11 +582,11 @@ export default function FreelancersPage({ freelancers }: FreelancersPageProps) {
 
               {/* Rating Dropdown */}
               <div className="flex flex-col gap-1.5">
-                <label className="filter-label text-white/70">RATING</label>
+                <label className={`${styles.filterLabel} text-white/70`}>RATING</label>
                 <select
                   value={ratingFilter}
                   onChange={(e) => setRatingFilter(e.target.value)}
-                  className="filter-dropdown"
+                  className={styles.filterDropdown}
                   aria-label="Filter by rating"
                 >
                   <option value="all">All Ratings</option>
@@ -608,11 +597,11 @@ export default function FreelancersPage({ freelancers }: FreelancersPageProps) {
 
               {/* Experience Dropdown */}
               <div className="flex flex-col gap-1.5">
-                <label className="filter-label text-white/70">EXPERIENCE</label>
+                <label className={`${styles.filterLabel} text-white/70`}>EXPERIENCE</label>
                 <select
                   value={experienceFilter}
                   onChange={(e) => setExperienceFilter(e.target.value)}
-                  className="filter-dropdown"
+                  className={styles.filterDropdown}
                   aria-label="Filter by experience level"
                 >
                   <option value="all">All Experience Levels</option>
@@ -624,11 +613,11 @@ export default function FreelancersPage({ freelancers }: FreelancersPageProps) {
 
               {/* Delivery Dropdown */}
               <div className="flex flex-col gap-1.5">
-                <label className="filter-label text-white/70">DELIVERY</label>
+                <label className={`${styles.filterLabel} text-white/70`}>DELIVERY</label>
                 <select
                   value={turnaroundFilter}
                   onChange={(e) => setTurnaroundFilter(e.target.value)}
-                  className="filter-dropdown"
+                  className={styles.filterDropdown}
                   aria-label="Filter by delivery speed"
                 >
                   <option value="all">All Delivery Times</option>
@@ -641,11 +630,11 @@ export default function FreelancersPage({ freelancers }: FreelancersPageProps) {
 
               {/* Service Filter */}
               <div className="flex flex-col gap-1.5">
-                <label className="filter-label text-white/70">SERVICE</label>
+                <label className={`${styles.filterLabel} text-white/70`}>SERVICE</label>
                 <select
                   value={serviceFilter}
                   onChange={(e) => setServiceFilter(e.target.value)}
-                  className="filter-dropdown"
+                  className={styles.filterDropdown}
                   aria-label="Filter by service category"
                 >
                   {serviceCategories.map((service) => (
@@ -658,11 +647,11 @@ export default function FreelancersPage({ freelancers }: FreelancersPageProps) {
 
               {/* Sort Dropdown */}
               <div className="flex flex-col gap-1.5 ml-auto">
-                <label className="filter-label text-white/70">SORT</label>
+                <label className={`${styles.filterLabel} text-white/70`}>SORT</label>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                  className="filter-dropdown"
+                  className={styles.filterDropdown}
                   aria-label="Sort freelancers"
               >
                 <option value="rating">Highest Rated</option>
@@ -677,12 +666,12 @@ export default function FreelancersPage({ freelancers }: FreelancersPageProps) {
             {activeFilters.length > 0 && (
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <div className="flex items-center gap-2 bg-white/5 backdrop-blur-sm rounded-full px-3 py-1.5 w-fit">
-                  <span className="text-white/70 text-xs uppercase tracking-wide filter-label">Active:</span>
-                  {activeFilters.map((filter) => (
-                    <button
-                      key={filter.key}
-                      onClick={filter.onRemove}
-                      className="chip"
+                        <span className={`text-white/70 text-xs uppercase tracking-wide ${styles.filterLabel}`}>Active:</span>
+                        {activeFilters.map((filter) => (
+                          <button
+                            key={filter.key}
+                            onClick={filter.onRemove}
+                            className={styles.chip}
                       aria-label={`Remove ${filter.label} filter`}
                     >
                       {filter.label}
