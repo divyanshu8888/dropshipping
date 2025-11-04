@@ -4,7 +4,7 @@ import Head from 'next/head'
 import Link from 'next/link'
 import Header from '../../src/components/Header'
 import QuoteRequestForm from '../../src/components/QuoteRequestForm'
-import { supabase } from '../../src/lib/supabase'
+import { query } from '../../src/lib/mysql'
 import { getFreelancerAvatar, getServiceIcon, getCategoryColor } from '../../src/utils/imageUtils'
 
 interface FreelancerService {
@@ -60,29 +60,53 @@ export default function FreelancersPage({ freelancers }: FreelancersPageProps) {
       <div className="min-h-screen bg-bg-base">
         <Header />
 
-        {/* Hero Section */}
-        <section className="bg-gradient-to-r from-brand-a via-brand-b to-brand-c text-white py-16 pt-28">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h1 className="text-4xl md:text-5xl font-extrabold mb-4">
-              Find the Perfect Freelancer
-            </h1>
-            <p className="text-xl text-indigo-100 mb-8">
-              Browse {freelancers.length}+ verified professionals ready to bring your projects to life
-            </p>
-            
-            {/* Search Bar */}
-            <div className="max-w-4xl">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search by name, skill, or category..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full px-6 py-4 pr-12 rounded-xl text-gray-900 text-lg focus:outline-none focus:ring-4 focus:ring-white/30 shadow-2xl"
-                />
-                <svg className="absolute right-4 top-1/2 transform -translate-y-1/2 w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
+        {/* Hero Section - Premium Spacious Design */}
+        <section className="relative overflow-hidden text-white py-20 md:py-28 pt-32">
+          {/* Refined Gradient Background */}
+          <div 
+            className="absolute inset-0"
+            style={{
+              background: 'linear-gradient(120deg, #1e3a8a, #3b82f6, #8b5cf6)'
+            }}
+          />
+          
+          {/* Subtle Vignette Overlay */}
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,0,0,0.15),transparent_70%)]" />
+          
+          {/* Additional Depth Overlays */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/10" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent" />
+          
+          {/* Content */}
+          <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-10">
+              <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold mb-3 tracking-tight">
+                Find the Perfect Freelancer
+              </h1>
+              <p className="text-xl md:text-2xl mb-12 max-w-2xl mx-auto font-medium" style={{ color: 'rgba(255,255,255,0.85)' }}>
+                Browse {freelancers.length}+ verified professionals ready to bring your projects to life
+              </p>
+              
+              {/* Search Bar - Premium Styling with Glassmorphism */}
+              <div className="max-w-4xl mx-auto">
+                <div className="relative transition-all duration-200 ease-out hover:-translate-y-1">
+                  <input
+                    type="text"
+                    placeholder="Search by name, skill, or category..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full px-6 py-5 pr-14 rounded-2xl text-gray-900 text-lg focus:outline-none focus:ring-4 focus:ring-white/30 shadow-2xl border border-white/20"
+                    style={{
+                      backgroundColor: 'rgba(255, 255, 255, 0.85)',
+                      backdropFilter: 'blur(10px)',
+                      WebkitBackdropFilter: 'blur(10px)',
+                      boxShadow: '0 8px 32px rgba(0,0,0,0.15)'
+                    }}
+                  />
+                  <svg className="absolute right-5 top-1/2 transform -translate-y-1/2 w-6 h-6 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
               </div>
             </div>
           </div>
@@ -97,7 +121,7 @@ export default function FreelancersPage({ freelancers }: FreelancersPageProps) {
                   <button
                     key={category}
                     onClick={() => setSelectedCategory(category)}
-                    className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-all ${
+                    className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-all duration-200 ease-out hover:-translate-y-0.5 ${
                       selectedCategory === category
                         ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -139,7 +163,10 @@ export default function FreelancersPage({ freelancers }: FreelancersPageProps) {
             {filteredFreelancers.map((freelancer) => (
               <div
                 key={freelancer.id}
-                className="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden group transform hover:-translate-y-2"
+                className="bg-white rounded-2xl hover:shadow-2xl transition-all duration-300 overflow-hidden group transform hover:-translate-y-2"
+                style={{
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.15)'
+                }}
               >
                 <div className="p-6">
                   {/* Header */}
@@ -295,10 +322,9 @@ export default function FreelancersPage({ freelancers }: FreelancersPageProps) {
 
 export const getServerSideProps: GetServerSideProps = async () => {
   try {
-    // Fetch all approved freelancers from database (NO PRICING!)
-    const { data: freelancers, error } = await supabase
-      .from('freelancers_public')
-      .select(`
+    // Fetch all approved freelancers from MySQL database
+    const freelancers = await query(`
+      SELECT 
         id, 
         display_name, 
         title, 
@@ -309,28 +335,33 @@ export const getServerSideProps: GetServerSideProps = async () => {
         total_reviews, 
         completed_projects, 
         response_time, 
-        availability,
-        freelancer_services (
-          id,
-          title,
-          price,
-          category,
-          delivery_time
-        )
-      `)
-      .eq('status', 'approved')
-      .order('rating', { ascending: false });
+        availability
+      FROM freelancers
+      WHERE status = 'approved'
+      ORDER BY rating DESC
+    `);
 
-    if (error) {
-      console.error('Error fetching freelancers:', error);
-      throw error;
-    }
+    // Parse JSON skills field
+    const freelancersWithServices = freelancers.map((freelancer: any) => {
+      let parsedSkills: string[] = [];
+      try {
+        parsedSkills = typeof freelancer.skills === 'string' 
+          ? JSON.parse(freelancer.skills) 
+          : freelancer.skills || [];
+      } catch (e) {
+        parsedSkills = [];
+      }
 
-    // Transform the data to include services
-    const freelancersWithServices = freelancers?.map(freelancer => ({
-      ...freelancer,
-      services: freelancer.freelancer_services || []
-    })) || [];
+      return {
+        ...freelancer,
+        id: String(freelancer.id),
+        skills: parsedSkills,
+        rating: Number(freelancer.rating) || 0,
+        total_reviews: Number(freelancer.total_reviews) || 0,
+        completed_projects: Number(freelancer.completed_projects) || 0,
+        services: [] // Services can be added later if needed
+      };
+    });
 
     return {
       props: {

@@ -26,12 +26,21 @@ export default function ContactPage() {
         <meta name="description" content="Get in touch with Uniti support team" />
       </Head>
 
-      <div className="min-h-screen bg-bg-base">
+      <div className="min-h-screen bg-[#0B0C0F]">
         <Header />
 
-        <div className="max-w-4xl mx-auto px-6 py-16 pt-24">
-          <h1 className="text-4xl font-bold text-white mb-4">Contact Us</h1>
-          <p className="text-xl text-gray-300 mb-8">We'd love to hear from you</p>
+        {/* Hero Section */}
+        <section className="relative border-b border-white/10 bg-gradient-to-b from-[#0B0C0F] to-[#0B0C0F] pt-24 pb-8">
+          <div className="max-w-4xl mx-auto px-6 text-center">
+            <h1 className="text-xs text-white/60 font-bold tracking-wide uppercase mb-2">Contact Us</h1>
+            <p className="text-2xl md:text-3xl font-black text-white leading-tight tracking-tight">
+              We'd love to{" "}
+              <span className="bg-gradient-to-r from-[#00C6FF] to-[#7D2AE8] bg-clip-text text-transparent">hear from you</span>
+            </p>
+          </div>
+        </section>
+
+        <div className="max-w-4xl mx-auto px-6 py-12">
 
           <div className="grid md:grid-cols-2 gap-8">
             <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
@@ -132,8 +141,14 @@ export default function ContactPage() {
           </div>
 
           <div className="mt-8 text-center">
-            <Link href="/" className="inline-flex items-center text-cyan-400 hover:text-cyan-300">
-              ← Back to Home
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm rounded-full bg-white/5 border border-white/10 text-white/90 hover:bg-white/10 hover:text-white transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Back to Home
             </Link>
           </div>
         </div>

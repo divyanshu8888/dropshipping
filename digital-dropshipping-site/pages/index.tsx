@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
 import Header from '../src/components/Header';
 import QuoteRequestForm from '../src/components/QuoteRequestForm';
-import { supabase } from '../src/lib/supabase';
+import { query } from '../src/lib/mysql';
 
 
 interface Testimonial {
@@ -557,17 +557,39 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
 
   const currentTestimonials = getCurrentTestimonials();
 
-  const handleNewsletterSubmit = (e: React.FormEvent) => {
+  const handleNewsletterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newsletterEmail);
     if (!ok) {
       setNewsletterMsg({type:'error',text:'Please enter a valid email address.'});
       return;
     }
-    // TODO: call your API, then:
-    setNewsletterMsg({type:'success',text:'Thanks! You’re subscribed.'});
-    setNewsletterEmail('');
-    setTimeout(() => setNewsletterMsg({type:'',text:''}), 5000);
+
+    try {
+      const response = await fetch('/api/newsletter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: newsletterEmail }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setNewsletterMsg({
+          type: 'success',
+          text: data.alreadySubscribed ? 'You are already subscribed!' : 'Thanks! You are subscribed.'
+        });
+        setNewsletterEmail('');
+        setTimeout(() => setNewsletterMsg({type:'',text:''}), 5000);
+      } else {
+        setNewsletterMsg({type:'error',text: data.message || 'Failed to subscribe. Please try again.'});
+        setTimeout(() => setNewsletterMsg({type:'',text:''}), 5000);
+      }
+    } catch (error) {
+      console.error('Newsletter subscription error:', error);
+      setNewsletterMsg({type:'error',text:'Something went wrong. Please try again later.'});
+      setTimeout(() => setNewsletterMsg({type:'',text:''}), 5000);
+    }
   };
 
   return (
@@ -778,12 +800,11 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
 
         <div className="relative max-w-7xl mx-auto px-4 md:px-6 py-12 md:py-16 text-center" style={{ zIndex: 2 }}>
           {/* Section heading */}
-          <h2 className="text-xl md:text-2xl font-semibold tracking-tight text-white">
-            Proof in Numbers
+          <h2 className="text-xl sm:text-2xl font-semibold tracking-tight">
+            <span className="bg-gradient-to-r from-sky-400 to-violet-400 bg-clip-text text-transparent">Proof</span>{" "}
+            <span className="text-white/95">in Numbers</span>
           </h2>
-          <p className="mt-2 text-white/70 text-sm md:text-base">
-            Real-world outcomes from vetted experts and transparent milestones.
-          </p>
+          <p className="mt-1.5 text-[10px] text-white/60">Real-world outcomes from vetted experts and transparent milestones.</p>
 
           {/* Stats grid */}
           <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
@@ -837,13 +858,13 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
                 {/* Icon chip */}
                 <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-white/10 text-white/85 ring-1 ring-white/15">
                   <span className="text-xl">{stat.icon}</span>
-            </div>
+                </div>
             
                 {/* Number with sheen effect */}
                 <div className="stat-number bg-gradient-to-r from-[#00C6FF] via-[#5F57FF] to-[#7D2AE8] bg-clip-text text-4xl md:text-5xl font-extrabold tracking-tight text-transparent [font-variant-numeric:tabular-nums] leading-none">
                   {(stat.value ?? 0).toLocaleString()}
                   {stat.suffix}
-            </div>
+              </div>
 
                 {/* Label */}
                 <div className="mt-1.5 text-sm md:text-base font-semibold text-white/90">{stat.label}</div>
@@ -852,159 +873,95 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
                 <div className="mt-1 text-xs text-white/60">{stat.meta}</div>
                 </Link>
             ))}
-              </div>
+          </div>
 
           {/* Footnote */}
           <p className="mt-6 text-xs text-white/50">
             Based on Uniti project data. Updated weekly.
-          </p>
+                  </p>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="bg-bg-base py-16">
-        <div className="max-w-7xl mx-auto px-6">
+      {/* Testimonials Section - Professional Design */}
+      <section className="relative bg-gradient-to-b from-bg-surface/80 via-bg-surface/60 to-bg-surface/80 backdrop-blur-sm py-20 md:py-24 overflow-hidden">
+        <div className="max-w-7xl mx-auto px-6 relative z-10">
+          {/* Section Header */}
           <div className="text-center mb-12">
-            <h2 className="text-sm text-brand-b font-bold tracking-wide uppercase mb-3">Why Choose Us</h2>
-            <p className="mt-2 text-3xl md:text-4xl lg:text-5xl font-black text-white leading-[1.1] tracking-tight">
-              Everything you need to<br/>
-              <span className="bg-gradient-to-r from-brand-a to-brand-c bg-clip-text text-transparent">succeed</span>
-            </p>
+            <h2 className="text-xl sm:text-2xl font-semibold tracking-tight">
+              <span className="bg-gradient-to-r from-sky-400 to-violet-400 bg-clip-text text-transparent">What our</span>{" "}
+              <span className="text-white/95">clients say</span>
+            </h2>
+            <p className="mt-1.5 text-[10px] text-white/60">Don't just take our word for it</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              {
-                title: 'Verified Freelancers',
-                description: 'All freelancers go through our rigorous verification process',
-                icon: '✅',
-                delay: 'delay-0',
-                color: 'from-green-500 to-emerald-600'
-              },
-              {
-                title: 'Secure Payments',
-                description: 'Escrow protection ensures you only pay for completed work',
-                icon: '🔒',
-                delay: 'delay-200',
-                color: 'from-blue-500 to-cyan-600'
-              },
-              {
-                title: '24/7 Support',
-                description: 'Round-the-clock customer support for all your needs',
-                icon: '🛟',
-                delay: 'delay-400',
-                color: 'from-purple-500 to-violet-600'
-              },
-              {
-                title: 'Quality Guarantee',
-                description: '100% satisfaction guarantee or your money back',
-                icon: '💯',
-                delay: 'delay-600',
-                color: 'from-orange-500 to-red-600'
-              },
-              {
-                title: 'Fast Delivery',
-                description: 'Get your projects delivered on time, every time',
-                icon: '⚡'
-              },
-              {
-                title: 'Global Network',
-                description: 'Access to talent from around the world',
-                icon: '🌍'
-              }
-            ].map((feature, index) => (
-              <div key={index} className="relative p-5 rounded-2xl bg-bg-surface shadow-card border border-white/5 hover:shadow-xl transition-all duration-300">
-                <div className="absolute inset-0 rounded-2xl bg-metal-sheen pointer-events-none"></div>
-                <div className="absolute -top-px left-6 right-6 h-px bg-specular-line opacity-30"></div>
-                <div className="relative">
-                  <div className="text-4xl mb-4">{feature.icon}</div>
-                  <h3 className="text-xl font-bold text-white mb-3">{feature.title}</h3>
-                  <p className="text-base text-text-soft font-medium leading-relaxed">{feature.description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+          {currentTestimonials.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-7">
+              {currentTestimonials.map((testimonial, index) => (
+                <div
+                  key={testimonial.id || index}
+                  className="group relative"
+                  style={{
+                    animationDelay: `${index * 100}ms`
+                  }}
+                >
+                  {/* Testimonial Card */}
+                  <div className="relative h-full p-6 rounded-2xl bg-gradient-to-br from-bg-surface via-bg-surface/95 to-bg-surface border border-white/10 hover:border-white/20 transition-all duration-500 cursor-pointer overflow-hidden shadow-2xl hover:shadow-[0_20px_60px_rgba(0,0,0,0.5)] transform hover:-translate-y-1">
 
-      {/* Testimonials Section */}
-      <section className="bg-bg-surface/60 backdrop-blur-sm py-16">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-white tracking-tight leading-[1.1] mb-4">What our clients say</h2>
-            <p className="text-base md:text-lg text-text-soft font-medium">Don't just take our word for it</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {currentTestimonials.map((testimonial, index) => (
-              <Link key={testimonial.id} href="/freelancers" className="relative p-5 rounded-2xl bg-bg-surface shadow-card border border-white/5 hover:shadow-xl transition-all duration-300 cursor-pointer">
-                <div className="absolute inset-0 rounded-2xl bg-metal-sheen pointer-events-none"></div>
-                <div className="absolute -top-px left-6 right-6 h-px bg-specular-line opacity-30"></div>
-          <div className="relative">
-                  <div className="flex items-center mb-3">
-                    {[...Array(5)].map((_, i) => (
-                      <span key={i} className={`${i < testimonial.rating ? 'text-yellow-400' : 'text-white/20'} text-base`}>⭐</span>
+                    <div className="relative z-10">
+                      {/* Star Rating */}
+                      <div className="flex items-center gap-0.5 mb-4">
+                        {[...Array(5)].map((_, i) => (
+                          <svg
+                            key={i}
+                            className={`w-4 h-4 transition-all duration-300 ${
+                              i < testimonial.rating
+                                ? 'text-yellow-400 fill-yellow-400 drop-shadow-[0_0_6px_rgba(250,204,21,0.4)]'
+                                : 'text-white/10 fill-white/10'
+                            }`}
+                            viewBox="0 0 24 24"
+                            fill="currentColor"
+                          >
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                          </svg>
                         ))}
                       </div>
-                  <p className="text-text-soft mb-3 italic text-sm">"{testimonial.testimonial_text}"</p>
-                        <div>
-                    <p className="font-semibold text-sm text-text-base">{testimonial.client_name}</p>
-                    <p className="text-xs text-text-mute">{testimonial.client_role} at {testimonial.client_company}</p>
+
+
+                      {/* Testimonial Text */}
+                      <blockquote className="mb-4">
+                        <p className="text-text-soft/90 text-sm leading-relaxed font-normal italic">
+                          "{testimonial.testimonial_text}"
+                        </p>
+                      </blockquote>
+
+                      {/* Client Info */}
+                      <div className="pt-4 border-t border-white/10">
+                        <p className="font-bold text-white text-xs mb-1">
+                          {testimonial.client_name}
+                        </p>
+                        <p className="text-text-mute text-[10px] font-medium">
+                          {testimonial.client_role}
+                          {testimonial.client_company && ` at ${testimonial.client_company}`}
+                        </p>
                       </div>
                     </div>
-                  </Link>
-                ))}
-          </div>
+
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-16">
+              <div className="inline-block p-8 rounded-2xl bg-bg-surface/50 border border-white/10">
+                <p className="text-text-soft text-base font-medium">
+                  No testimonials available yet. Check back soon!
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
-      {/* Final CTA Section */}
-      <section className="relative mx-auto max-w-6xl px-6 py-10">
-        <div className="relative overflow-hidden rounded-3xl border border-white/12 bg-white/[0.06] backdrop-blur-md px-8 py-10 md:px-12 md:py-12 shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
-          {/* Inner highlight + aurora wash */}
-          <div className="pointer-events-none absolute inset-0 rounded-3xl bg-[radial-gradient(120%_80%_at_0%_0%,rgba(0,198,255,.12),transparent),radial-gradient(120%_80%_at_100%_100%,rgba(125,42,232,.14),transparent)] ring-1 ring-inset ring-white/5" />
-
-          <div className="relative z-10 text-center">
-            <h3 className="mx-auto max-w-3xl text-xl md:text-2xl font-extrabold tracking-tight text-white">
-              Bring your idea to life with a{" "}
-              <span className="bg-gradient-to-r from-[#00C6FF] via-[#5F57FF] to-[#7D2AE8] bg-clip-text text-transparent">verified expert</span>.
-            </h3>
-
-            {/* Tighter heading -> subtext gap; more subtext -> buttons gap */}
-            <p className="mx-auto mt-2 mb-6 max-w-2xl text-white/90 text-xs">
-              Fast quotes, milestone protection, and portfolio-verified talent. Start in minutes.
-            </p>
-
-            <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <button
-                onClick={() => setShowQuoteForm(true)}
-                className="inline-flex h-10 items-center justify-center rounded-full px-5 font-medium text-white text-xs bg-gradient-to-r from-[#00C6FF] to-[#7D2AE8] hover:shadow-[0_0_18px_rgba(125,42,232,.45)] transition-transform hover:scale-[1.02]"
-              >
-                Request a Quote
-              </button>
-            <Link
-              href="/freelancers"
-                className="inline-flex h-10 items-center justify-center rounded-full px-5 font-medium border border-white/25 text-white/90 hover:bg-white/10 transition text-xs"
-            >
-                Browse Freelancers
-            </Link>
-            </div>
-
-            {/* Trust pills → clearer dots + spacing */}
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[10px] text-white/80">
-              <span className="inline-flex items-center gap-2">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400/90" />Protected milestones
-              </span>
-              <span className="inline-flex items-center gap-2">
-                <span className="h-1.5 w-1.5 rounded-full bg-sky-400/90" />Verified experts
-              </span>
-              <span className="inline-flex items-center gap-2">
-                <span className="h-1.5 w-1.5 rounded-full bg-violet-400/90" />Secure payments
-              </span>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* Footer */}
       <footer className="relative border-t border-white/10 bg-[#0B0D10]">
@@ -1022,11 +979,11 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
                   className="h-8 w-8 object-contain"
                 />
                 <span className="text-lg font-semibold text-white">Uniti</span>
-              </div>
+                </div>
               <p className="text-white/70 text-sm">
                 Unity of ideas and experts. Build fast, build right.
               </p>
-            </div>
+              </div>
 
             <div className="md:col-span-2">
               <form
@@ -1059,11 +1016,11 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
               <div role="status" aria-live="polite" className="mt-2 min-h-[1rem] text-xs">
                 {newsletterMsg.type === 'success' && <span className="text-emerald-400">{newsletterMsg.text}</span>}
                 {newsletterMsg.type === 'error' && <span className="text-rose-400">{newsletterMsg.text}</span>}
-              </div>
+          </div>
               <p className="mt-1 text-[10px] text-white/55">
                 By subscribing you agree to our <a href="/privacy" className="underline underline-offset-2">Privacy Policy</a>.
               </p>
-            </div>
+        </div>
           </div>
 
           {/* Link columns */}
@@ -1099,6 +1056,7 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
               heading="Company"
               items={[
                 { label: "About", href: "/about" },
+                { label: "Why Choose Us", href: "/why-choose-us" },
                 { label: "Blog", href: "/blog" },
                 { label: "Contact", href: "/contact" },
                 { label: "Careers", href: "/careers" },
@@ -1113,9 +1071,9 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
               <a href="/terms" className="hover:text-white">Terms</a>
               <a href="/privacy" className="hover:text-white">Privacy</a>
               <a href="/cookies" className="hover:text-white">Cookies</a>
-            </div>
-          </div>
-        </div>
+                      </div>
+                      </div>
+                    </div>
 
         {/* Back to top */}
         <a
@@ -1171,68 +1129,81 @@ function FooterCol({
 
 export const getServerSideProps: GetServerSideProps = async () => {
   try {
-    // Fetch data directly from Supabase database
-    const [
-      testimonialsResult,
-      freelancersResult,
-      projectsResult,
-      reviewsResult,
-      countriesResult
-    ] = await Promise.all([
-      // Fetch testimonials
-      supabase
-      .from('testimonials')
-      .select('*')
-        .limit(6),
+    // Fetch data directly from MySQL database
+    // Using Promise.allSettled to handle errors gracefully for each query
+    const results = await Promise.allSettled([
+      // Fetch testimonials from database - prioritize featured ones, then by rating
+      query(`
+        SELECT * FROM testimonials 
+        WHERE is_active = "TRUE" 
+        ORDER BY is_featured DESC, rating DESC, created_at DESC 
+        LIMIT 12
+      `),
       
       // Count active freelancers
-      supabase
-        .from('freelancers_public')
-        .select('*', { count: 'exact', head: true }),
+      query<{ count: number | string }>('SELECT COUNT(*) as count FROM freelancers WHERE status = "approved"'),
       
       // Count completed projects
-      supabase
-        .from('projects')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'completed'),
+      query<{ count: number | string }>('SELECT COUNT(*) as count FROM projects WHERE status = "completed"'),
       
       // Count total reviews/testimonials
-      supabase
-        .from('testimonials')
-        .select('*', { count: 'exact', head: true }),
+      query<{ count: number | string }>('SELECT COUNT(*) as count FROM testimonials WHERE is_active = "TRUE"'),
       
       // Get unique countries from freelancers
-      supabase
-        .from('freelancers_public')
-        .select('country')
-        .not('country', 'is', null)
+      query<{ country: string }>('SELECT DISTINCT country FROM freelancers WHERE country IS NOT NULL AND status = "approved"'),
+      
+      // Get projects from last 90 days
+      query<{ count: number | string }>('SELECT COUNT(*) as count FROM projects WHERE status = "completed" AND created_at >= DATE_SUB(NOW(), INTERVAL 90 DAY)')
     ]);
 
-    // Handle testimonials
-    if (testimonialsResult.error) {
-      console.error('Error fetching testimonials:', testimonialsResult.error);
-    }
-    const testimonials = testimonialsResult.data || [];
+    // Extract results with fallbacks
+    const testimonials = results[0].status === 'fulfilled' ? results[0].value : [];
+    const freelancersCountResult = results[1].status === 'fulfilled' ? results[1].value : [{ count: 0 }];
+    const projectsCountResult = results[2].status === 'fulfilled' ? results[2].value : [{ count: 0 }];
+    const reviewsCountResult = results[3].status === 'fulfilled' ? results[3].value : [{ count: 0 }];
+    const countries = results[4].status === 'fulfilled' ? results[4].value : [];
+    const projectsLast90DaysResult = results[5].status === 'fulfilled' ? results[5].value : [{ count: 0 }];
 
     // Calculate stats from database results
-    const freelancerCount = freelancersResult.count || 0;
-    const projectCount = projectsResult.count || 0;
-    const reviewCount = reviewsResult.count || 0;
-    const uniqueCountries = new Set((countriesResult.data ?? []).map((f: any) => f.country)).size || 0;
+    // MySQL COUNT(*) returns the count - convert to number (handles BigInt or string)
+    const freelancerCount = Number(freelancersCountResult[0]?.count) || 0;
+    const projectCount = Number(projectsCountResult[0]?.count) || 0;
+    const reviewCount = Number(reviewsCountResult[0]?.count) || 0;
+    const uniqueCountries = countries.length || 0;
+    const projectsLast90DaysCount = Number(projectsLast90DaysResult[0]?.count) || 0;
 
     // Calculate average rating from testimonials
     const avgRating = testimonials.length > 0
-      ? (testimonials.reduce((sum: number, t: any) => sum + (t.rating || 0), 0) / testimonials.length).toFixed(1)
+      ? (testimonials.reduce((sum: number, t: any) => sum + (Number(t.rating) || 0), 0) / testimonials.length).toFixed(1)
       : '0.0';
 
-    // Get projects from last 90 days
-    const ninetyDaysAgo = new Date();
-    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-    const projectsLast90Days = await supabase
-      .from('projects')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'completed')
-      .gte('created_at', ninetyDaysAgo.toISOString());
+    // Serialize testimonials - convert Date objects to strings and map field names
+    // Database uses: content, client_title
+    // Page expects: testimonial_text, client_role
+    const serializedTestimonials = testimonials.map((t: any) => ({
+      id: String(t.id || ''),
+      client_name: t.client_name || '',
+      client_role: t.client_title || '', // Map client_title to client_role
+      client_company: t.client_company || '',
+      testimonial_text: t.content || '', // Map content to testimonial_text
+      rating: Number(t.rating) || 0,
+      // Keep original fields for reference
+      client_title: t.client_title || '',
+      content: t.content || '',
+      is_featured: t.is_featured === 'TRUE',
+      is_active: t.is_active === 'TRUE',
+      client_image_url: t.client_image_url || '',
+      created_at: t.created_at instanceof Date 
+        ? t.created_at.toISOString() 
+        : typeof t.created_at === 'string' 
+          ? t.created_at 
+          : String(t.created_at || ''),
+      updated_at: t.updated_at instanceof Date 
+        ? t.updated_at.toISOString() 
+        : typeof t.updated_at === 'string' 
+          ? t.updated_at 
+          : String(t.updated_at || '')
+    }));
 
     const stats = {
       totalFreelancers: freelancerCount,
@@ -1240,26 +1211,27 @@ export const getServerSideProps: GetServerSideProps = async () => {
       totalReviews: reviewCount,
       countries: uniqueCountries,
       averageRating: avgRating,
-      projectsLast90Days: projectsLast90Days.count || 0
+      projectsLast90Days: projectsLast90DaysCount
     };
 
     return {
       props: {
-        testimonials,
+        testimonials: serializedTestimonials,
         stats
       }
     };
   } catch (error) {
     console.error('Error in getServerSideProps:', error);
     
-    // Return empty data when there's an error - no mock data
+    // Return empty data when there's an error - NO hardcoded testimonials
+    // All data must come from database
     return {
       props: {
-        testimonials: [],
+        testimonials: [], // Empty array - no hardcoded testimonials
         stats: {
-      totalFreelancers: 0,
-      totalProjects: 0,
-      totalReviews: 0,
+          totalFreelancers: 0,
+          totalProjects: 0,
+          totalReviews: 0,
           countries: 0,
           averageRating: '0.0',
           projectsLast90Days: 0

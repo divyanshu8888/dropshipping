@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { query, queryOne } from './mysql';
 
 export interface Product {
   id: number;
@@ -35,22 +35,19 @@ export interface OrderItem {
 // Products API
 export const getProducts = async (): Promise<Product[]> => {
   try {
-    const { data: products, error } = await supabase
-      .from('products')
-      .select('*')
-      .eq('is_active', true)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      if (error.code === 'PGRST116') {
-        console.log('Products table does not exist. Please create it in Supabase dashboard.');
-        return [];
-      }
-      throw error;
-    }
-
+    // Note: Products table may not exist in MySQL yet
+    // Return empty array if table doesn't exist
+    const products = await query<Product>(`
+      SELECT * FROM products 
+      WHERE is_active = 'TRUE' 
+      ORDER BY created_at DESC
+    `);
     return products || [];
-  } catch (error) {
+  } catch (error: any) {
+    if (error.code === 'ER_NO_SUCH_TABLE') {
+      console.log('Products table does not exist. Please create it in MySQL database.');
+      return [];
+    }
     console.error('Error fetching products:', error);
     return [];
   }
@@ -58,25 +55,23 @@ export const getProducts = async (): Promise<Product[]> => {
 
 export const getProduct = async (id: number): Promise<Product | null> => {
   try {
-    const { data: product, error } = await supabase
-      .from('products')
-      .select('*')
-      .eq('id', id)
-      .eq('is_active', true)
-      .single();
-
-    if (error) {
-      throw error;
-    }
+    const product = await queryOne<Product>(`
+      SELECT * FROM products 
+      WHERE id = ? AND is_active = 'TRUE'
+    `, [id]);
 
     return product;
-  } catch (error) {
+  } catch (error: any) {
+    if (error.code === 'ER_NO_SUCH_TABLE') {
+      return null;
+    }
     console.error('Error fetching product:', error);
     throw new Error('Failed to fetch product');
   }
 };
 
 // Orders API
+// TODO: Migrate to MySQL - orders table needs to be created
 export const createOrder = async (orderData: {
   customerName: string;
   customerEmail: string;
@@ -87,129 +82,27 @@ export const createOrder = async (orderData: {
     price: number;
   }>;
 }): Promise<Order> => {
-  try {
-    const totalAmount = orderData.items.reduce(
-      (sum, item) => sum + item.price * item.quantity,
-      0
-    );
-
-    // Create the order
-    const { data: order, error: orderError } = await supabase
-      .from('orders')
-      .insert({
-        customer_name: orderData.customerName,
-        customer_email: orderData.customerEmail,
-        customer_address: orderData.customerAddress,
-        total_amount: totalAmount,
-        status: 'pending'
-      })
-      .select()
-      .single();
-
-    if (orderError) {
-      throw orderError;
-    }
-
-    // Create order items
-    const orderItems = orderData.items.map(item => ({
-      order_id: order.id,
-      product_id: item.productId,
-      quantity: item.quantity,
-      price: item.price
-    }));
-
-    const { error: itemsError } = await supabase
-      .from('order_items')
-      .insert(orderItems);
-
-    if (itemsError) {
-      throw itemsError;
-    }
-
-    // Fetch the complete order with items
-    const { data: completeOrder, error: fetchError } = await supabase
-      .from('orders')
-      .select(`
-        *,
-        order_items (
-          *,
-          products (*)
-        )
-      `)
-      .eq('id', order.id)
-      .single();
-
-    if (fetchError) {
-      throw fetchError;
-    }
-
-    return {
-      ...completeOrder,
-      items: completeOrder.order_items || []
-    };
-  } catch (error) {
-    console.error('Error creating order:', error);
-    throw new Error('Failed to create order');
-  }
+  throw new Error('Order creation not yet migrated to MySQL. Please create orders and order_items tables first.');
 };
 
+// TODO: Migrate to MySQL
 export const getOrders = async (): Promise<Order[]> => {
   try {
-    const { data: orders, error } = await supabase
-      .from('orders')
-      .select(`
-        *,
-        order_items (
-          *,
-          products (*)
-        )
-      `)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      throw error;
-    }
-
-    return orders?.map(order => ({
-      ...order,
-      items: order.order_items || []
-    })) || [];
+    // TODO: Implement MySQL query for orders with order_items join
+    return [];
   } catch (error) {
     console.error('Error fetching orders:', error);
-    throw new Error('Failed to fetch orders');
+    return [];
   }
 };
 
+// TODO: Migrate to MySQL
 export const updateOrderStatus = async (id: number, status: string): Promise<Order> => {
-  try {
-    const { data: order, error } = await supabase
-      .from('orders')
-      .update({ status })
-      .eq('id', id)
-      .select(`
-        *,
-        order_items (
-          *,
-          products (*)
-        )
-      `)
-      .single();
-
-    if (error) {
-      throw error;
-    }
-
-    return {
-      ...order,
-      items: order.order_items || []
-    };
-  } catch (error) {
-    console.error('Error updating order:', error);
-    throw new Error('Failed to update order');
-  }
+  throw new Error('Order update not yet migrated to MySQL');
 };
 
 // Admin functions
+// TODO: Migrate to MySQL
 export const createProduct = async (productData: {
   name: string;
   description: string;
@@ -218,66 +111,17 @@ export const createProduct = async (productData: {
   imageUrl: string;
   stock: number;
 }): Promise<Product> => {
-  try {
-    const { data: product, error } = await supabase
-      .from('products')
-      .insert({
-        name: productData.name,
-        description: productData.description,
-        price: productData.price,
-        category: productData.category,
-        image_url: productData.imageUrl,
-        stock: productData.stock,
-        is_active: true
-      })
-      .select()
-      .single();
-
-    if (error) {
-      throw error;
-    }
-
-    return product;
-  } catch (error) {
-    console.error('Error creating product:', error);
-    throw new Error('Failed to create product');
-  }
+  throw new Error('Product creation not yet migrated to MySQL');
 };
 
+// TODO: Migrate to MySQL
 export const updateProduct = async (id: number, productData: Partial<Product>): Promise<Product> => {
-  try {
-    const { data: product, error } = await supabase
-      .from('products')
-      .update(productData)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) {
-      throw error;
-    }
-
-    return product;
-  } catch (error) {
-    console.error('Error updating product:', error);
-    throw new Error('Failed to update product');
-  }
+  throw new Error('Product update not yet migrated to MySQL');
 };
 
+// TODO: Migrate to MySQL
 export const deleteProduct = async (id: number): Promise<void> => {
-  try {
-    const { error } = await supabase
-      .from('products')
-      .update({ is_active: false })
-      .eq('id', id);
-
-    if (error) {
-      throw error;
-    }
-  } catch (error) {
-    console.error('Error deleting product:', error);
-    throw new Error('Failed to delete product');
-  }
+  throw new Error('Product deletion not yet migrated to MySQL');
 };
 
 // Legacy function for backward compatibility

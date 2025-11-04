@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { supabase } from '../../src/lib/supabase';
+import { query } from '../../src/lib/mysql';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -7,10 +7,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Fetch all approved freelancers from database (public view only)
-    const { data: freelancers, error } = await supabase
-      .from('freelancers_public')
-      .select(`
+    // Fetch all approved freelancers from MySQL database
+    const freelancers = await query(`
+      SELECT 
         id, 
         display_name, 
         title, 
@@ -22,12 +21,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         completed_projects, 
         response_time, 
         availability
-      `)
-      .eq('status', 'approved')
-      .order('rating', { ascending: false });
+      FROM freelancers
+      WHERE status = 'approved'
+      ORDER BY rating DESC
+    `);
 
-    if (error) {
-      console.error('Error fetching freelancers:', error);
+    if (!freelancers) {
+      console.error('Error fetching freelancers');
       return res.status(500).json({ message: 'Error fetching freelancers' });
     }
 
