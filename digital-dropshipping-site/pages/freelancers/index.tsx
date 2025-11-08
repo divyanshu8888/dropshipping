@@ -1,4 +1,5 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useEffect, useRef, type ReactNode } from 'react'
+import { useRouter } from 'next/router'
 import { GetServerSideProps } from 'next'
 import Head from 'next/head'
 import Link from 'next/link'
@@ -35,6 +36,7 @@ interface Freelancer {
 
 interface FreelancersPageProps {
   freelancers: Freelancer[];
+  initialSearchTerm?: string;
 }
 
 // Helper to get country code from country name
@@ -62,14 +64,112 @@ function calculateOverlapHours(timezoneOffset: number | undefined): string {
   return '1–2h';
 }
 
-export default function FreelancersPage({ freelancers }: FreelancersPageProps) {
-  const [searchTerm, setSearchTerm] = useState('')
+type HeroTrustBadge = {
+  label: string;
+  icon: ReactNode;
+};
+
+type HeroCategory = string;
+
+const heroTrustBadges: HeroTrustBadge[] = [
+  {
+    label: 'Verified Portfolios',
+    icon: (
+      <svg className="w-4 h-4 text-brand-b" viewBox="0 0 24 24" fill="none">
+        <path
+          d="M12 3l6 3v5c0 3.866-2.686 7.5-6 8.5-3.314-1-6-4.634-6-8.5V6l6-3z"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path d="M9.75 12.5l1.75 1.75 2.75-2.75" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  {
+    label: 'Fast Response Times',
+    icon: (
+      <svg className="w-4 h-4 text-brand-b" viewBox="0 0 24 24" fill="none">
+        <path
+          d="M5 12a7 7 0 1111.31 5.31L19 20l-2 2-2.69-2.69A7 7 0 015 12z"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path d="M12 8v4l2 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  {
+    label: 'Top-Rated Professionals',
+    icon: (
+      <svg className="w-4 h-4 text-brand-b" viewBox="0 0 24 24" fill="none">
+        <path
+          d="M12 4l2.09 4.24L19 9.27l-3.5 3.42L16.18 18 12 15.9 7.82 18l.68-5.31L5 9.27l4.91-.03L12 4z"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    ),
+  },
+];
+
+const heroCategories: HeroCategory[] = [
+  'UI/UX Design',
+  'Web Development',
+  'Content Writing',
+  'Branding',
+  'SEO',
+];
+
+export default function FreelancersPage({ freelancers, initialSearchTerm }: FreelancersPageProps) {
+  const router = useRouter()
+  const [searchTerm, setSearchTerm] = useState(initialSearchTerm || '')
   const [showQuoteForm, setShowQuoteForm] = useState(false)
   const [selectedFreelancer, setSelectedFreelancer] = useState<string | null>(null)
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1)
   const [recentSearches, setRecentSearches] = useState<string[]>([])
   const searchRef = useRef<HTMLDivElement>(null)
+  const lastQueryRef = useRef(initialSearchTerm || '')
+ 
+  const runSearch = (rawTerm: string) => {
+    const trimmed = rawTerm.trim()
+
+    setSearchTerm(trimmed)
+
+    if (trimmed) {
+      setRecentSearches(prev => {
+        const updated = [trimmed, ...prev.filter(s => s !== trimmed)].slice(0, 5)
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('freelancer_recent_searches', JSON.stringify(updated))
+        }
+        return updated
+      })
+    }
+
+    const currentQueryValue = typeof router.query.search === 'string' ? router.query.search : ''
+    const nextQuery = { ...router.query }
+    if (trimmed) {
+      nextQuery.search = trimmed
+    } else {
+      delete nextQuery.search
+    }
+
+    const shouldUpdateRoute = trimmed !== currentQueryValue || (!trimmed && typeof router.query.search === 'string')
+
+    lastQueryRef.current = trimmed
+    if (shouldUpdateRoute) {
+      router.replace({ pathname: router.pathname, query: nextQuery }, undefined, { shallow: true, scroll: false })
+    }
+
+    setShowSuggestions(false)
+    setSelectedSuggestionIndex(-1)
+  }
   
   // Load recent searches from localStorage on mount
   useEffect(() => {
@@ -84,6 +184,14 @@ export default function FreelancersPage({ freelancers }: FreelancersPageProps) {
       }
     }
   }, [])
+ 
+  useEffect(() => {
+    if (!router.isReady) return
+    const querySearch = typeof router.query.search === 'string' ? router.query.search : ''
+    if (lastQueryRef.current === querySearch) return
+    lastQueryRef.current = querySearch
+    setSearchTerm(querySearch)
+  }, [router.isReady, router.query.search])
   
   // Close suggestions when clicking outside
   useEffect(() => {
@@ -205,19 +313,7 @@ export default function FreelancersPage({ freelancers }: FreelancersPageProps) {
   // Handle search submission
   const handleSearchSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault()
-    
-    if (searchTerm.trim()) {
-      // Save to recent searches
-      if (typeof window !== 'undefined') {
-        const updated = [searchTerm.trim(), ...recentSearches.filter(s => s !== searchTerm.trim())].slice(0, 5)
-        setRecentSearches(updated)
-        localStorage.setItem('freelancer_recent_searches', JSON.stringify(updated))
-      }
-      
-      setShowSuggestions(false)
-      setSelectedSuggestionIndex(-1)
-      // Search is handled by filteredFreelancers automatically
-    }
+    runSearch(searchTerm)
   }
   
   // Handle keyboard navigation
@@ -236,8 +332,7 @@ export default function FreelancersPage({ freelancers }: FreelancersPageProps) {
     } else if (e.key === 'Enter') {
       e.preventDefault()
       if (selectedSuggestionIndex >= 0 && suggestions[selectedSuggestionIndex]) {
-        setSearchTerm(suggestions[selectedSuggestionIndex])
-        handleSearchSubmit()
+        runSearch(suggestions[selectedSuggestionIndex])
       } else {
         handleSearchSubmit()
       }
@@ -339,91 +434,45 @@ export default function FreelancersPage({ freelancers }: FreelancersPageProps) {
         <Header />
 
         {/* Hero Section - Enhanced Professional Design */}
-        <section className="relative overflow-hidden text-white py-20 md:py-28 pt-32">
-          {/* Enhanced Diagonal Gradient Background - Using brand colors */}
-          <div 
-            className="absolute inset-0"
-            style={{
-              background: 'linear-gradient(135deg, #0B0C0F 0%, #101218 25%, rgba(96, 165, 250, 0.15) 50%, rgba(167, 139, 250, 0.15) 75%, #0B0C0F 100%)'
-            }}
-          />
-          
-          {/* Subtle Noise Texture */}
-          <div className="absolute inset-0 opacity-[0.03]">
-            <div 
-              className="absolute inset-0"
-              style={{
-                backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='4' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
-                backgroundSize: '200px 200px'
-              }}
-            />
-          </div>
-          
-          {/* Animated Background Pattern */}
-          <div className="absolute inset-0 opacity-10">
-            <div 
-              className="absolute inset-0"
-              style={{
-                backgroundImage: `radial-gradient(circle at 2px 2px, rgba(255,255,255,0.15) 1px, transparent 0)`,
-                backgroundSize: '40px 40px'
-              }}
-            />
-          </div>
-          
-          {/* Subtle Vignette Overlay */}
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,0,0,0.2),transparent_70%)]" />
-          
-          {/* Additional Depth Overlays */}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/10" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent" />
-          
-          {/* Blurred Glow Behind Search Area - Using brand colors */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="w-full max-w-4xl h-32 bg-gradient-to-r from-brand-a/20 via-brand-b/20 to-brand-c/20 blur-3xl opacity-50" />
-          </div>
+        <section className="relative overflow-hidden text-white pt-20 pb-14 md:pt-24 md:pb-18">
+          <div className="absolute inset-0 bg-[radial-gradient(900px_520px_at_50%_-20%,rgba(255,255,255,0.05),transparent)]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#0a1019]/90 via-[#080d17]/75 to-[#060910]/95" />
+          <div className={`absolute inset-0 ${styles.heroImageOverlay}`} />
+          <div className={`absolute inset-0 ${styles.heroAurora}`} />
+          <div className={`absolute inset-0 ${styles.heroNoise}`} />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(5,8,15,0.55),transparent_70%)]" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/40 to-transparent" />
           
           {/* Content */}
           <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-10 animate-fade-in-up">
-              {/* Headline with Gradient Highlight - Matching Homepage */}
-              <h1 className="mx-auto font-extrabold text-[clamp(32px,5.5vw,48px)] leading-[1.15] whitespace-nowrap animate-fade-in-up animate-delay-100 tracking-tight">
+            <div className="pointer-events-none absolute inset-x-0 top-24 h-40 rounded-[32px] bg-black/18 blur-lg -z-10" />
+            <div className="text-center mb-9 animate-fade-in-up">
+              <h1 className="mx-auto font-extrabold text-[clamp(32px,5.2vw,52px)] leading-[1.12] tracking-tight animate-fade-in-up animate-delay-100 drop-shadow-none md:drop-shadow-[0_0_8px_rgba(88,123,255,.18)]">
                 Find the{' '}
                 <span className={styles.heroGradient}>
                   Perfect Freelancer
                 </span>
               </h1>
-              
-              {/* Enhanced Subtext - Matching Homepage */}
-              <p className="mx-auto text-[clamp(14px,1.5vw,16px)] max-w-[600px] animate-fade-in-up animate-delay-300 hero-tagline">
+              <p className="mx-auto mt-5 text-[clamp(14px,1.5vw,16px)] max-w-[600px] text-[rgba(226,232,240,0.9)] fadeUp animateDelay2 hero-tagline leading-relaxed">
                 Discover top-rated professionals ready to design, build, and scale your vision
               </p>
-              
-              {/* Trust Bar - Freelancer-Specific */}
-              <div className="flex flex-wrap items-center justify-center gap-6 mb-12 text-white/80 text-sm">
-                <div className="flex items-center gap-2">
-                  <svg className="w-5 h-5 text-cyan-400" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                  <span>Verified Portfolios</span>
+            </div>
+
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-4 sm:gap-5 mb-10 animate-fade-in-up animate-delay-200 text-text-soft">
+              {heroTrustBadges.map((badge) => (
+                <div key={badge.label} className={styles.trustBadge}>
+                  <span className={styles.trustBadgeIcon}>{badge.icon}</span>
+                  <span>{badge.label}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <svg className="w-5 h-5 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span>Fast Response Times</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span>Top-Rated Professionals</span>
-                </div>
+              ))}
               </div>
               
-              {/* Enhanced Search Bar - Matching Homepage Style */}
-              <div className="flex items-center justify-center animate-fade-in-up animate-delay-500" ref={searchRef}>
-                <form onSubmit={handleSearchSubmit} className="relative flex w-full max-w-[680px] items-center gap-3 rounded-full px-4 h-[50px] bg-white border border-gray-200 shadow-lg transition-all duration-300 focus-within:border-blue-400 focus-within:shadow-xl">
-                  <svg className="h-5 w-5 text-gray-600 shrink-0" viewBox="0 0 24 24" fill="none">
+            <div className="mt-9 flex items-center justify-center animate-fade-in-up animate-delay-300" ref={searchRef}>
+              <form
+                onSubmit={handleSearchSubmit}
+                className={`relative z-20 flex w-full max-w-[700px] items-center gap-3 rounded-full px-5 h-[52px] border border-white/15 shadow-[0_16px_36px_rgba(8,18,36,0.42)] transition-all duration-300 focus-within:border-brand-b/40 focus-within:shadow-[0_18px_44px_rgba(73,126,227,0.3)] ${styles.heroSearchForm}`}
+              >
+                <svg className="h-5 w-5 text-white/70 shrink-0" viewBox="0 0 24 24" fill="none">
                     <path d="M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
                   </svg>
                   <input
@@ -439,20 +488,16 @@ export default function FreelancersPage({ freelancers }: FreelancersPageProps) {
                     aria-label="Search freelancers"
                     aria-expanded={showSuggestions}
                     aria-haspopup="listbox"
-                    className="h-full flex-1 bg-transparent text-gray-900 outline-none placeholder-gray-500"
+                  className="h-full flex-1 bg-transparent text-slate-100 font-medium text-sm placeholder-slate-500 outline-none tracking-wide focus-visible:outline-none"
                     placeholder="Try 'Web Designer', 'Logo Animation', or 'SEO Audit'..."
                   />
                   <button
                     type="submit"
-                    className="shrink-0 h-[38px] px-4 rounded-full text-white font-medium transition-all text-sm bg-gradient-to-r from-[#00C6FF] to-[#7D2AE8] hover:shadow-lg hover:scale-105 hover:-translate-y-0.5 focus:outline-none"
-                    style={{
-                      boxShadow: '0 4px 16px rgba(125,42,232,0.25)'
-                    }}
+                  className="shrink-0 h-[40px] px-5 rounded-full text-white font-semibold transition-all text-sm bg-[#3E5BF1] hover:bg-[#334fe6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7aa2ff]/40 focus-visible:ring-offset-0"
                     >
                     Search
                   </button>
                   
-                  {/* Inline Suggestions Dropdown */}
                   {(showSuggestions && (getSuggestions.length > 0 || recentSearches.length > 0)) && (
                     <div 
                       className="absolute top-full left-0 right-0 mt-2 rounded-2xl bg-white border border-gray-200 shadow-2xl max-h-80 overflow-y-auto z-50"
@@ -469,10 +514,7 @@ export default function FreelancersPage({ freelancers }: FreelancersPageProps) {
                             <button
                               key={suggestion}
                               type="button"
-                              onClick={() => {
-                                setSearchTerm(suggestion)
-                                handleSearchSubmit()
-                              }}
+                              onClick={() => runSearch(suggestion)}
                               className={`w-full text-left px-4 py-3 rounded-lg transition-all duration-150 ${
                                 selectedSuggestionIndex === index
                                   ? 'bg-gradient-to-r from-brand-a/10 to-brand-b/10 text-gray-900 font-medium'
@@ -500,10 +542,7 @@ export default function FreelancersPage({ freelancers }: FreelancersPageProps) {
                             <button
                               key={`recent-${index}`}
                               type="button"
-                              onClick={() => {
-                                setSearchTerm(recent)
-                                handleSearchSubmit()
-                              }}
+                              onClick={() => runSearch(recent)}
                               className="w-full text-left px-4 py-3 rounded-lg text-gray-700 hover:bg-gray-50 transition-all duration-150 flex items-center justify-between group"
                               role="option"
                             >
@@ -540,20 +579,27 @@ export default function FreelancersPage({ freelancers }: FreelancersPageProps) {
               </div>
               
               {/* Quick Category Chips */}
-              <div className={`mt-6 flex flex-wrap items-center justify-center gap-3 animate-fade-in-up ${styles.animateDelay2}`}>
-                <span className="text-white/90 text-sm font-medium">Popular:</span>
-                {['UI/UX Design', 'Web Development', 'Content Writing', 'Branding', 'SEO'].map((category) => (
+            <div className={`mt-8 flex flex-wrap items-center justify-center gap-3 sm:gap-4 animate-fade-in-up ${styles.animateDelay3}`}>
+              <span className="text-text-soft text-xs font-semibold uppercase tracking-wide">Popular</span>
+              {heroCategories.map((category) => (
                   <button
                     key={category}
-                    onClick={() => setSearchTerm(category)}
-                    className="px-4 py-2 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/30 text-white font-medium text-sm transition-all duration-200 hover:scale-105 hover:border-white/50 hover:shadow-lg shadow-white/10"
-                    style={{
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.15), 0 0 0 1px rgba(255,255,255,0.1)'
-                    }}
+                    onClick={() => runSearch(category)}
+                  type="button"
+                  aria-pressed={searchTerm === category}
+                  className={`${styles.heroCategoryButton} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/40`}
                   >
                     {category}
                   </button>
                 ))}
+            </div>
+
+            <div className={`mt-10 flex justify-center animate-fade-in-up ${styles.animateDelay4}`}>
+              <div className="flex items-center gap-2 text-white/40 text-xs uppercase tracking-[0.4em]">
+                <span>Scroll to explore</span>
+                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-white/20 text-white/60">
+                  ↓
+                </span>
               </div>
             </div>
           </div>
@@ -785,8 +831,8 @@ export default function FreelancersPage({ freelancers }: FreelancersPageProps) {
                         </div>
                         {freelancer.country && (
                           <div className="inline-flex items-center gap-1.5 text-sm text-white/60">
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 002 2h2.945M15 21v-2.5a2.5 2.5 0 00-5 0V21m5 0h2.945M18 18h2.945M21 15v-2.5a2.5 2.5 0 00-5 0V15m5 0h-2.945M15 3v2.5a2.5 2.5 0 005 0V3m-5 0h-2.945M12 3H9.055M9 5.5a2.5 2.5 0 005 0M9 5.5V3m0 0H5.055M21 18v2.945a2.5 2.5 0 01-2.5 2.5H15" />
+                            <svg className="h-4 w-4 text-white/50" viewBox="0 0 24 24" fill="currentColor">
+                              <path fillRule="evenodd" d="M12 2.25c-3.728 0-6.75 3.022-6.75 6.75 0 1.496.472 2.879 1.273 4.017L12 21.362l5.477-8.345a6.724 6.724 0 001.273-4.017c0-3.728-3.022-6.75-6.75-6.75zM12 11.25a2.25 2.25 0 100-4.5 2.25 2.25 0 000 4.5z" clipRule="evenodd" />
                             </svg>
                             {freelancer.country}
                           </div>
@@ -930,8 +976,9 @@ export default function FreelancersPage({ freelancers }: FreelancersPageProps) {
   )
 }
 
-export const getServerSideProps: GetServerSideProps = async () => {
+export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
+    const initialSearchTerm = typeof context.query?.search === 'string' ? context.query.search : ''
     // Fetch all approved freelancers with all new fields from MySQL database
     const freelancers = await query(`
       SELECT 
@@ -1043,6 +1090,7 @@ export const getServerSideProps: GetServerSideProps = async () => {
     return {
       props: {
         freelancers: freelancersWithData,
+        initialSearchTerm,
       },
     };
   } catch (error) {
@@ -1050,6 +1098,7 @@ export const getServerSideProps: GetServerSideProps = async () => {
     return {
       props: {
         freelancers: [],
+        initialSearchTerm: '',
       },
     };
   }

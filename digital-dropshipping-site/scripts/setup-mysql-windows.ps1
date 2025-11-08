@@ -6,6 +6,11 @@ Write-Host "  MySQL Setup Guide for Windows" -ForegroundColor Cyan
 Write-Host "================================================" -ForegroundColor Cyan
 Write-Host ""
 
+$databaseName = if ($env:MYSQL_DATABASE) { $env:MYSQL_DATABASE } else { "uniti" }
+$applicationUser = if ($env:MYSQL_USER) { $env:MYSQL_USER } else { "<YOUR_DB_USER>" }
+$rootPasswordReference = if ($env:MYSQL_ROOT_PASSWORD) { '$env:MYSQL_ROOT_PASSWORD' } else { "<YOUR_ROOT_PASSWORD>" }
+$applicationPasswordReference = if ($env:MYSQL_PASSWORD) { '$env:MYSQL_PASSWORD' } else { "<YOUR_DB_PASSWORD>" }
+
 Write-Host "📥 Option 1: Install MySQL Installer (Recommended)" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "1. Download MySQL Installer:" -ForegroundColor White
@@ -19,13 +24,13 @@ Write-Host "   ✓ MySQL Server" -ForegroundColor Green
 Write-Host "   ✓ MySQL Workbench (GUI tool)" -ForegroundColor Green
 Write-Host "   ✓ MySQL Shell (Command line)" -ForegroundColor Green
 Write-Host ""
-Write-Host "4. During setup, set root password: 'rootpass'" -ForegroundColor White
-Write-Host "   (or your preferred password)" -ForegroundColor Gray
+Write-Host "4. During setup, choose a strong root password." -ForegroundColor White
+Write-Host "   Recommended: store it securely in a password manager." -ForegroundColor Gray
 Write-Host ""
 Write-Host "5. Create database and user:" -ForegroundColor White
-Write-Host "   Database: uniti" -ForegroundColor Green
-Write-Host "   User: uniti" -ForegroundColor Green
-Write-Host "   Password: unitipass" -ForegroundColor Green
+Write-Host "   Database: $databaseName" -ForegroundColor Green
+Write-Host "   User: $applicationUser" -ForegroundColor Green
+Write-Host "   Password: $applicationPasswordReference" -ForegroundColor Green
 Write-Host ""
 
 Write-Host "📦 Option 2: Use Chocolatey (Package Manager)" -ForegroundColor Yellow
@@ -39,9 +44,9 @@ Write-Host ""
 Write-Host "Connection Details:" -ForegroundColor White
 Write-Host "  Host: localhost" -ForegroundColor Green
 Write-Host "  Port: 3306" -ForegroundColor Green
-Write-Host "  Database: uniti" -ForegroundColor Green
+Write-Host "  Database: $databaseName" -ForegroundColor Green
 Write-Host "  User: root" -ForegroundColor Green
-Write-Host "  Password: <your root password>" -ForegroundColor Green
+Write-Host "  Password: $rootPasswordReference" -ForegroundColor Green
 Write-Host ""
 
 Write-Host "📝 Create Database and User:" -ForegroundColor Yellow
@@ -49,9 +54,9 @@ Write-Host ""
 Write-Host "Open MySQL Workbench or MySQL Command Line Client" -ForegroundColor White
 Write-Host "and run these commands:" -ForegroundColor White
 Write-Host ""
-Write-Host "CREATE DATABASE IF NOT EXISTS uniti;" -ForegroundColor Cyan
-Write-Host "CREATE USER IF NOT EXISTS 'uniti'@'localhost' IDENTIFIED BY 'unitipass';" -ForegroundColor Cyan
-Write-Host "GRANT ALL PRIVILEGES ON uniti.* TO 'uniti'@'localhost';" -ForegroundColor Cyan
+Write-Host "CREATE DATABASE IF NOT EXISTS $databaseName;" -ForegroundColor Cyan
+Write-Host "CREATE USER IF NOT EXISTS '$applicationUser'@'localhost' IDENTIFIED BY '$applicationPasswordReference';" -ForegroundColor Cyan
+Write-Host "GRANT ALL PRIVILEGES ON $databaseName.* TO '$applicationUser'@'localhost';" -ForegroundColor Cyan
 Write-Host "FLUSH PRIVILEGES;" -ForegroundColor Cyan
 Write-Host ""
 
@@ -61,8 +66,8 @@ Write-Host "In MySQL Workbench, create new connection:" -ForegroundColor White
 Write-Host "  Connection Name: Uniti Local" -ForegroundColor Green
 Write-Host "  Hostname: localhost" -ForegroundColor Green
 Write-Host "  Port: 3306" -ForegroundColor Green
-Write-Host "  Username: uniti" -ForegroundColor Green
-Write-Host "  Password: unitipass" -ForegroundColor Green
+Write-Host "  Username: $applicationUser" -ForegroundColor Green
+Write-Host "  Password: $applicationPasswordReference" -ForegroundColor Green
 Write-Host ""
 
 Write-Host "📚 Next Steps:" -ForegroundColor Yellow
@@ -70,9 +75,9 @@ Write-Host ""
 Write-Host "1. Update your .env.local file:" -ForegroundColor White
 Write-Host "   DB_HOST=localhost" -ForegroundColor Gray
 Write-Host "   DB_PORT=3306" -ForegroundColor Gray
-Write-Host "   DB_NAME=uniti" -ForegroundColor Gray
-Write-Host "   DB_USER=uniti" -ForegroundColor Gray
-Write-Host "   DB_PASSWORD=unitipass" -ForegroundColor Gray
+Write-Host "   DB_NAME=$databaseName" -ForegroundColor Gray
+Write-Host "   DB_USER=$applicationUser" -ForegroundColor Gray
+Write-Host "   DB_PASSWORD=$applicationPasswordReference" -ForegroundColor Gray
 Write-Host ""
 Write-Host "2. Install MySQL driver for Node.js:" -ForegroundColor White
 Write-Host "   npm install mysql2" -ForegroundColor Green
