@@ -1,5 +1,15 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { supabase } from '../../src/lib/supabase';
+import { safeExecute, safeQuery } from '../../../src/lib/dbHelpers';
+
+type EntityType = 'user' | 'order' | 'project' | 'service' | 'kyc';
+
+const TABLE_MAP: Record<EntityType, string> = {
+  user: 'users',
+  order: 'orders',
+  project: 'projects',
+  service: 'freelancer_services',
+  kyc: 'users'
+};
 
 export default async function handler(
   req: NextApiRequest,
@@ -10,66 +20,68 @@ export default async function handler(
   }
 
   try {
-    const { entityType, entityId, data } = req.body;
+    const { entityType, entityId, data } = req.body as {
+      entityType?: EntityType;
+      entityId?: number | string;
+      data?: Record<string, any>;
+    };
 
-    // Get user from session/token to verify admin access
-    // For now, we'll skip auth check but in production you'd verify the user is admin
-
-    let result;
-    let tableName;
-
-    // Determine table name based on entity type
-    switch (entityType) {
-      case 'user':
-        tableName = 'users';
-        break;
-      case 'order':
-        tableName = 'orders';
-        break;
-      case 'project':
-        tableName = 'projects';
-        break;
-      case 'service':
-        tableName = 'freelancer_services';
-        break;
-      case 'kyc':
-        tableName = 'users'; // KYC is part of users table
-        break;
-      default:
-        return res.status(400).json({ error: 'Invalid entity type' });
+    if (!entityType || !TABLE_MAP[entityType]) {
+      return res.status(400).json({ error: 'Invalid entity type' });
     }
 
-    // Update the entity
-    const { data: updatedEntity, error } = await supabase
-      .from(tableName)
-      .update(data)
-      .eq('id', entityId)
-      .select()
-      .single();
-
-    if (error) {
-      throw error;
+    if (!entityId) {
+      return res.status(400).json({ error: 'entityId is required' });
     }
 
-    // Log the update in audit_logs
-    await supabase
-      .from('audit_logs')
-      .insert({
-        actor_id: 'admin', // In production, get from session
-        action: 'update_entity',
-        target_type: entityType,
-        target_id: entityId,
-        metadata: {
+    if (!data || typeof data !== 'object' || Array.isArray(data)) {
+      return res.status(400).json({ error: 'data payload must be an object' });
+    }
+
+    const tableName = TABLE_MAP[entityType];
+    const fields = Object.keys(data);
+
+    if (fields.length === 0) {
+      return res.status(400).json({ error: 'No fields provided to update' });
+    }
+
+    const assignments = fields.map((field) => `${field} = ?`).join(', ');
+    const values = fields.map((field) => data[field]);
+
+    await safeExecute(
+      `UPDATE ${tableName}
+          SET ${assignments}, updated_at = NOW()
+        WHERE id = ?`,
+      [...values, entityId],
+      'update-entity'
+    );
+
+    const updatedEntity = await safeQuery(
+      `SELECT * FROM ${tableName} WHERE id = ? LIMIT 1`,
+      [entityId],
+      'update-entity-fetch'
+    );
+
+    await safeExecute(
+      `INSERT INTO audit_logs (actor_id, action, target_type, target_id, metadata, created_at)
+       VALUES (?, 'update_entity', ?, ?, ?, NOW())`,
+      [
+        'admin',
+        entityType,
+        String(entityId),
+        JSON.stringify({
           changes: data,
-          table: tableName
-        }
-      });
+          table: tableName,
+          timestamp: new Date().toISOString()
+        })
+      ],
+      'update-entity-audit'
+    );
 
     return res.status(200).json({
       success: true,
-      data: updatedEntity
+      data: updatedEntity[0] ?? null
     });
-
   } catch (error) {
     console.error('Error updating entity:', error);
     return res.status(500).json({

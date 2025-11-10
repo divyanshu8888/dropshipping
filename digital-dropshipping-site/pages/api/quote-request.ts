@@ -3,6 +3,7 @@ import formidable from 'formidable';
 import path from 'path';
 import { promises as fs } from 'fs';
 import { query } from '../../src/lib/mysql';
+import { projectQuoteSchema, formatZodErrors } from '../../src/lib/schemas/projectQuote';
 
 export const config = {
   api: {
@@ -42,14 +43,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     keepExtensions: true,
     maxFileSize: 15 * 1024 * 1024,
     filename: (_name, file) => {
-      const safeName = (file.originalFilename || 'attachment')
+      const uploaded = typeof file === 'string' ? null : (file as formidable.File)
+      const original = uploaded?.originalFilename || uploaded?.newFilename || (typeof file === 'string' ? file : 'attachment')
+      const safeName = original
         .replace(/[^a-zA-Z0-9.\-_]/g, '_')
         .replace(/_{2,}/g, '_');
       return `${Date.now()}-${safeName}`;
     },
   });
 
-  let attachmentsMetadata: Array<{ originalName: string; storedName: string; url: string; size: number; type?: string | null }> = [];
+let attachmentsMetadata: Array<{ originalName: string; storedName: string; url: string; size: number; type?: string | null }> = [];
+
+const removeUploadedFiles = async () => {
+  await Promise.all(
+    attachmentsMetadata.map(async (file) => {
+      const filePath = path.join(uploadDir, file.storedName);
+      await fs.unlink(filePath).catch(() => undefined);
+    }),
+  );
+};
 
   try {
     const { fields, files } = await new Promise<{ fields: QuoteRequestFields; files: formidable.Files }>((resolve, reject) => {
@@ -62,24 +74,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const clientName = toStringField(fields.clientName).trim();
     const clientEmail = toStringField(fields.clientEmail).trim();
     const clientPhone = toStringField(fields.clientPhone).trim();
-    const phoneCountryCode = toStringField(fields.phoneCountryCode).trim() || null;
+    const phoneCountryCode = toStringField(fields.phoneCountryCode).trim();
     const projectTitle = toStringField(fields.projectTitle).trim();
     const projectDescription = toStringField(fields.projectDescription).trim();
-    const budgetRaw = toStringField(fields.budget).trim();
-    const timeline = toStringField(fields.timeline).trim();
+    const budgetRaw = toStringField(fields.budget);
+    const timeline = toStringField(fields.timeline);
     const category = toStringField(fields.category).trim();
-    const notes = toStringField(fields.notes).trim();
-
-    if (!clientName || !clientEmail || !projectTitle || !projectDescription || !category) {
-      return res.status(400).json({
-        message: 'Missing required fields: clientName, clientEmail, projectTitle, projectDescription, category',
-      });
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(clientEmail)) {
-      return res.status(400).json({ message: 'Invalid email format' });
-    }
+    const notes = toStringField(fields.notes);
 
     const attachmentsArray: formidable.File[] = [];
     const rawFiles = files.attachments;
@@ -98,6 +99,52 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       size: file.size,
       type: file.mimetype,
     }));
+
+    const allowedMimeTypes = new Set([
+      'application/pdf',
+      'image/png',
+      'image/jpeg',
+    ]);
+
+    const invalidAttachment = attachmentsMetadata.find((file) => !allowedMimeTypes.has(file.type || ''));
+    if (invalidAttachment) {
+      await removeUploadedFiles();
+      return res.status(422).json({
+        message: 'Validation failed',
+        errors: { attachments: 'Only PDF, PNG, or JPG files are allowed.' },
+      });
+    }
+
+    if (attachmentsMetadata.length > 5) {
+      await removeUploadedFiles();
+      return res.status(422).json({
+        message: 'Validation failed',
+        errors: { attachments: 'You can upload up to 5 files.' },
+      });
+    }
+
+    const validationResult = projectQuoteSchema.safeParse({
+      clientName,
+      clientEmail,
+      clientPhone,
+      phoneCountryCode,
+      projectTitle,
+      projectDescription,
+      budget: budgetRaw,
+      timeline,
+      category,
+      notes,
+    });
+
+    if (!validationResult.success) {
+      await removeUploadedFiles();
+      return res.status(422).json({
+        message: 'Validation failed',
+        errors: formatZodErrors(validationResult.error),
+      });
+    }
+
+    const payload = validationResult.data;
 
     await query(`
       CREATE TABLE IF NOT EXISTS project_leads (
@@ -122,8 +169,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
-    const budgetValue = budgetRaw ? Number(budgetRaw) : null;
-
     const result = await query(
       `
         INSERT INTO project_leads
@@ -132,16 +177,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       [
-        clientName,
-        clientEmail,
-        clientPhone || null,
-        phoneCountryCode,
-        projectTitle,
-        projectDescription,
-        budgetValue,
-        timeline || null,
-        category,
-        notes || null,
+        payload.clientName,
+        payload.clientEmail,
+        payload.clientPhone || null,
+        payload.phoneCountryCode || null,
+        payload.projectTitle,
+        payload.projectDescription,
+        payload.budget,
+        payload.timeline ? payload.timeline.trim() : null,
+        payload.category,
+        payload.notes ? payload.notes.trim() : null,
         attachmentsMetadata.length > 0 ? JSON.stringify(attachmentsMetadata) : null,
         'pending',
         'medium',
@@ -150,7 +195,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const insertId = (Array.isArray(result) && (result as any).insertId) || (result as any).insertId || null;
 
-    res.status(201).json({
+    return res.status(201).json({
       message: 'Quote request submitted successfully',
       quoteRequest: {
         id: insertId,
@@ -168,7 +213,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       );
     }
     console.error('Error creating quote request:', error);
-    res.status(500).json({
+    return res.status(500).json({
       message: 'Failed to submit quote request',
       error: error instanceof Error ? error.message : 'Unknown error',
     });

@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { supabase } from '../../../src/lib/supabase';
+import { safeQuery } from '../../../src/lib/dbHelpers';
 
 export default async function handler(
   req: NextApiRequest,
@@ -10,49 +10,33 @@ export default async function handler(
   }
 
   try {
-    // Get user from session/token to verify admin access
-    // For now, we'll skip auth check but in production you'd verify the user is admin
-    
-    // Fetch work queue data from Supabase
-    const [
-      pendingKYC,
-      refundRequests,
-      chargebacks,
-      payoutHolds,
-      failedWebhooks
-    ] = await Promise.all([
-      // Pending KYC applications
-      supabase
-        .from('users')
-        .select('id, email, role, created_at, kyc_status')
-        .eq('kyc_status', 'pending')
-        .order('created_at', { ascending: true })
-        .limit(20),
-      
-      // Refund requests
-      supabase
-        .from('orders')
-        .select('id, total_amount, status, created_at, refund_reason')
-        .eq('status', 'refund_requested')
-        .order('created_at', { ascending: true })
-        .limit(20),
-      
-      // Chargebacks (placeholder - would need chargebacks table)
-      Promise.resolve({ data: [] }),
-      
-      // Payout holds (placeholder - would need payouts table)
-      Promise.resolve({ data: [] }),
-      
-      // Failed webhooks (placeholder - would need webhooks table)
-      Promise.resolve({ data: [] })
+    const [pendingKYC, refundRequests] = await Promise.all([
+      safeQuery(
+        `SELECT id, email, role, created_at, kyc_status
+         FROM users
+         WHERE kyc_status = 'pending'
+         ORDER BY created_at ASC
+         LIMIT 20`,
+        [],
+        'workqueue-kyc'
+      ),
+      safeQuery(
+        `SELECT id, total_amount, status, created_at, refund_reason
+         FROM orders
+         WHERE status = 'refund_requested'
+         ORDER BY created_at ASC
+         LIMIT 20`,
+        [],
+        'workqueue-refunds'
+      )
     ]);
 
     const workQueueData = {
-      pendingKYC: pendingKYC.data || [],
-      refundRequests: refundRequests.data || [],
-      chargebacks: chargebacks.data || [],
-      payoutHolds: payoutHolds.data || [],
-      failedWebhooks: failedWebhooks.data || []
+      pendingKYC,
+      refundRequests,
+      chargebacks: [],
+      payoutHolds: [],
+      failedWebhooks: []
     };
 
     return res.status(200).json({
@@ -60,7 +44,6 @@ export default async function handler(
       data: workQueueData,
       lastUpdated: new Date().toISOString()
     });
-
   } catch (error) {
     console.error('Error fetching work queue data:', error);
     return res.status(500).json({

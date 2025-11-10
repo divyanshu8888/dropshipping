@@ -1,5 +1,22 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { supabase } from '../../../src/lib/supabase';
+import { safeQuery } from '../../../src/lib/dbHelpers';
+
+type EventRow = {
+  id: string;
+  event_type: string;
+  entity_type: string | null;
+  entity_id: string | null;
+  user_id: string | null;
+  title: string | null;
+  description: string | null;
+  metadata: any;
+  priority: string | null;
+  status: string | null;
+  assigned_to: string | null;
+  is_pinned: number | boolean | null;
+  created_at: string | Date;
+  updated_at: string | Date | null;
+};
 
 export default async function handler(
   req: NextApiRequest,
@@ -12,76 +29,73 @@ export default async function handler(
   try {
     const { limit = 20, priority, event_type, assigned_to, pinned_only } = req.query;
 
-    // Get user from session/token to verify admin access
-    // For now, we'll skip auth check but in production you'd verify the user is admin
-    
-    // Build query for events table
-    let query = supabase
-      .from('events')
-      .select(`
-        id,
-        event_type,
-        entity_type,
-        entity_id,
-        user_id,
-        title,
-        description,
-        metadata,
-        priority,
-        status,
-        assigned_to,
-        is_pinned,
-        created_at,
-        updated_at
-      `)
-      .eq('status', 'active')
-      .order('created_at', { ascending: false });
+    const filters: string[] = ["status = 'active'"];
+    const params: any[] = [];
 
-    // Apply filters
-    if (priority) {
-      query = query.eq('priority', priority);
+    if (priority && typeof priority === 'string') {
+      filters.push('priority = ?');
+      params.push(priority);
     }
-    
-    if (event_type) {
-      query = query.eq('event_type', event_type);
+
+    if (event_type && typeof event_type === 'string') {
+      filters.push('event_type = ?');
+      params.push(event_type);
     }
-    
-    if (assigned_to) {
-      query = query.eq('assigned_to', assigned_to);
+
+    if (assigned_to && typeof assigned_to === 'string') {
+      filters.push('assigned_to = ?');
+      params.push(assigned_to);
     }
-    
+
     if (pinned_only === 'true') {
-      query = query.eq('is_pinned', true);
+      filters.push('is_pinned = 1');
     }
 
-    // Apply limit
-    query = query.limit(parseInt(limit as string));
+    const whereClause = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
 
-    const { data: events, error } = await query;
+    const events = await safeQuery<EventRow>(
+      `SELECT id, event_type, entity_type, entity_id, user_id, title, description, metadata, priority, status, assigned_to, is_pinned, created_at, updated_at
+       FROM events
+       ${whereClause}
+       ORDER BY created_at DESC
+       LIMIT ?`,
+      [...params, Number(limit) || 20],
+      'events-stream'
+    );
 
-    if (error) {
-      console.error('Database error:', error);
-      throw error;
-    }
+    const transformedEvents = events.map((event) => {
+      let metadata = event.metadata;
+      if (metadata && typeof metadata === 'string') {
+        try {
+          metadata = JSON.parse(metadata);
+        } catch {
+          metadata = { raw: metadata };
+        }
+      }
 
-    // Transform events to match EventStream component format
-    const transformedEvents = events?.map(event => ({
-      id: event.id,
-      type: event.event_type,
-      message: event.title,
-      description: event.description,
-      timestamp: getTimeAgo(new Date(event.created_at)),
-      user: event.metadata?.email || event.metadata?.user_name || 'Unknown User',
-      amount: event.metadata?.amount || event.metadata?.budget,
-      priority: event.priority,
-      entityId: event.entity_id,
-      entityType: event.entity_type,
-      assignedTo: event.assigned_to,
-      isPinned: event.is_pinned,
-      metadata: event.metadata,
-      createdAt: event.created_at,
-      updatedAt: event.updated_at
-    })) || [];
+      return {
+        id: event.id,
+        type: event.event_type,
+        message: event.title || 'Event',
+        description: event.description || '',
+        timestamp: getTimeAgo(new Date(event.created_at)),
+        user:
+          metadata?.email ||
+          metadata?.user_name ||
+          metadata?.user ||
+          event.user_id ||
+          'Unknown user',
+        amount: metadata?.amount || metadata?.budget || null,
+        priority: event.priority || 'medium',
+        entityId: event.entity_id,
+        entityType: event.entity_type,
+        assignedTo: event.assigned_to,
+        isPinned: Boolean(event.is_pinned),
+        metadata,
+        createdAt: event.created_at,
+        updatedAt: event.updated_at
+      };
+    });
 
     return res.status(200).json({
       success: true,
@@ -89,7 +103,6 @@ export default async function handler(
       total: transformedEvents.length,
       lastUpdated: new Date().toISOString()
     });
-
   } catch (error) {
     console.error('Error fetching event stream:', error);
     return res.status(500).json({
@@ -101,8 +114,8 @@ export default async function handler(
 
 function getTimeAgo(date: Date): string {
   const now = new Date();
-  const diffInSeconds = Math.floor((now.getTime() - new Date(date).getTime()) / 1000);
-  
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
   if (diffInSeconds < 60) {
     return `${diffInSeconds} seconds ago`;
   } else if (diffInSeconds < 3600) {

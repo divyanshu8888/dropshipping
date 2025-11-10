@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { supabase } from '../../../src/lib/supabase';
+import { safeExecute } from '../../../src/lib/dbHelpers';
 
 export default async function handler(
   req: NextApiRequest,
@@ -12,100 +12,91 @@ export default async function handler(
   try {
     const { action, entityType, entityId, params } = req.body;
 
-    // Get user from session/token to verify admin access
-    // For now, we'll skip auth check but in production you'd verify the user is admin
+    if (!action || !entityType || !entityId) {
+      return res
+        .status(400)
+        .json({ error: 'action, entityType, and entityId are required fields' });
+    }
 
     let result;
 
     switch (action) {
       case 'approve':
         if (entityType === 'kyc') {
-          const { error } = await supabase
-            .from('users')
-            .update({ 
-              kyc_status: 'approved',
-              kyc_approved_at: new Date().toISOString()
-            })
-            .eq('id', entityId);
-          
-          if (error) throw error;
+          await safeExecute(
+            `UPDATE users SET kyc_status = 'approved', kyc_approved_at = NOW() WHERE id = ?`,
+            [entityId],
+            'quick-action-approve-kyc'
+          );
           result = { message: 'KYC approved successfully' };
         }
         break;
 
       case 'reject':
         if (entityType === 'kyc') {
-          const { error } = await supabase
-            .from('users')
-            .update({ 
-              kyc_status: 'rejected',
-              kyc_rejected_at: new Date().toISOString()
-            })
-            .eq('id', entityId);
-          
-          if (error) throw error;
+          await safeExecute(
+            `UPDATE users SET kyc_status = 'rejected', kyc_rejected_at = NOW() WHERE id = ?`,
+            [entityId],
+            'quick-action-reject-kyc'
+          );
           result = { message: 'KYC rejected' };
         }
         break;
 
       case 'refund':
         if (entityType === 'order') {
-          const { error } = await supabase
-            .from('orders')
-            .update({ 
-              status: 'refunded',
-              refunded_at: new Date().toISOString(),
-              refund_reason: params.reason || 'Admin refund'
-            })
-            .eq('id', entityId);
-          
-          if (error) throw error;
+          await safeExecute(
+            `UPDATE orders
+               SET status = 'refunded',
+                   refunded_at = NOW(),
+                   refund_reason = ?
+             WHERE id = ?`,
+            [params?.reason || 'Admin refund', entityId],
+            'quick-action-refund'
+          );
           result = { message: 'Refund processed' };
         }
         break;
 
       case 'hold':
         if (entityType === 'order') {
-          const { error } = await supabase
-            .from('orders')
-            .update({ 
-              status: 'on_hold',
-              hold_reason: params.reason || 'Admin hold'
-            })
-            .eq('id', entityId);
-          
-          if (error) throw error;
+          await safeExecute(
+            `UPDATE orders
+               SET status = 'on_hold',
+                   hold_reason = ?
+             WHERE id = ?`,
+            [params?.reason || 'Admin hold', entityId],
+            'quick-action-hold'
+          );
           result = { message: 'Order placed on hold' };
         }
         break;
 
       case 'suspend':
         if (entityType === 'user') {
-          const { error } = await supabase
-            .from('users')
-            .update({ 
-              is_active: false,
-              suspended_at: new Date().toISOString(),
-              suspension_reason: params.reason || 'Admin suspension'
-            })
-            .eq('id', entityId);
-          
-          if (error) throw error;
+          await safeExecute(
+            `UPDATE users
+               SET is_active = 0,
+                   suspended_at = NOW(),
+                   suspension_reason = ?
+             WHERE id = ?`,
+            [params?.reason || 'Admin suspension', entityId],
+            'quick-action-suspend'
+          );
           result = { message: 'User suspended' };
         }
         break;
 
       case 'verify':
         if (entityType === 'user') {
-          const { error } = await supabase
-            .from('users')
-            .update({ 
-              email_verified: true,
-              verified_at: new Date().toISOString()
-            })
-            .eq('id', entityId);
-          
-          if (error) throw error;
+          await safeExecute(
+            `UPDATE users
+               SET email_verified = 'TRUE',
+                   verified_at = NOW()
+             WHERE id = ?`,
+            [entityId],
+            'quick-action-verify'
+          );
           result = { message: 'User verified' };
         }
         break;
@@ -114,25 +105,26 @@ export default async function handler(
         return res.status(400).json({ error: 'Invalid action' });
     }
 
-    // Log the action in audit_logs
-    await supabase
-      .from('audit_logs')
-      .insert({
-        actor_id: 'admin', // In production, get from session
-        action: `quick_${action}`,
-        target_type: entityType,
-        target_id: entityId,
-        metadata: {
+    await safeExecute(
+      `INSERT INTO audit_logs (actor_id, action, target_type, target_id, metadata, created_at)
+       VALUES (?, ?, ?, ?, ?, NOW())`,
+      [
+        'admin',
+        `quick_${action}`,
+        entityType,
+        String(entityId),
+        JSON.stringify({
           params,
           timestamp: new Date().toISOString()
-        }
-      });
+        })
+      ],
+      'quick-action-audit'
+    );
 
     return res.status(200).json({
       success: true,
       result
     });
-
   } catch (error) {
     console.error('Error performing quick action:', error);
     return res.status(500).json({

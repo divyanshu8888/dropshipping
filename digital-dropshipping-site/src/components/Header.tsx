@@ -94,17 +94,9 @@ const Header: React.FC = () => {
                             </button>
                         </div>
                         ) : (
-                            <div className="flex items-center gap-4">
-                                <Link href="/login" className="relative text-white/75 hover:text-white transition-all duration-300 after:absolute after:left-0 after:-bottom-1.5 after:h-[2px] after:w-0 after:bg-gradient-to-r from-cyan-400 to-violet-400 hover:after:w-full after:transition-all after:duration-300 focus:ring-2 focus:ring-white/50 focus:outline-none rounded px-2 py-1 text-sm font-medium">
-                                    Log in
-                                </Link>
-                                <Link href="/signup" className="group inline-flex items-center gap-2 rounded-xl bg-[#3E5BF1] hover:bg-[#334fe6] text-white px-5 py-2.5 font-semibold text-sm shadow-[0_10px_28px_-8px_rgba(62,91,241,.5)] transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7aa2ff]/40">
-                                    Get started
-                                    <svg className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="none">
-                                        <path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-                                    </svg>
-                                </Link>
-                            </div>
+                            <Link href="/login" className="relative text-white/75 hover:text-white transition-all duration-300 after:absolute after:left-0 after:-bottom-1.5 after:h-[2px] after:w-0 after:bg-gradient-to-r from-cyan-400 to-violet-400 hover:after:w-full after:transition-all after:duration-300 focus:ring-2 focus:ring-white/50 focus:outline-none rounded px-2 py-1 text-sm font-medium">
+                                Log in / Sign up
+                            </Link>
                         )}
                 </nav>
 
@@ -188,10 +180,7 @@ const Header: React.FC = () => {
                         ) : (
                             <div className="pt-2 border-t border-white/10 space-y-2">
                                 <Link href="/login" className="block text-text-soft hover:text-text-base hover:bg-white/5 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200">
-                                    Login
-                                </Link>
-                                <Link href="/signup" className="block text-center px-4 py-3 bg-gradient-to-br from-accent-blue to-accent-cyan text-white rounded-xl text-sm font-medium shadow-metallic hover:shadow-xl transition-all duration-200">
-                                    Get Started
+                                    Log in / Sign up
                                 </Link>
                             </div>
                         )}

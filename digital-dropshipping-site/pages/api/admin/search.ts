@@ -1,5 +1,16 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { supabase } from '../../../src/lib/supabase';
+import { safeQuery } from '../../../src/lib/dbHelpers';
+
+type SearchResult = {
+  id: number | string;
+  type: string;
+  description: string;
+  created_at: string | Date;
+};
+
+function like(term: string) {
+  return `%${term.toLowerCase()}%`;
+}
 
 export default async function handler(
   req: NextApiRequest,
@@ -11,61 +22,69 @@ export default async function handler(
 
   try {
     const { q } = req.query;
-    
+
     if (!q || typeof q !== 'string') {
       return res.status(400).json({ error: 'Query parameter is required' });
     }
 
-    const searchQuery = q.toLowerCase();
+    const term = q.trim();
+    if (!term) {
+      return res.status(200).json({ success: true, results: [] });
+    }
 
-    // Search across multiple tables
-    const [
-      users,
-      orders,
-      projects,
-      services,
-      disputes
-    ] = await Promise.all([
-      // Search users
-      supabase
-        .from('users')
-        .select('id, email, role, created_at')
-        .or(`email.ilike.%${searchQuery}%,role.ilike.%${searchQuery}%`)
-        .limit(5),
-      
-      // Search orders
-      supabase
-        .from('orders')
-        .select('id, status, total_amount, created_at')
-        .or(`status.ilike.%${searchQuery}%,id.ilike.%${searchQuery}%`)
-        .limit(5),
-      
-      // Search projects
-      supabase
-        .from('projects')
-        .select('id, title, status, budget, created_at')
-        .or(`title.ilike.%${searchQuery}%,status.ilike.%${searchQuery}%`)
-        .limit(5),
-      
-      // Search services
-      supabase
-        .from('freelancer_services')
-        .select('id, title, price, status, created_at')
-        .or(`title.ilike.%${searchQuery}%,status.ilike.%${searchQuery}%`)
-        .limit(5),
-      
-      // Search disputes (if disputes table exists)
-      supabase
-        .from('disputes')
-        .select('id, status, reason, created_at')
-        .or(`status.ilike.%${searchQuery}%,reason.ilike.%${searchQuery}%`)
-        .limit(5)
+    const pattern = like(term);
+
+    const [users, orders, projects, services, disputes] = await Promise.all([
+      safeQuery<{ id: number; email: string; role: string; created_at: Date | string }>(
+        `SELECT id, email, role, created_at
+           FROM users
+          WHERE LOWER(email) LIKE ? OR LOWER(role) LIKE ?
+          ORDER BY created_at DESC
+          LIMIT 5`,
+        [pattern, pattern],
+        'search-users'
+      ),
+      safeQuery<{ id: number; status: string; total_amount: number; created_at: Date | string }>(
+        `SELECT id, status, total_amount, created_at
+           FROM orders
+          WHERE LOWER(status) LIKE ? OR CAST(id AS CHAR) LIKE ?
+          ORDER BY created_at DESC
+          LIMIT 5`,
+        [pattern, pattern],
+        'search-orders'
+      ),
+      safeQuery<{ id: number; title: string; status: string; budget: number; created_at: Date | string }>(
+        `SELECT id, title, status, budget, created_at
+           FROM projects
+          WHERE LOWER(title) LIKE ? OR LOWER(status) LIKE ?
+          ORDER BY created_at DESC
+          LIMIT 5`,
+        [pattern, pattern],
+        'search-projects'
+      ),
+      safeQuery<{ id: number; title: string; price: number; status: string; created_at: Date | string }>(
+        `SELECT id, title, price, status, created_at
+           FROM freelancer_services
+          WHERE LOWER(title) LIKE ? OR LOWER(status) LIKE ?
+          ORDER BY created_at DESC
+          LIMIT 5`,
+        [pattern, pattern],
+        'search-services'
+      ),
+      safeQuery<{ id: number; status: string; reason: string; created_at: Date | string }>(
+        `SELECT id, status, reason, created_at
+           FROM disputes
+          WHERE LOWER(status) LIKE ? OR LOWER(reason) LIKE ?
+          ORDER BY created_at DESC
+          LIMIT 5`,
+        [pattern, pattern],
+        'search-disputes'
+      )
     ]);
 
-    const results: any[] = [];
+    const results: SearchResult[] = [];
 
-    // Process users
-    users.data?.forEach(user => {
+    users.forEach((user) => {
       results.push({
         id: user.id,
         type: 'user',
@@ -74,8 +93,7 @@ export default async function handler(
       });
     });
 
-    // Process orders
-    orders.data?.forEach(order => {
+    orders.forEach((order) => {
       results.push({
         id: order.id,
         type: 'order',
@@ -84,28 +102,25 @@ export default async function handler(
       });
     });
 
-    // Process projects
-    projects.data?.forEach(project => {
+    projects.forEach((project) => {
       results.push({
         id: project.id,
         type: 'project',
-        description: `${project.title} - $${project.budget}`,
+        description: `${project.title} - $${project.budget ?? 0}`,
         created_at: project.created_at
       });
     });
 
-    // Process services
-    services.data?.forEach(service => {
+    services.forEach((service) => {
       results.push({
         id: service.id,
         type: 'service',
-        description: `${service.title} - $${service.price}`,
+        description: `${service.title} - $${service.price ?? 0}`,
         created_at: service.created_at
       });
     });
 
-    // Process disputes
-    disputes.data?.forEach(dispute => {
+    disputes.forEach((dispute) => {
       results.push({
         id: dispute.id,
         type: 'dispute',
@@ -114,14 +129,14 @@ export default async function handler(
       });
     });
 
-    // Sort by creation date (most recent first)
-    results.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    results.sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
 
     return res.status(200).json({
       success: true,
-      results: results.slice(0, 10) // Limit to 10 results
+      results: results.slice(0, 10)
     });
-
   } catch (error) {
     console.error('Search error:', error);
     return res.status(500).json({

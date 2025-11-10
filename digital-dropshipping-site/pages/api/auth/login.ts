@@ -1,6 +1,16 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { supabase } from '../../../src/lib/supabase';
 import bcrypt from 'bcryptjs';
+import { query, queryOne } from '../../../src/lib/mysql';
+
+type DbUser = {
+  id: number;
+  email: string;
+  password_hash: string;
+  role: 'admin' | 'freelancer' | 'client' | 'team_member';
+  is_active: 'TRUE' | 'FALSE';
+  email_verified: 'TRUE' | 'FALSE';
+  created_at: string;
+};
 
 export default async function handler(
   req: NextApiRequest,
@@ -11,61 +21,62 @@ export default async function handler(
   }
 
   try {
-    const { email, password } = req.body;
+    const { email, password } = req.body ?? {};
 
-    // Validate required fields
     if (!email || !password) {
-      return res.status(400).json({ 
-        error: 'Email and password are required' 
+      return res.status(400).json({
+        error: 'Email and password are required'
       });
     }
 
-    // Find user by email in users table
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', email.toLowerCase())
-      .single();
+    const normalizedEmail = String(email).toLowerCase();
 
-    console.log('Login attempt for:', email.toLowerCase());
-    console.log('User found:', user ? 'Yes' : 'No');
-    console.log('User error:', userError);
+    const user = await queryOne<DbUser>(
+      `
+        SELECT id, email, password_hash, role, is_active, email_verified, created_at
+        FROM users
+        WHERE email = ?
+        LIMIT 1
+      `,
+      [normalizedEmail]
+    );
 
-    if (!user || userError) {
-      return res.status(401).json({ 
-        error: 'Invalid email or password' 
+    if (!user) {
+      return res.status(401).json({
+        error: 'Invalid email or password'
       });
     }
 
-    // Verify password
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
+
     if (!isValidPassword) {
-      return res.status(401).json({ 
-        error: 'Invalid email or password' 
+      return res.status(401).json({
+        error: 'Invalid email or password'
       });
     }
 
-    // Update last login time
-    await supabase
-      .from('users')
-      .update({ last_login: new Date().toISOString() })
-      .eq('id', user.id);
+    await query(
+      `
+        UPDATE users
+        SET last_login = ?
+        WHERE id = ?
+      `,
+      [new Date(), user.id]
+    );
 
-    // Return user data (without password)
-    return res.status(200).json({ 
+    return res.status(200).json({
       success: true,
       message: 'Login successful!',
       user: {
         id: user.id,
         email: user.email,
-        name: user.email.split('@')[0], // Use email prefix as name since users table doesn't have name column
-        role: user.role.toUpperCase(), // Convert to uppercase for consistency
-        isActive: user.is_active,
-        emailVerified: user.email_verified,
+        name: user.email.split('@')[0],
+        role: user.role.toUpperCase(),
+        isActive: user.is_active === 'TRUE',
+        emailVerified: user.email_verified === 'TRUE',
         createdAt: user.created_at
       }
     });
-
   } catch (error) {
     console.error('Unexpected error:', error);
     return res.status(500).json({ error: 'Internal server error' });

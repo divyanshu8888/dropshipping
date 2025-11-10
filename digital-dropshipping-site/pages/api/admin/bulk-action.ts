@@ -1,5 +1,9 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { supabase } from '../../../src/lib/supabase';
+import { safeExecute } from '../../../src/lib/dbHelpers';
+
+function buildPlaceholders(length: number) {
+  return new Array(length).fill('?').join(',');
+}
 
 export default async function handler(
   req: NextApiRequest,
@@ -12,87 +16,93 @@ export default async function handler(
   try {
     const { action, rows } = req.body;
 
-    // Get user from session/token to verify admin access
-    // For now, we'll skip auth check but in production you'd verify the user is admin
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return res.status(400).json({ error: 'No rows provided for bulk action' });
+    }
+
+    const ids = rows.map((row: any) => row.id).filter(Boolean);
+
+    if (ids.length === 0) {
+      return res.status(400).json({ error: 'Invalid row identifiers' });
+    }
 
     let result;
 
     switch (action) {
-      case 'approve_kyc':
-        const kycIds = rows.map((row: any) => row.id);
-        const { error: kycError } = await supabase
-          .from('users')
-          .update({ 
-            kyc_status: 'approved',
-            kyc_approved_at: new Date().toISOString()
-          })
-          .in('id', kycIds);
-        
-        if (kycError) throw kycError;
-        result = { message: `Approved ${rows.length} KYC applications` };
+      case 'approve_kyc': {
+        const placeholders = buildPlaceholders(ids.length);
+        await safeExecute(
+          `UPDATE users
+           SET kyc_status = 'approved',
+               kyc_approved_at = NOW()
+           WHERE id IN (${placeholders})`,
+          ids,
+          'bulk-approve-kyc'
+        );
+        result = { message: `Approved ${ids.length} KYC applications` };
         break;
-
-      case 'reject_kyc':
-        const rejectIds = rows.map((row: any) => row.id);
-        const { error: rejectError } = await supabase
-          .from('users')
-          .update({ 
-            kyc_status: 'rejected',
-            kyc_rejected_at: new Date().toISOString()
-          })
-          .in('id', rejectIds);
-        
-        if (rejectError) throw rejectError;
-        result = { message: `Rejected ${rows.length} KYC applications` };
+      }
+      case 'reject_kyc': {
+        const placeholders = buildPlaceholders(ids.length);
+        await safeExecute(
+          `UPDATE users
+           SET kyc_status = 'rejected',
+               kyc_rejected_at = NOW()
+           WHERE id IN (${placeholders})`,
+          ids,
+          'bulk-reject-kyc'
+        );
+        result = { message: `Rejected ${ids.length} KYC applications` };
         break;
-
-      case 'approve_refunds':
-        const refundIds = rows.map((row: any) => row.id);
-        const { error: refundError } = await supabase
-          .from('orders')
-          .update({ 
-            status: 'refunded',
-            refunded_at: new Date().toISOString()
-          })
-          .in('id', refundIds);
-        
-        if (refundError) throw refundError;
-        result = { message: `Approved ${rows.length} refund requests` };
+      }
+      case 'approve_refunds': {
+        const placeholders = buildPlaceholders(ids.length);
+        await safeExecute(
+          `UPDATE orders
+           SET status = 'refunded',
+               refunded_at = NOW()
+           WHERE id IN (${placeholders})`,
+          ids,
+          'bulk-approve-refunds'
+        );
+        result = { message: `Approved ${ids.length} refund requests` };
         break;
-
-      case 'reject_refunds':
-        const rejectRefundIds = rows.map((row: any) => row.id);
-        const { error: rejectRefundError } = await supabase
-          .from('orders')
-          .update({ 
-            status: 'refund_rejected',
-            refund_rejected_at: new Date().toISOString()
-          })
-          .in('id', rejectRefundIds);
-        
-        if (rejectRefundError) throw rejectRefundError;
-        result = { message: `Rejected ${rows.length} refund requests` };
+      }
+      case 'reject_refunds': {
+        const placeholders = buildPlaceholders(ids.length);
+        await safeExecute(
+          `UPDATE orders
+           SET status = 'refund_rejected',
+               refund_rejected_at = NOW()
+           WHERE id IN (${placeholders})`,
+          ids,
+          'bulk-reject-refunds'
+        );
+        result = { message: `Rejected ${ids.length} refund requests` };
         break;
-
+      }
       default:
         return res.status(400).json({ error: 'Invalid bulk action' });
     }
 
-    // Log the bulk action in audit_logs
-    await supabase
-      .from('audit_logs')
-      .insert({
-        actor_id: 'admin', // In production, get from session
-        action: `bulk_${action}`,
-        target_type: 'bulk',
-        target_id: null,
-        metadata: {
+    // Attempt to log audit entry (ignore failures if table missing)
+    await safeExecute(
+      `INSERT INTO audit_logs (actor_id, action, target_type, target_id, metadata, created_at)
+       VALUES (?, ?, ?, ?, ?, NOW())`,
+      [
+        'admin',
+        `bulk_${action}`,
+        'bulk',
+        null,
+        JSON.stringify({
           action,
-          count: rows.length,
-          row_ids: rows.map((row: any) => row.id),
+          count: ids.length,
+          row_ids: ids,
           timestamp: new Date().toISOString()
-        }
-      });
+        })
+      ],
+      'bulk-audit-log'
+    );
 
     return res.status(200).json({
       success: true,

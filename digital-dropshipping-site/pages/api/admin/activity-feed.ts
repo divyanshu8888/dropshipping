@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { supabase } from '../../../src/lib/supabase';
+import { query } from '../../../src/lib/mysql';
 
 export default async function handler(
   req: NextApiRequest,
@@ -10,92 +10,73 @@ export default async function handler(
   }
 
   try {
-    // Get activity type filter from query params
     const { type } = req.query;
-    
-    // Fetch comprehensive activities from Supabase
+
     const [
-      recentUsers,
-      recentFreelancers,
-      recentClients,
-      recentProjects,
-      recentOrders,
-      recentServices,
-      recentQuoteRequests,
-      recentMessages,
-      recentReviews
+      users,
+      freelancers,
+      clients,
+      projects,
+      orders,
+      services,
+      quotes,
+      reviews
     ] = await Promise.all([
-      // Recent user registrations (all users)
-      supabase
-        .from('users')
-        .select('id, email, role, created_at, is_active')
-        .order('created_at', { ascending: false })
-        .limit(15),
-      
-      // Recent freelancer registrations
-      supabase
-        .from('freelancers')
-        .select('id, display_name, status, created_at, updated_at, rating')
-        .order('created_at', { ascending: false })
-        .limit(15),
-      
-      // Recent client registrations
-      supabase
-        .from('clients')
-        .select('id, contact_name, company_name, created_at, updated_at')
-        .order('created_at', { ascending: false })
-        .limit(15),
-      
-      // Recent projects
-      supabase
-        .from('projects')
-        .select('id, title, status, budget, created_at, updated_at, client_id, freelancer_id')
-        .order('created_at', { ascending: false })
-        .limit(15),
-      
-      // Recent orders
-      supabase
-        .from('orders')
-        .select('id, total_amount, status, created_at, updated_at, client_id')
-        .order('created_at', { ascending: false })
-        .limit(15),
-      
-      // Recent freelancer services
-      supabase
-        .from('freelancer_services')
-        .select('id, title, price, status, created_at, updated_at, freelancer_id')
-        .order('created_at', { ascending: false })
-        .limit(15),
-      
-      // Recent quote requests
-      supabase
-        .from('quote_requests')
-        .select('id, project_title, budget, status, created_at, updated_at, client_id')
-        .order('created_at', { ascending: false })
-        .limit(15),
-      
-      // Recent messages (if messages table exists)
-      supabase
-        .from('messages')
-        .select('id, content, created_at, sender_id, receiver_id')
-        .order('created_at', { ascending: false })
-        .limit(15),
-      
-      // Recent reviews
-      supabase
-        .from('reviews')
-        .select('id, rating, comment, created_at, reviewer_id, reviewee_id')
-        .order('created_at', { ascending: false })
-        .limit(15)
+      query(`
+        SELECT id, email, role, is_active, created_at
+        FROM users
+        ORDER BY created_at DESC
+        LIMIT 20
+      `),
+      query(`
+        SELECT id, display_name, status, rating, created_at
+        FROM freelancers
+        ORDER BY created_at DESC
+        LIMIT 20
+      `),
+      query(`
+        SELECT id, contact_name, company_name, created_at
+        FROM clients
+        ORDER BY created_at DESC
+        LIMIT 20
+      `),
+      query(`
+        SELECT id, title, status, budget, created_at
+        FROM projects
+        ORDER BY created_at DESC
+        LIMIT 20
+      `),
+      query(`
+        SELECT id, total_amount, status, created_at
+        FROM orders
+        ORDER BY created_at DESC
+        LIMIT 20
+      `),
+      query(`
+        SELECT id, title, price, status, created_at
+        FROM freelancer_services
+        ORDER BY created_at DESC
+        LIMIT 20
+      `),
+      query(`
+        SELECT id, project_title, budget, status, created_at
+        FROM quote_requests
+        ORDER BY created_at DESC
+        LIMIT 20
+      `),
+      query(`
+        SELECT id, rating, comment, created_at
+        FROM reviews
+        ORDER BY created_at DESC
+        LIMIT 20
+      `)
     ]);
 
-    // Transform data into categorized activity feeds
     const userActivities: any[] = [];
     const clientActivities: any[] = [];
     const serviceActivities: any[] = [];
 
-    // User Activities (registrations, profile updates, etc.)
-    recentUsers.data?.forEach(user => {
+    users.forEach((user: any) => {
       userActivities.push({
         id: `user_${user.id}`,
         type: 'user_registered',
@@ -108,7 +89,7 @@ export default async function handler(
       });
     });
 
-    recentFreelancers.data?.forEach(freelancer => {
+    freelancers.forEach((freelancer: any) => {
       userActivities.push({
         id: `freelancer_${freelancer.id}`,
         type: 'freelancer_registered',
@@ -122,7 +103,7 @@ export default async function handler(
       });
     });
 
-    recentClients.data?.forEach(client => {
+    clients.forEach((client: any) => {
       userActivities.push({
         id: `client_${client.id}`,
         type: 'client_registered',
@@ -135,17 +116,11 @@ export default async function handler(
       });
     });
 
-    // Client Activities (orders, projects, quote requests)
-    recentOrders.data?.forEach(order => {
-      const statusDisplay = order.status === 'pending' ? 'placed' :
-                           order.status === 'processing' ? 'processing' :
-                           order.status === 'shipped' ? 'shipped' :
-                           order.status === 'completed' ? 'completed' : order.status.toLowerCase();
-      
+    orders.forEach((order: any) => {
       clientActivities.push({
         id: `order_${order.id}`,
         type: 'order_placed',
-        message: `Order #${order.id} was ${statusDisplay}`,
+        message: `Order #${order.id} was ${order.status.toLowerCase()}`,
         timestamp: getTimeAgo(new Date(order.created_at)),
         amount: order.total_amount,
         status: order.status,
@@ -153,16 +128,11 @@ export default async function handler(
       });
     });
 
-    recentProjects.data?.forEach(project => {
-      const statusDisplay = project.status === 'open' ? 'requested' :
-                           project.status === 'assigned' ? 'assigned' :
-                           project.status === 'completed' ? 'completed' :
-                           project.status === 'cancelled' ? 'cancelled' : project.status.toLowerCase();
-      
+    projects.forEach((project: any) => {
       clientActivities.push({
         id: `project_${project.id}`,
         type: 'project_created',
-        message: `Project "${project.title}" was ${statusDisplay}`,
+        message: `Project "${project.title}" was ${project.status.toLowerCase()}`,
         timestamp: getTimeAgo(new Date(project.created_at)),
         budget: project.budget,
         status: project.status,
@@ -170,7 +140,7 @@ export default async function handler(
       });
     });
 
-    recentQuoteRequests.data?.forEach(quote => {
+    quotes.forEach((quote: any) => {
       clientActivities.push({
         id: `quote_${quote.id}`,
         type: 'quote_request',
@@ -182,8 +152,7 @@ export default async function handler(
       });
     });
 
-    // Service Activities (service creation, updates, reviews)
-    recentServices.data?.forEach(service => {
+    services.forEach((service: any) => {
       serviceActivities.push({
         id: `service_${service.id}`,
         type: 'service_created',
@@ -195,7 +164,7 @@ export default async function handler(
       });
     });
 
-    recentReviews.data?.forEach(review => {
+    reviews.forEach((review: any) => {
       serviceActivities.push({
         id: `review_${review.id}`,
         type: 'review_posted',
@@ -207,13 +176,11 @@ export default async function handler(
       });
     });
 
-    // Sort each category by creation date (most recent first)
     userActivities.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     clientActivities.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     serviceActivities.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-    // Return data based on type filter
-    let responseData: any = {
+    const responseData: any = {
       success: true,
       lastUpdated: new Date().toISOString()
     };
@@ -228,11 +195,10 @@ export default async function handler(
       responseData.activities = serviceActivities.slice(0, 10);
       responseData.total = serviceActivities.length;
     } else {
-      // Return all activities combined
       const allActivities = [...userActivities, ...clientActivities, ...serviceActivities]
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
         .slice(0, 15);
-      
+
       responseData.activities = allActivities;
       responseData.total = allActivities.length;
       responseData.breakdown = {
@@ -243,7 +209,6 @@ export default async function handler(
     }
 
     return res.status(200).json(responseData);
-
   } catch (error) {
     console.error('Error fetching activity feed:', error);
     return res.status(500).json({ 

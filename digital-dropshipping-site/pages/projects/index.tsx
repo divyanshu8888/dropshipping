@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import Head from 'next/head'
 import Header from '../../src/components/Header'
 import { GetServerSideProps } from 'next'
@@ -11,6 +11,7 @@ import {
   findCountryOption,
   formatDialLabel,
 } from '../../src/lib/phone'
+import { projectQuoteClientSchema, projectQuoteSchema, formatZodErrors } from '../../src/lib/schemas/projectQuote'
 
 
 type CategoryRecord = {
@@ -32,7 +33,7 @@ type FormState = {
   phoneLocal: string
   projectTitle: string
   projectDescription: string
-  categorySlug: string
+  category: string
   notes: string
   budget: string
   timeline: string
@@ -58,7 +59,7 @@ export default function ProjectsPage({ categories }: ProjectPageProps) {
     phoneLocal: '',
     projectTitle: '',
     projectDescription: '',
-    categorySlug: '',
+    category: '',
     notes: '',
     budget: '',
     timeline: '',
@@ -76,28 +77,41 @@ export default function ProjectsPage({ categories }: ProjectPageProps) {
   ) => {
     const { name, value } = event.target
     if (name === 'phoneLocal') {
-      setFormState((prev) => {
-        const country = findCountryOption(prev.phoneCountryCode)
+      const nextState = (() => {
+        const country = findCountryOption(formState.phoneCountryCode)
         const combined = combinePhone(country.dialCode, value)
         return {
-          ...prev,
+          ...formState,
           phoneLocal: value,
           clientPhone: combined,
         }
-      })
+      })()
+      setFormState(nextState)
+      if (hasSubmitted) {
+        setFieldErrors(collectErrors(nextState))
+      }
       return
     }
-    setFormState((prev) => ({ ...prev, [name]: value }))
+
+    const nextState = { ...formState, [name]: value }
+    setFormState(nextState)
+    if (hasSubmitted) {
+      setFieldErrors(collectErrors(nextState))
+    }
   }
 
   const handlePhoneCountryChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const countryCode = event.target.value
     const country = findCountryOption(countryCode)
-    setFormState((prev) => ({
-      ...prev,
+    const nextState = {
+      ...formState,
       phoneCountryCode: countryCode,
-      clientPhone: combinePhone(country.dialCode, prev.phoneLocal),
-    }))
+      clientPhone: combinePhone(country.dialCode, formState.phoneLocal),
+    }
+    setFormState(nextState)
+    if (hasSubmitted) {
+      setFieldErrors(collectErrors(nextState))
+    }
   }
 
   const selectedCountry = useMemo(
@@ -141,55 +155,26 @@ export default function ProjectsPage({ categories }: ProjectPageProps) {
   }
 
   const collectErrors = (state: FormState) => {
-    const errors: Record<string, string> = {}
-    if (!state.clientName.trim()) {
-      errors.clientName = 'Please enter your name.'
-    }
-    if (!state.clientEmail.trim()) {
-      errors.clientEmail = 'Email is required.'
-    } else {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-      if (!emailRegex.test(state.clientEmail.trim())) {
-        errors.clientEmail = 'Enter a valid email address.'
-      }
+    const result = projectQuoteClientSchema.safeParse({
+      clientName: state.clientName,
+      clientEmail: state.clientEmail,
+      clientPhone: state.clientPhone,
+      phoneCountryCode: state.phoneCountryCode,
+      projectTitle: state.projectTitle,
+      projectDescription: state.projectDescription,
+      budget: state.budget,
+      timeline: state.timeline,
+      category: state.category,
+      notes: state.notes,
+      phoneLocal: state.phoneLocal,
+    })
+
+    if (!result.success) {
+      return formatZodErrors(result.error)
     }
 
-    if (!state.projectTitle.trim()) {
-      errors.projectTitle = 'Project title is required.'
-    }
-    if (!state.projectDescription.trim()) {
-      errors.projectDescription = 'Tell us about your project.'
-    }
-    if (!state.categorySlug.trim()) {
-      errors.categorySlug = 'Select a category.'
-    }
-
-    const country = findCountryOption(state.phoneCountryCode)
-    const localDigits = state.phoneLocal.replace(/\s|-/g, '')
-    if (!localDigits) {
-      errors.clientPhone = 'Phone number is required for scheduling follow-ups.'
-    } else {
-      const combined = combinePhone(country.dialCode, state.phoneLocal)
-      const digitsOnly = combined.replace(/[^0-9]/g, '')
-      if (digitsOnly.length < 8 || digitsOnly.length > 15) {
-        errors.clientPhone = 'Phone number looks too short or too long.'
-      }
-    }
-
-    if (state.budget.trim()) {
-      const value = Number(state.budget)
-      if (Number.isNaN(value) || value < 0) {
-        errors.budget = 'Budget must be a positive number.'
-      }
-    }
-    return errors
+    return {}
   }
-
-  useEffect(() => {
-    if (hasSubmitted) {
-      setFieldErrors(collectErrors(formState))
-    }
-  }, [formState, hasSubmitted])
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -198,6 +183,10 @@ export default function ProjectsPage({ categories }: ProjectPageProps) {
     setHasSubmitted(true)
 
     const errors = collectErrors(formState)
+    if (errors.form) {
+      setError(errors.form)
+      delete errors.form
+    }
     setFieldErrors(errors)
     if (Object.keys(errors).length > 0) {
       setError('Please fix the highlighted fields and try again.')
@@ -213,18 +202,33 @@ export default function ProjectsPage({ categories }: ProjectPageProps) {
 
     setIsSubmitting(true)
     try {
-      const categoryRecord = categories.find((category) => category.slug === formState.categorySlug)
+      const basePayload = {
+        clientName: formState.clientName,
+        clientEmail: formState.clientEmail,
+        clientPhone: formState.clientPhone.trim(),
+        phoneCountryCode: formState.phoneCountryCode,
+        projectTitle: formState.projectTitle,
+        projectDescription: formState.projectDescription,
+        budget: formState.budget,
+        timeline: formState.timeline,
+    category: formState.category || categories[0]?.slug || '',
+        notes: formState.notes,
+      }
+      const parsedPayload = projectQuoteSchema.parse(basePayload)
+
+      const categoryRecord = categories.find((category) => category.slug === parsedPayload.category)
+
       const formPayload = new FormData()
-      formPayload.append('clientName', formState.clientName)
-      formPayload.append('clientEmail', formState.clientEmail)
-      formPayload.append('clientPhone', formState.clientPhone.trim())
-      formPayload.append('projectTitle', formState.projectTitle)
-      formPayload.append('projectDescription', formState.projectDescription)
-      formPayload.append('budget', formState.budget ? String(Number(formState.budget)) : '')
-      formPayload.append('timeline', formState.timeline)
-      formPayload.append('category', categoryRecord ? categoryRecord.name : formState.categorySlug)
-      formPayload.append('notes', formState.notes)
-      formPayload.append('phoneCountryCode', formState.phoneCountryCode)
+      formPayload.append('clientName', parsedPayload.clientName)
+      formPayload.append('clientEmail', parsedPayload.clientEmail)
+      formPayload.append('clientPhone', parsedPayload.clientPhone)
+      formPayload.append('phoneCountryCode', parsedPayload.phoneCountryCode)
+      formPayload.append('projectTitle', parsedPayload.projectTitle)
+      formPayload.append('projectDescription', parsedPayload.projectDescription)
+      formPayload.append('budget', parsedPayload.budget === null ? '' : String(parsedPayload.budget))
+      formPayload.append('timeline', parsedPayload.timeline ?? '')
+      formPayload.append('category', categoryRecord ? categoryRecord.name : parsedPayload.category)
+      formPayload.append('notes', parsedPayload.notes ?? '')
       attachments.forEach((file) => {
         formPayload.append('attachments', file)
       })
@@ -236,10 +240,18 @@ export default function ProjectsPage({ categories }: ProjectPageProps) {
 
       if (!response.ok) {
         const payload = await response.json()
+        if (payload?.errors) {
+          const mappedErrors = payload.errors as Record<string, string>
+          if (mappedErrors.form) {
+            setError(mappedErrors.form)
+            delete mappedErrors.form
+          }
+          setFieldErrors(mappedErrors)
+        }
         throw new Error(payload?.message ?? 'Failed to submit project request.')
       }
 
-      setSuccess('Project submitted! Our admin team will review it right away.')
+      setSuccess('Project submitted! Our admin team will review it soon and follow up with next steps.')
       setFormState({
         clientName: '',
         clientEmail: '',
@@ -248,12 +260,14 @@ export default function ProjectsPage({ categories }: ProjectPageProps) {
         phoneLocal: '',
         projectTitle: '',
         projectDescription: '',
-        categorySlug: '',
+        category: '',
         notes: '',
         budget: '',
         timeline: '',
       })
       setAttachments([])
+      setFieldErrors({})
+      setHasSubmitted(false)
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : 'Something went wrong. Please try again.')
     } finally {
@@ -284,6 +298,7 @@ export default function ProjectsPage({ categories }: ProjectPageProps) {
           <form
             ref={mainFormRef}
             onSubmit={handleSubmit}
+            noValidate
             className="mt-12 rounded-2xl border border-white/10 bg-white/5 p-8 shadow-2xl backdrop-blur"
           >
             <div className="grid gap-6 md:grid-cols-2">
@@ -348,7 +363,11 @@ export default function ProjectsPage({ categories }: ProjectPageProps) {
                       className={`w-full rounded-xl border bg-black/20 px-4 py-3 text-white placeholder-white/40 outline-none transition focus:ring-2 ${fieldErrors.clientPhone ? 'border-rose-400 focus:border-rose-400 focus:ring-rose-500/60' : 'border-white/20 focus:border-cyan-400 focus:ring-cyan-500/60'}`}
                     />
                   </div>
-                  {fieldErrors.clientPhone && <p className="mt-1 text-xs text-rose-300">{fieldErrors.clientPhone}</p>}
+                  {(fieldErrors.clientPhone || fieldErrors.phoneLocal) && (
+                    <p className="mt-1 text-xs text-rose-300">
+                      {fieldErrors.clientPhone ?? fieldErrors.phoneLocal}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-white/80">Budget (USD)</label>
@@ -380,11 +399,11 @@ export default function ProjectsPage({ categories }: ProjectPageProps) {
                 <div>
                   <label className="block text-sm font-semibold text-white/80">Category *</label>
                   <select
-                    name="categorySlug"
-                    value={formState.categorySlug}
+                    name="category"
+                    value={formState.category}
                     onChange={handleChange}
                     required
-                    className={`mt-2 w-full rounded-xl border bg-black/20 px-4 py-3 text-white outline-none transition focus:ring-2 ${fieldErrors.categorySlug ? 'border-rose-400 focus:border-rose-400 focus:ring-rose-500/60' : 'border-white/20 focus:border-cyan-400 focus:ring-cyan-500/60'}`}
+                    className={`mt-2 w-full rounded-xl border bg-black/20 px-4 py-3 text-white outline-none transition focus:ring-2 ${fieldErrors.category ? 'border-rose-400 focus:border-rose-400 focus:ring-rose-500/60' : 'border-white/20 focus:border-cyan-400 focus:ring-cyan-500/60'}`}
                   >
                     <option value="">Select a category</option>
                     {categories.map((category) => (
@@ -393,7 +412,7 @@ export default function ProjectsPage({ categories }: ProjectPageProps) {
                       </option>
                     ))}
                   </select>
-                  {fieldErrors.categorySlug && <p className="mt-1 text-xs text-rose-300">{fieldErrors.categorySlug}</p>}
+                  {fieldErrors.category && <p className="mt-1 text-xs text-rose-300">{fieldErrors.category}</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-white/80">Timeline</label>
@@ -467,6 +486,10 @@ export default function ProjectsPage({ categories }: ProjectPageProps) {
                   </ul>
                 )}
               </div>
+
+              {fieldErrors.attachments && (
+                <p className="text-xs font-medium text-rose-300">{fieldErrors.attachments}</p>
+              )}
 
               <div>
                 <label className="block text-sm font-semibold text-white/80">Additional Notes</label>
@@ -621,5 +644,3 @@ export const getServerSideProps: GetServerSideProps<ProjectPageProps> = async ()
     }
   }
 }
-
-

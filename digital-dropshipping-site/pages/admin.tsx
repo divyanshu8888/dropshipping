@@ -1,22 +1,21 @@
-import { useState, useEffect } from 'react'
-import { GetServerSideProps } from 'next'
-import Head from 'next/head'
-import Link from 'next/link'
-import { useRouter } from 'next/router'
-import Header from '../src/components/Header'
-import { 
-  EntityDrawer, 
-  CommandBar, 
-  DataGrid, 
-  EditableCard, 
-  KanbanPipeline, 
-  EventStream 
-} from '../src/components/admin'
-import { useToast } from '../src/components/Toast'
-import { supabase } from '../src/lib/supabase'
+import { useEffect, useMemo, useState } from 'react';
+import { GetServerSideProps } from 'next';
+import Head from 'next/head';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import Header from '../src/components/Header';
+import {
+  EntityDrawer,
+  CommandBar,
+  DataGrid,
+  EditableCard,
+  KanbanPipeline,
+  EventStream,
+} from '../src/components/admin';
+import { useToast } from '../src/components/Toast';
+import { query } from '../src/lib/mysql';
 
 interface DashboardMetrics {
-  // Real KPIs
   gmvToday: number;
   gmvMTD: number;
   gmvTrailing28d: number;
@@ -25,7 +24,7 @@ interface DashboardMetrics {
   revenueChange: number;
   aov: number;
   conversionRate: number;
-  
+
   totalProjects: number;
   revenueThisMonth: number;
   pendingPayouts: number;
@@ -83,7 +82,19 @@ interface DashboardMetrics {
 
 interface ActivityFeedItem {
   id: string;
-  type: 'user_registered' | 'freelancer_registered' | 'client_registered' | 'work_request' | 'project_created' | 'order_placed' | 'service_created' | 'review_posted' | 'quote_request' | 'escrow_funded' | 'chat_flagged' | 'dispute_opened';
+  type:
+    | 'user_registered'
+    | 'freelancer_registered'
+    | 'client_registered'
+    | 'work_request'
+    | 'project_created'
+    | 'order_placed'
+    | 'service_created'
+    | 'review_posted'
+    | 'quote_request'
+    | 'escrow_funded'
+    | 'chat_flagged'
+    | 'dispute_opened';
   message: string;
   timestamp: string;
   user?: string;
@@ -94,6 +105,7 @@ interface ActivityFeedItem {
   rating?: number;
   company?: string;
   createdAt: string;
+  entityId?: string;
 }
 
 interface AdminProps {
@@ -103,386 +115,515 @@ interface AdminProps {
   quoteRequests: number;
 }
 
-export default function AdminDashboard({ freelancers, pendingCount, approvedCount, quoteRequests }: AdminProps) {
-  const router = useRouter()
-  const { addToast } = useToast()
-  const [loading, setLoading] = useState(true)
-  const [dataLoading, setDataLoading] = useState(true)
-  const [user, setUser] = useState<{name: string, role: string} | null>(null)
-  const [activeTab, setActiveTab] = useState('overview')
-  
-  // Real data from database
-  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null)
-  const [activityFeed, setActivityFeed] = useState<ActivityFeedItem[]>([])
-  const [lastUpdated, setLastUpdated] = useState<string>('')
-  const [activityTab, setActivityTab] = useState<'all' | 'users' | 'clients' | 'services'>('all')
-  const [activityLoading, setActivityLoading] = useState(false)
-  const [isRefreshing, setIsRefreshing] = useState(false)
-  
-  // New control room state
-  const [drawerOpen, setDrawerOpen] = useState(false)
-  const [selectedEntity, setSelectedEntity] = useState<any>(null)
-  const [selectedEntityType, setSelectedEntityType] = useState<'user' | 'order' | 'project' | 'service' | 'dispute' | 'kyc'>('user')
-  const [workQueueData, setWorkQueueData] = useState<any>({
+type WorkQueueData = {
+  pendingKYC: any[];
+  refundRequests: any[];
+  chargebacks: any[];
+  payoutHolds: any[];
+  failedWebhooks: any[];
+};
+
+const getActivityIcon = (type: string) => {
+  switch (type) {
+    case 'user_registered':
+      return '👤';
+    case 'freelancer_registered':
+      return '💼';
+    case 'client_registered':
+      return '🏢';
+    case 'work_request':
+      return '💬';
+    case 'project_created':
+      return '📋';
+    case 'order_placed':
+      return '🛒';
+    case 'service_created':
+      return '🛠️';
+    case 'review_posted':
+      return '⭐';
+    case 'quote_request':
+      return '💰';
+    case 'escrow_funded':
+      return '🔒';
+    case 'chat_flagged':
+      return '🚫';
+    case 'dispute_opened':
+      return '⚖️';
+    default:
+      return '📢';
+  }
+};
+
+const formatCurrency = (amount: number) =>
+  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+
+const formatNumber = (value: number) => new Intl.NumberFormat('en-US').format(value);
+
+export default function AdminDashboard({
+  freelancers,
+  pendingCount,
+  approvedCount,
+  quoteRequests,
+}: AdminProps) {
+  const router = useRouter();
+  const { addToast } = useToast();
+
+  const [loading, setLoading] = useState(true);
+  const [metricsLoading, setMetricsLoading] = useState(true);
+  const [user, setUser] = useState<{ name: string; role: string } | null>(null);
+  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<string>('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const [activityTab, setActivityTab] = useState<'all' | 'users' | 'clients' | 'services'>('all');
+  const [activityFeed, setActivityFeed] = useState<ActivityFeedItem[]>([]);
+  const [activityLoading, setActivityLoading] = useState(false);
+
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [selectedEntity, setSelectedEntity] = useState<any>(null);
+  const [selectedEntityType, setSelectedEntityType] = useState<
+    'user' | 'order' | 'project' | 'service' | 'dispute' | 'kyc'
+  >('user');
+
+  const [workQueueData, setWorkQueueData] = useState<WorkQueueData>({
     pendingKYC: [],
     refundRequests: [],
     chargebacks: [],
     payoutHolds: [],
-    failedWebhooks: []
-  })
-  
-  // Advanced control room state
-  const [kanbanColumns, setKanbanColumns] = useState<any[]>([])
-  const [eventStream, setEventStream] = useState<any[]>([])
-  const [isStreamPaused, setIsStreamPaused] = useState(false)
+    failedWebhooks: [],
+  });
+
+  const [kanbanColumns, setKanbanColumns] = useState<any[]>([]);
+  const [eventStream, setEventStream] = useState<any[]>([]);
 
   useEffect(() => {
-    const userData = localStorage.getItem('user')
-    if (!userData) {
-      router.push('/login')
-      return
-    }
-    
-    const userObj = JSON.parse(userData)
-    if (userObj.role !== 'ADMIN' && userObj.role !== 'TEAM_MEMBER') {
-      router.push('/login')
-      return
-    }
+    const bootstrap = () => {
+      const userData = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
 
-    setUser(userObj)
-    setLoading(false)
-  }, [router])
-
-  // Fetch dashboard data (metrics only)
-  useEffect(() => {
-    const fetchDashboardData = async (isInitialLoad = false) => {
-      try {
-        if (isInitialLoad) {
-          setDataLoading(true)
-        } else {
-          setIsRefreshing(true)
-        }
-        
-        // Fetch only metrics
-        const metricsResponse = await fetch('/api/admin/dashboard-metrics')
-
-        if (metricsResponse.ok) {
-          const metricsData = await metricsResponse.json()
-          setMetrics(metricsData.metrics)
-          setLastUpdated(metricsData.lastUpdated)
-        }
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error)
-      } finally {
-        if (isInitialLoad) {
-          setDataLoading(false)
-        } else {
-          setIsRefreshing(false)
-        }
+      if (!userData) {
+        router.push('/login');
+        return;
       }
-    }
 
-    if (!loading) {
-      // Initial load with loading state
-      fetchDashboardData(true)
-      
-      // Set up auto-refresh every 30 seconds (without loading state)
-      const interval = setInterval(() => fetchDashboardData(false), 30000)
-      return () => clearInterval(interval)
-    }
-  }, [loading])
-
-  // Fetch activity feed data separately
-  useEffect(() => {
-    const fetchActivityData = async () => {
       try {
-        setActivityLoading(true)
-        const activityResponse = await fetch(`/api/admin/activity-feed?type=${activityTab}`)
-        
-        if (activityResponse.ok) {
-          const activityData = await activityResponse.json()
-          setActivityFeed(activityData.activities)
+        const parsed = JSON.parse(userData);
+        if (parsed.role !== 'ADMIN' && parsed.role !== 'TEAM_MEMBER') {
+          router.push('/login');
+          return;
         }
+
+        setUser(parsed);
+        setLoading(false);
       } catch (error) {
-        console.error('Error fetching activity data:', error)
-      } finally {
-        setActivityLoading(false)
+        console.error('Failed to parse stored user:', error);
+        router.push('/login');
       }
-    }
+    };
 
-    if (!loading) {
-      fetchActivityData()
-    }
-  }, [activityTab, loading])
+    bootstrap();
+  }, [router]);
 
-  // Fetch work queue data on mount
+  const fetchDashboardData = async () => {
+    try {
+      const response = await fetch('/api/admin/dashboard-metrics');
+      if (response.ok) {
+        const payload = await response.json();
+        setMetrics(payload.metrics);
+        setLastUpdated(payload.lastUpdated);
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard metrics:', error);
+    }
+  };
+
+  const fetchWorkQueueData = async () => {
+    try {
+      const response = await fetch('/api/admin/work-queue-data');
+      const payload = await response.json();
+      if (payload.success) {
+        setWorkQueueData({
+          pendingKYC: payload.data.pendingKYC || [],
+          refundRequests: payload.data.refundRequests || [],
+          chargebacks: payload.data.chargebacks || [],
+          payoutHolds: payload.data.payoutHolds || [],
+          failedWebhooks: payload.data.failedWebhooks || [],
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching work queue data:', error);
+    }
+  };
+
+  const fetchKanbanData = async () => {
+    try {
+      const response = await fetch('/api/admin/kanban-data');
+      const payload = await response.json();
+      if (payload.success) {
+        setKanbanColumns(payload.columns);
+      }
+    } catch (error) {
+      console.error('Error fetching kanban data:', error);
+    }
+  };
+
+  const fetchEventStream = async () => {
+    try {
+      const response = await fetch('/api/admin/event-stream');
+      const payload = await response.json();
+      if (payload.success) {
+        setEventStream(payload.events);
+      }
+    } catch (error) {
+      console.error('Error fetching event stream:', error);
+    }
+  };
+
+  const fetchActivityData = async (tabValue: typeof activityTab = activityTab) => {
+    try {
+      setActivityLoading(true);
+      const response = await fetch(`/api/admin/activity-feed?type=${tabValue}`);
+      if (response.ok) {
+        const payload = await response.json();
+        setActivityFeed(payload.activities);
+      }
+    } catch (error) {
+      console.error('Error fetching activity feed:', error);
+    } finally {
+      setActivityLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (loading) return;
+
+    const loadMetrics = async (initial: boolean) => {
+      if (initial) {
+        setMetricsLoading(true);
+      } else {
+        setIsRefreshing(true);
+      }
+
+      await fetchDashboardData();
+
+      if (initial) {
+        setMetricsLoading(false);
+      } else {
+        setIsRefreshing(false);
+      }
+    };
+
+    loadMetrics(true);
+    const interval = setInterval(() => loadMetrics(false), 30000);
+    return () => clearInterval(interval);
+  }, [loading]);
+
   useEffect(() => {
     if (!loading) {
-      fetchWorkQueueData()
-      fetchKanbanData()
-      fetchEventStream()
+      fetchActivityData(activityTab);
     }
-  }, [loading])
+  }, [activityTab, loading]);
 
-
-  const getActivityIcon = (type: string) => {
-    switch (type) {
-      case 'user_registered': return '👨‍💻'
-      case 'freelancer_registered': return '👨‍💼'
-      case 'client_registered': return '👨‍💻'
-      case 'work_request': return '💬'
-      case 'project_created': return '📋'
-      case 'order_placed': return '🛒'
-      case 'service_created': return '🔧'
-      case 'review_posted': return '⭐'
-      case 'quote_request': return '💰'
-      case 'escrow_funded': return '🔒'
-      case 'chat_flagged': return '🚫'
-      case 'dispute_opened': return '⚖️'
-      default: return '📢'
+  useEffect(() => {
+    if (!loading) {
+      fetchWorkQueueData();
+      fetchKanbanData();
+      fetchEventStream();
     }
-  }
+  }, [loading]);
 
-  // Control room handlers
   const handleEntitySelect = (entityType: string, entityId: string) => {
-    setSelectedEntityType(entityType as any)
-    setSelectedEntity({ id: entityId })
-    setDrawerOpen(true)
-  }
+    setSelectedEntityType(entityType as any);
+    setSelectedEntity({ id: entityId });
+    setDrawerOpen(true);
+  };
 
   const handleActionExecute = async (action: string, params: any) => {
     try {
-      // Optimistic update
-      addToast(`Executing ${action}...`, 'info', 1000)
-      
+      addToast(`Executing ${action}...`, 'info', 1000);
       const response = await fetch('/api/admin/quick-action', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, params })
-      })
-      
+        body: JSON.stringify({ action, params }),
+      });
+
       if (response.ok) {
-        addToast(`${action} completed successfully`, 'success')
-        // Refresh data
-        fetchDashboardData()
-        fetchWorkQueueData()
+        addToast(`${action} completed successfully`, 'success');
+        fetchDashboardData();
+        fetchWorkQueueData();
       } else {
-        throw new Error('Action failed')
+        throw new Error('Action failed');
       }
     } catch (error) {
-      console.error(`Error executing ${action}:`, error)
-      addToast(`Failed to execute ${action}`, 'error')
+      console.error(`Error executing ${action}:`, error);
+      addToast(`Failed to execute ${action}`, 'error');
     }
-  }
+  };
 
   const handleWorkQueueBulkAction = async (action: string, selectedRows: any[]) => {
     try {
       const response = await fetch('/api/admin/bulk-action', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, rows: selectedRows })
-      })
-      
+        body: JSON.stringify({ action, rows: selectedRows }),
+      });
+
       if (response.ok) {
-        console.log(`Bulk ${action} completed for ${selectedRows.length} items`)
-        // Refresh work queue data
-        fetchWorkQueueData()
+        fetchWorkQueueData();
       }
     } catch (error) {
-      console.error(`Error executing bulk ${action}:`, error)
+      console.error(`Error executing bulk ${action}:`, error);
     }
-  }
+  };
 
-  const fetchDashboardData = async () => {
-    try {
-      const metricsResponse = await fetch('/api/admin/dashboard-metrics')
-      if (metricsResponse.ok) {
-        const metricsData = await metricsResponse.json()
-        setMetrics(metricsData.metrics)
-        setLastUpdated(metricsData.lastUpdated)
-      }
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error)
-    }
-  }
-
-  const fetchWorkQueueData = async () => {
-    try {
-      const response = await fetch('/api/admin/work-queue-data')
-      const data = await response.json()
-      if (data.success) {
-        setWorkQueueData(data.data)
-      }
-    } catch (error) {
-      console.error('Error fetching work queue data:', error)
-    }
-  }
-
-  // Advanced control room handlers
   const handleKPIEdit = async (field: string, newValue: string | number) => {
     try {
-      addToast(`Updating ${field}...`, 'info', 1000)
-      
+      addToast(`Updating ${field}...`, 'info', 1000);
       const response = await fetch('/api/admin/update-kpi', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ field, value: newValue })
-      })
-      
+        body: JSON.stringify({ field, value: newValue }),
+      });
+
       if (response.ok) {
-        addToast(`${field} updated successfully`, 'success')
-        fetchDashboardData()
+        addToast(`${field} updated successfully`, 'success');
+        fetchDashboardData();
       } else {
-        throw new Error('Update failed')
+        throw new Error('Update failed');
       }
     } catch (error) {
-      addToast(`Failed to update ${field}`, 'error')
+      addToast(`Failed to update ${field}`, 'error');
     }
-  }
+  };
 
   const handleKanbanCardMove = async (cardId: string, fromStatus: string, toStatus: string) => {
     try {
-      addToast(`Moving card to ${toStatus}...`, 'info', 1000)
-      
+      addToast(`Moving card to ${toStatus}...`, 'info', 1000);
       const response = await fetch('/api/admin/move-kanban-card', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cardId, fromStatus, toStatus })
-      })
-      
+        body: JSON.stringify({ cardId, fromStatus, toStatus }),
+      });
+
       if (response.ok) {
-        addToast('Card moved successfully', 'success')
-        fetchKanbanData()
+        addToast('Card moved successfully', 'success');
+        fetchKanbanData();
       } else {
-        throw new Error('Move failed')
+        throw new Error('Move failed');
       }
     } catch (error) {
-      addToast('Failed to move card', 'error')
+      addToast('Failed to move card', 'error');
     }
-  }
+  };
 
   const handleEventClick = (event: any) => {
-    // Open entity drawer based on event type
-    const entityTypeMap: Record<string, string> = {
-      'user_registered': 'user',
-      'order_placed': 'order',
-      'project_created': 'project',
-      'service_created': 'service',
-      'dispute_opened': 'dispute'
-    }
-    
-    const entityType = entityTypeMap[event.type] || 'user'
-    handleEntitySelect(entityType, event.entityId || event.id)
-  }
+    const map: Record<string, string> = {
+      user_registered: 'user',
+      order_placed: 'order',
+      project_created: 'project',
+      service_created: 'service',
+      dispute_opened: 'dispute',
+    };
+    const entityType = map[event.type] || 'user';
+    handleEntitySelect(entityType, event.entityId || event.id);
+  };
 
-  const fetchKanbanData = async () => {
-    try {
-      const response = await fetch('/api/admin/kanban-data')
-      const data = await response.json()
-      if (data.success) {
-        setKanbanColumns(data.columns)
-      }
-    } catch (error) {
-      console.error('Error fetching kanban data:', error)
-    }
-  }
+  const handleManualRefresh = () => {
+    fetchDashboardData();
+    fetchWorkQueueData();
+    fetchKanbanData();
+    fetchEventStream();
+    fetchActivityData(activityTab);
+  };
 
-  const fetchEventStream = async () => {
-    try {
-      const response = await fetch('/api/admin/event-stream')
-      const data = await response.json()
-      if (data.success) {
-        setEventStream(data.events)
-      }
-    } catch (error) {
-      console.error('Error fetching event stream:', error)
-    }
-  }
-
-  if (loading || dataLoading) {
+  if (loading || metricsLoading || !metrics) {
     return (
-      <div className="min-h-screen bg-bg-base flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-accent-cyan mx-auto"></div>
-          <p className="mt-4 text-text-soft">Loading dashboard...</p>
+      <div className="min-h-screen bg-superhuman text-text-base">
+        <Header />
+        <div className="flex min-h-screen items-center justify-center px-6">
+          <div className="text-center space-y-4">
+            <div className="mx-auto h-12 w-12 animate-spin rounded-full border-2 border-brand-b border-t-transparent"></div>
+            <p className="text-text-soft">Preparing your command center…</p>
+          </div>
         </div>
       </div>
-    )
+    );
   }
 
-  if (!metrics) {
-    return (
-      <div className="min-h-screen bg-bg-base flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-red-400 text-6xl mb-4">⚠️</div>
-          <p className="text-text-soft">Failed to load dashboard data</p>
-          <button 
-            onClick={() => window.location.reload()} 
-            className="mt-4 px-4 py-2 bg-accent-blue text-white rounded-lg hover:bg-accent-violet transition-colors"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    )
-  }
+  const heroGreeting = user ? `Welcome back, ${user.name.split(' ')[0]}` : 'Admin Command Center';
+  const lastUpdatedLabel = lastUpdated
+    ? new Date(lastUpdated).toLocaleString()
+    : new Date().toLocaleString();
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)
-  }
+  const primaryHighlights = useMemo(
+    () => [
+      {
+        title: 'GMV Today',
+        value: formatCurrency(metrics.gmvToday),
+        caption: 'Gross merchandise processed today',
+        delta: metrics.revenueChange,
+        icon: '💸',
+        accent: 'from-brand-a via-brand-b to-brand-c',
+      },
+      {
+        title: 'Net Revenue',
+        value: formatCurrency(metrics.netRevenueAfterRefunds),
+        caption: 'After refunds & adjustments',
+        icon: '🏦',
+        accent: 'from-brand-b via-brand-c to-brand-a',
+      },
+      {
+        title: 'Active Users',
+        value: formatNumber(metrics.activeUsers),
+        caption: 'Engaged accounts in the last 24h',
+        icon: '👥',
+        accent: 'from-emerald-500 to-teal-500',
+      },
+      {
+        title: 'Total Orders',
+        value: formatNumber(metrics.totalOrders),
+        caption: 'Orders logged this month',
+        icon: '📦',
+        accent: 'from-amber-400 to-rose-400',
+      },
+    ],
+    [metrics],
+  );
 
-  const StatCard = ({ title, value, icon, color, change, onClick }: any) => (
-    <div 
-      className="relative bg-bg-surface rounded-2xl shadow-card border border-white/5 p-6 transform hover:-translate-y-1 transition-all cursor-pointer group"
-      onClick={onClick}
-    >
-      <div className="absolute inset-0 rounded-2xl bg-metal-sheen pointer-events-none"></div>
-      <div className="absolute -top-px left-6 right-6 h-px bg-specular-line opacity-30"></div>
-      <div className="relative flex items-center justify-between">
-        <div>
-          <div className="text-3xl font-bold text-text-base">{value}</div>
-          <div className="text-text-soft font-medium">{title}</div>
-          {change && (
-            <div className={`text-sm font-semibold ${change > 0 ? 'text-accent-cyan' : 'text-red-400'}`}>
-              {change > 0 ? '+' : ''}{change}% vs last week
-            </div>
-          )}
-        </div>
-        <div className={`w-16 h-16 bg-gradient-to-br ${color} rounded-xl flex items-center justify-center text-3xl shadow-metallic group-hover:animate-metallic-glow`}>
-          {icon}
-        </div>
-      </div>
-    </div>
-  )
+  const pipelineHighlights = useMemo(
+    () => [
+      {
+        label: 'New Requests',
+        value: formatNumber(metrics.newRequests),
+        delta: metrics.newRequestsChange,
+        icon: '🧾',
+      },
+      {
+        label: 'Quotes Under Review',
+        value: formatNumber(metrics.quotesUnderReview),
+        delta: 0,
+        icon: '📝',
+      },
+      {
+        label: 'In Delivery',
+        value: formatNumber(metrics.inDelivery),
+        delta: 0,
+        icon: '🚚',
+      },
+      {
+        label: 'Completed',
+        value: formatNumber(metrics.completed),
+        delta: metrics.completedChange,
+        icon: '✅',
+      },
+    ],
+    [metrics],
+  );
 
-  const PipelineStage = ({ stage, count, change, color }: any) => (
-    <div className="bg-white rounded-xl p-4 shadow-lg">
-      <div className="flex items-center justify-between mb-2">
-        <div className={`w-4 h-4 rounded-full ${color}`}></div>
-        <span className="text-2xl font-bold text-gray-900">{count}</span>
-      </div>
-      <div className="text-sm text-gray-600">{stage}</div>
-      <div className={`text-xs font-semibold ${change > 0 ? 'text-green-600' : 'text-red-600'}`}>
-        {change > 0 ? '+' : ''}{change}%
-      </div>
-    </div>
-  )
+  const workQueueHighlights = useMemo(
+    () => [
+      {
+        label: 'Pending KYC',
+        value: workQueueData.pendingKYC.length,
+        helper: 'Applications awaiting review',
+        accent: 'bg-brand-b/15 text-brand-b',
+        icon: '🛂',
+      },
+      {
+        label: 'Refund Requests',
+        value: workQueueData.refundRequests.length,
+        helper: 'Orders needing attention',
+        accent: 'bg-rose-500/15 text-rose-400',
+        icon: '💳',
+      },
+      {
+        label: 'Open Flags',
+        value: metrics.workQueue.totalItems,
+        helper: 'Across moderation & payments',
+        accent: 'bg-amber-500/15 text-amber-400',
+        icon: '🚩',
+      },
+    ],
+    [metrics.workQueue.totalItems, workQueueData.pendingKYC.length, workQueueData.refundRequests.length],
+  );
+
+  const healthHighlights = useMemo(
+    () => [
+      {
+        label: 'Database latency',
+        value: `${metrics.systemHealth.databaseLatency}ms`,
+        status: metrics.systemHealth.databaseLatency < 80 ? 'Healthy' : 'Investigate',
+      },
+      {
+        label: 'Email uptime',
+        value: `${metrics.systemHealth.emailApiUptime}%`,
+        status: 'Transactional mail',
+      },
+      {
+        label: 'Payment webhook',
+        value: metrics.systemHealth.paymentWebhook,
+        status: 'Stripe listener',
+      },
+      {
+        label: 'File scan service',
+        value: metrics.systemHealth.fileScanService,
+        status: 'Uploads & AV',
+      },
+    ],
+    [metrics.systemHealth],
+  );
+
+  const quickLinks = useMemo(
+    () => [
+      {
+        title: 'Quote Requests',
+        description: `${quoteRequests} awaiting action`,
+        href: '/admin/quotes',
+        icon: '💬',
+      },
+      {
+        title: 'Manage Products',
+        description: 'Inventory, pricing & bundles',
+        href: '/admin/products-enhanced',
+        icon: '📦',
+      },
+      {
+        title: 'Database Setup',
+        description: 'Migrations & seed scripts',
+        href: '/admin/setup',
+        icon: '⚙️',
+      },
+      {
+        title: 'Team Directory',
+        description: 'Invite or manage teammates',
+        href: '/admin/team',
+        icon: '👥',
+      },
+    ],
+    [quoteRequests],
+  );
+
+  const activityFilters = useMemo(
+    () => [
+      { id: 'all', label: 'All' },
+      { id: 'users', label: 'Users' },
+      { id: 'clients', label: 'Clients' },
+      { id: 'services', label: 'Services' },
+    ],
+    [],
+  );
+
+  const pendingKYCRows = workQueueData.pendingKYC || [];
+  const refundRows = workQueueData.refundRequests || [];
+  const topFreelancers = useMemo(() => freelancers.slice(0, 4), [freelancers]);
 
   return (
     <>
       <Head>
-        <title>Admin Dashboard - Uniti</title>
+        <title>Admin Dashboard · Uniti</title>
       </Head>
-      <div className="min-h-screen bg-bg-base">
+      <div className="min-h-screen bg-superhuman text-text-base">
         <Header />
-        
-        {/* Command Bar */}
-        <CommandBar 
-          onEntitySelect={handleEntitySelect}
-          onActionExecute={handleActionExecute}
-        />
-        
-        {/* Entity Drawer */}
+        <CommandBar onEntitySelect={handleEntitySelect} onActionExecute={handleActionExecute} />
         <EntityDrawer
           open={drawerOpen}
           onClose={() => setDrawerOpen(false)}
@@ -490,84 +631,140 @@ export default function AdminDashboard({ freelancers, pendingCount, approvedCoun
           entityType={selectedEntityType}
         />
 
-        {/* Hero */}
-        <section className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-hero-gradient"></div>
-          <div className="relative bg-gradient-to-r from-accent-blue to-accent-violet text-white py-12 pt-24">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between">
+        <main className="mx-auto max-w-7xl px-6 pb-24 pt-28 space-y-10">
+          <section className="rounded-[32px] border border-white/10 bg-white/5 p-8 backdrop-blur-lg shadow-card sm:p-10">
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <h1 className="text-4xl font-extrabold mb-2">🧭 Admin Command Center</h1>
-                <p className="text-xl text-white/80">Welcome back, {user?.name}! Platform health overview & management</p>
-                {lastUpdated && (
-                  <p className="text-sm text-white/60 mt-2">
-                    Last updated: {new Date(lastUpdated).toLocaleString()}
-                    {isRefreshing && (
-                      <span className="ml-2 text-white/80">
-                        <span className="animate-spin inline-block">🔄</span> Refreshing...
-                      </span>
-                    )}
-                  </p>
-                )}
+                <p className="text-xs uppercase tracking-[0.35em] text-text-mute mb-3">
+                  Command Center
+                </p>
+                <h1 className="font-display text-3xl text-text-base sm:text-4xl">{heroGreeting}</h1>
+                <p className="mt-3 max-w-2xl text-sm text-text-soft">
+                  Track revenue, service delivery, and trust signals in real-time. Surface the work
+                  that needs human judgement and keep Uniti moving.
+                </p>
+                <div className="mt-5 flex flex-wrap items-center gap-3 text-sm text-text-mute">
+                  <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1">
+                    <span className="h-2 w-2 rounded-full bg-brand-a"></span>
+                    Updated {lastUpdatedLabel}
+                  </span>
+                  {isRefreshing && (
+                    <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1">
+                      <span className="h-2 w-2 animate-ping rounded-full bg-brand-b"></span>
+                      Refreshing data…
+                    </span>
+                  )}
+                </div>
               </div>
-              <div className="flex items-center space-x-4">
+              <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+                <button
+                  onClick={handleManualRefresh}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/10 px-4 py-2 text-sm font-semibold text-text-base transition hover:border-brand-b hover:text-brand-b"
+                >
+                  <span className="h-2 w-2 rounded-full bg-brand-b"></span>
+                  Refresh Metrics
+                </button>
                 <button
                   onClick={() => {
-                    localStorage.removeItem('user')
-                    router.push('/login')
+                    localStorage.removeItem('user');
+                    router.push('/login');
                   }}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                  className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-rose-500 to-red-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-rose-500/30 transition hover:from-rose-400 hover:to-red-400"
                 >
                   Logout
                 </button>
               </div>
-              </div>
             </div>
-          </div>
-        </section>
+          </section>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Navigation Tabs */}
-          <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-            <div className="flex space-x-4">
-              {[
-                { id: 'overview', label: '📊 Overview', icon: '📊' },
-                { id: 'finance', label: '💰 Finance', icon: '💰' },
-                { id: 'moderation', label: '🛡️ Moderation', icon: '🛡️' },
-                { id: 'operations', label: '⚙️ Operations', icon: '⚙️' },
-                { id: 'users', label: '👥 Users', icon: '👥' }
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`px-6 py-3 rounded-xl font-semibold transition-all ${
-                    activeTab === tab.id
-                      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
+          <section className="space-y-4">
+            <div className="flex items-baseline justify-between">
+              <h2 className="text-sm uppercase tracking-[0.3em] text-text-mute">Snapshot</h2>
+              <span className="text-xs text-text-mute">
+                GMV trailing 28d · Net revenue · Active users · Orders
+              </span>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              {primaryHighlights.map((metric) => (
+                <div
+                  key={metric.title}
+                  className="group rounded-3xl border border-white/10 bg-white/5 p-6 shadow-card transition hover:-translate-y-1 hover:border-brand-b/60"
                 >
-                  {tab.label}
-                </button>
+                  <div className="flex items-center justify-between">
+                    <span className="text-lg">{metric.icon}</span>
+                    <span className="rounded-full bg-white/5 px-3 py-1 text-xs font-medium text-text-mute">
+                      {metric.caption}
+                    </span>
+                  </div>
+                  <h3 className="mt-4 text-sm font-semibold text-text-soft">{metric.title}</h3>
+                  <p className="mt-2 text-2xl font-semibold text-text-base">{metric.value}</p>
+                  {typeof metric.delta === 'number' && (
+                    <p
+                      className={`mt-3 text-xs font-semibold ${
+                        metric.delta >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                      }`}
+                    >
+                      {metric.delta >= 0 ? '▲' : '▼'} {Math.abs(metric.delta).toFixed(1)}% vs. last month
+                    </p>
+                  )}
+                </div>
               ))}
             </div>
-          </div>
+          </section>
 
-          {activeTab === 'overview' && (
-            <>
-              {/* Real KPIs Section */}
-              <div className="mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">📊 Key Performance Indicators</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <section className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+            <div className="space-y-6">
+              <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-card">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-text-base">Pipeline health</h3>
+                  <span className="text-xs text-text-mute">
+                    Conversion from request → delivery → completion
+                  </span>
+                </div>
+                <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                  {pipelineHighlights.map((item) => (
+                    <div
+                      key={item.label}
+                      className="rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:border-brand-b/40"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-lg">{item.icon}</span>
+                        {item.delta !== 0 && (
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                              (item.delta || 0) >= 0 ? 'bg-emerald-500/15 text-emerald-300' : 'bg-rose-500/15 text-rose-300'
+                            }`}
+                          >
+                            {(item.delta || 0) >= 0 ? '+' : '-'}
+                            {Math.abs(item.delta || 0).toFixed(1)}%
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-3 text-sm font-medium text-text-soft">{item.label}</p>
+                      <p className="text-xl font-semibold text-text-base">{item.value}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-card">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-text-base">Adjustable KPIs</h3>
+                  <span className="text-xs text-text-mute">
+                    Tap a card to tweak goals or log interventions.
+                  </span>
+                </div>
+                <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                   <EditableCard
                     title="GMV Today"
                     value={formatCurrency(metrics.gmvToday)}
                     icon="💰"
                     color="from-green-500 to-emerald-500"
-                    editable={true}
-                    onEdit={(newValue) => handleKPIEdit('gmvToday', newValue)}
+                    editable
+                    onEdit={(value) => handleKPIEdit('gmvToday', value)}
                     fastActions={[
-                      { label: 'Export Transactions (CSV)', action: 'export_transactions', icon: '📊' },
-                      { label: 'View Transaction Details', action: 'view_transactions', icon: '👁️' }
+                      { label: 'Export Transactions (CSV)', action: 'export_transactions', icon: '📑' },
+                      { label: 'View Transactions', action: 'view_transactions', icon: '👁️' },
                     ]}
                     onFastAction={handleActionExecute}
                   />
@@ -576,532 +773,409 @@ export default function AdminDashboard({ freelancers, pendingCount, approvedCoun
                     value={formatCurrency(metrics.gmvMTD)}
                     icon="📈"
                     color="from-blue-500 to-cyan-500"
-                    change={metrics.revenueChange}
-                    editable={true}
-                    onEdit={(newValue) => handleKPIEdit('gmvMTD', newValue)}
-                    fastActions={[
-                      { label: 'Adjust Revenue Target', action: 'adjust_revenue_target', icon: '🎯' },
-                      { label: 'Generate Revenue Report', action: 'generate_revenue_report', icon: '📈' }
-                    ]}
-                    onFastAction={handleActionExecute}
-                  />
-                  <EditableCard
-                    title="GMV (28d)"
-                    value={formatCurrency(metrics.gmvTrailing28d)}
-                    icon="📊"
-                    color="from-purple-500 to-pink-500"
-                    editable={true}
-                    onEdit={(newValue) => handleKPIEdit('gmvTrailing28d', newValue)}
+                    editable
+                    onEdit={(value) => handleKPIEdit('gmvMTD', value)}
                   />
                   <EditableCard
                     title="Net Revenue"
                     value={formatCurrency(metrics.netRevenueAfterRefunds)}
-                    icon="💸"
-                    color="from-indigo-500 to-purple-500"
-                    editable={true}
-                    onEdit={(newValue) => handleKPIEdit('netRevenueAfterRefunds', newValue)}
+                    icon="🏦"
+                    color="from-purple-500 to-indigo-500"
+                    editable
+                    onEdit={(value) => handleKPIEdit('netRevenueAfterRefunds', value)}
                     fastActions={[
                       { label: 'Adjust Platform Fee', action: 'adjust_platform_fee', icon: '⚙️' },
-                      { label: 'Process Refunds', action: 'process_refunds', icon: '💰' }
+                      { label: 'Process Refunds', action: 'process_refunds', icon: '💳' },
                     ]}
                     onFastAction={handleActionExecute}
-                  />
-                  <EditableCard
-                    title="Average Order Value"
-                    value={formatCurrency(metrics.aov)}
-                    icon="🛒"
-                    color="from-yellow-500 to-orange-500"
-                    editable={true}
-                    onEdit={(newValue) => handleKPIEdit('aov', newValue)}
                   />
                   <EditableCard
                     title="Active Users"
-                    value={metrics.activeUsers}
+                    value={formatNumber(metrics.activeUsers)}
                     icon="👥"
-                    color="from-teal-500 to-cyan-500"
-                    editable={true}
-                    onEdit={(newValue) => handleKPIEdit('activeUsers', newValue)}
+                    color="from-emerald-500 to-teal-500"
+                    editable
+                    onEdit={(value) => handleKPIEdit('activeUsers', value)}
                     fastActions={[
-                      { label: 'Send User Notification', action: 'send_user_notification', icon: '📧' },
-                      { label: 'Export User List', action: 'export_users', icon: '👥' }
-                    ]}
-                    onFastAction={handleActionExecute}
-                  />
-                  <EditableCard
-                    title="Total Orders"
-                    value={metrics.totalOrders}
-                    icon="📦"
-                    color="from-red-500 to-pink-500"
-                    editable={true}
-                    onEdit={(newValue) => handleKPIEdit('totalOrders', newValue)}
-                  />
-                  <EditableCard
-                    title="Conversion Rate"
-                    value={`${metrics.conversionRate}%`}
-                    icon="🎯"
-                    color="from-emerald-500 to-green-500"
-                    editable={true}
-                    onEdit={(newValue) => handleKPIEdit('conversionRate', newValue)}
-                    fastActions={[
-                      { label: 'Optimize Conversion', action: 'optimize_conversion', icon: '🚀' },
-                      { label: 'A/B Test Landing Page', action: 'ab_test_landing', icon: '🧪' }
+                      { label: 'Send Broadcast', action: 'send_user_notification', icon: '📢' },
+                      { label: 'Export User List', action: 'export_users', icon: '📃' },
                     ]}
                     onFastAction={handleActionExecute}
                   />
                 </div>
               </div>
 
-              {/* Work Queue Section - Actionable Tables */}
-              <div className="mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">⚡ Work Queue - Action Required</h2>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Pending KYC */}
+              <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-card">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-lg font-semibold text-text-base">Work queue</h3>
+                    <p className="text-xs text-text-mute">
+                      Escalations that require a human decision
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleManualRefresh}
+                    className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold text-text-soft transition hover:text-brand-b"
+                  >
+                    Refresh queue
+                  </button>
+                </div>
+                <div className="mt-5 grid gap-6 lg:grid-cols-2">
                   <DataGrid
                     title="Pending KYC"
-                    rows={workQueueData.pendingKYC}
+                    rows={pendingKYCRows}
                     columns={[
                       { field: 'email', headerName: 'Email' },
                       { field: 'role', headerName: 'Role' },
-                      { field: 'created_at', headerName: 'Submitted', renderCell: (row) => 
-                        new Date(row.created_at).toLocaleDateString()
+                      {
+                        field: 'created_at',
+                        headerName: 'Submitted',
+                        renderCell: (row) => new Date(row.created_at).toLocaleDateString(),
                       },
-                      { field: 'status', headerName: 'Status', renderCell: (row) => (
-                        <span className={`px-2 py-1 rounded-full text-xs ${
-                          row.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {row.status}
-                        </span>
-                      )}
+                      {
+                        field: 'status',
+                        headerName: 'Status',
+                        renderCell: (row) => (
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-xs ${
+                              row.status === 'pending'
+                                ? 'bg-amber-500/15 text-amber-400'
+                                : 'bg-white/10 text-text-soft'
+                            }`}
+                          >
+                            {row.status}
+                          </span>
+                        ),
+                      },
                     ]}
                     onRowClick={(row) => handleEntitySelect('kyc', row.id)}
                     bulkActions={[
                       { label: 'Approve All', action: 'approve_kyc', icon: '✅' },
-                      { label: 'Reject All', action: 'reject_kyc', icon: '❌', variant: 'destructive' }
+                      { label: 'Reject All', action: 'reject_kyc', icon: '❌', variant: 'destructive' },
                     ]}
                     onBulkAction={handleWorkQueueBulkAction}
-                    filters={[
-                      { field: 'role', label: 'Role', options: [
-                        { value: 'freelancer', label: 'Freelancer' },
-                        { value: 'client', label: 'Client' }
-                      ]},
-                      { field: 'status', label: 'Status', options: [
-                        { value: 'pending', label: 'Pending' },
-                        { value: 'approved', label: 'Approved' },
-                        { value: 'rejected', label: 'Rejected' }
-                      ]}
-                    ]}
                   />
-
-                  {/* Refund Requests */}
                   <DataGrid
                     title="Refund Requests"
-                    rows={workQueueData.refundRequests}
+                    rows={refundRows}
                     columns={[
                       { field: 'id', headerName: 'Order ID' },
-                      { field: 'total_amount', headerName: 'Amount', renderCell: (row) => 
-                        `$${row.total_amount}`
+                      {
+                        field: 'total_amount',
+                        headerName: 'Amount',
+                        renderCell: (row) => formatCurrency(row.total_amount || 0),
                       },
                       { field: 'status', headerName: 'Status' },
-                      { field: 'created_at', headerName: 'Requested', renderCell: (row) => 
-                        new Date(row.created_at).toLocaleDateString()
-                      }
+                      {
+                        field: 'created_at',
+                        headerName: 'Requested',
+                        renderCell: (row) => new Date(row.created_at).toLocaleDateString(),
+                      },
                     ]}
                     onRowClick={(row) => handleEntitySelect('order', row.id)}
                     bulkActions={[
                       { label: 'Approve Refunds', action: 'approve_refunds', icon: '✅' },
-                      { label: 'Reject Refunds', action: 'reject_refunds', icon: '❌', variant: 'destructive' }
+                      { label: 'Reject Refunds', action: 'reject_refunds', icon: '❌', variant: 'destructive' },
                     ]}
                     onBulkAction={handleWorkQueueBulkAction}
                   />
                 </div>
               </div>
+            </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-                {/* Event Stream */}
-                <div className="lg:col-span-2">
-                  <EventStream
-                    events={eventStream}
-                    onEventClick={handleEventClick}
-                    onAssign={(eventId, assignee) => {
-                      addToast(`Assigned event to ${assignee}`, 'success')
-                    }}
-                    onPin={(eventId) => {
-                      addToast('Event pinned', 'success')
-                    }}
-                    filters={[
-                      { field: 'event_type', label: 'Event Type', options: [
+            <aside className="space-y-6">
+              <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-card">
+                <h3 className="text-sm font-semibold text-text-base">Urgent tasks</h3>
+                <div className="mt-4 space-y-3">
+                  {workQueueHighlights.map((item) => (
+                    <div
+                      key={item.label}
+                      className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-3 py-3"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg">{item.icon}</span>
+                        <div>
+                          <p className="text-sm font-medium text-text-base">{item.label}</p>
+                          <p className="text-xs text-text-mute">{item.helper}</p>
+                        </div>
+                      </div>
+                      <span className="text-lg font-semibold text-text-base">{item.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-card">
+                <h3 className="text-sm font-semibold text-text-base">System health</h3>
+                <ul className="mt-4 space-y-3 text-sm text-text-soft">
+                  {healthHighlights.map((item) => (
+                    <li
+                      key={item.label}
+                      className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-3 py-2"
+                    >
+                      <div>
+                        <p className="font-medium text-text-base">{item.label}</p>
+                        <p className="text-xs text-text-mute">{item.status}</p>
+                      </div>
+                      <span className="text-sm font-semibold text-text-base">{item.value}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-card">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-text-base">Quick links</h3>
+                  <span className="text-xs text-text-mute">Jump straight into workflows</span>
+                </div>
+                <div className="mt-4 grid gap-3">
+                  {quickLinks.map((link) => (
+                    <Link
+                      key={link.title}
+                      href={link.href}
+                      className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-sm font-semibold text-text-base transition hover:border-brand-b/50 hover:text-brand-b"
+                    >
+                      <span className="flex items-center gap-2">
+                        <span>{link.icon}</span>
+                        {link.title}
+                      </span>
+                      <span className="text-xs text-text-mute">{link.description}</span>
+                    </Link>
+                  ))}
+                  <Link
+                    href="/admin/moderation"
+                    className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-sm font-semibold text-text-base transition hover:border-rose-500/50 hover:text-rose-300"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span>🛡️</span>
+                      Moderation dashboard
+                    </span>
+                    <span className="text-xs text-text-mute">Conversations & flags</span>
+                  </Link>
+                </div>
+              </div>
+            </aside>
+          </section>
+
+          <section className="grid gap-6 lg:grid-cols-[3fr_2fr]">
+            <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-card">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-text-base">Live event stream</h3>
+                <span className="text-xs text-text-mute">{eventStream.length} events</span>
+              </div>
+              <div className="mt-4 rounded-2xl border border-white/10 bg-white/5">
+                <EventStream
+                  events={eventStream}
+                  onEventClick={handleEventClick}
+                  onAssign={(eventId, assignee) => {
+                    addToast(`Assigned event to ${assignee}`, 'success');
+                    fetchEventStream();
+                  }}
+                  onPin={() => fetchEventStream()}
+                  filters={[
+                    {
+                      field: 'event_type',
+                      label: 'Event Type',
+                      options: [
                         { value: 'user_registered', label: 'User Registration' },
                         { value: 'order_placed', label: 'Order Placed' },
                         { value: 'project_created', label: 'Project Created' },
                         { value: 'service_created', label: 'Service Created' },
-                        { value: 'kyc_submitted', label: 'KYC Submitted' },
-                        { value: 'payment_processed', label: 'Payment Processed' },
                         { value: 'dispute_opened', label: 'Dispute Opened' },
-                        { value: 'review_posted', label: 'Review Posted' },
-                        { value: 'message_flagged', label: 'Message Flagged' }
-                      ]},
-                      { field: 'priority', label: 'Priority', options: [
-                        { value: 'high', label: 'High' },
-                        { value: 'medium', label: 'Medium' },
-                        { value: 'low', label: 'Low' }
-                      ]},
-                      { field: 'status', label: 'Status', options: [
-                        { value: 'active', label: 'Active' },
-                        { value: 'archived', label: 'Archived' },
-                        { value: 'deleted', label: 'Deleted' }
-                      ]}
-                    ]}
-                    onFilterChange={(filters) => {
-                      console.log('Event filters changed:', filters)
-                    }}
-                  />
-                </div>
-
-                {/* Kanban Pipeline */}
-                <KanbanPipeline
-                  columns={kanbanColumns}
-                  onCardMove={handleKanbanCardMove}
-                  onCardClick={(card) => handleEntitySelect('project', card.id)}
-                  onAddCard={(status) => {
-                    addToast(`Adding new card to ${status}`, 'info')
-                    // Handle add card logic
-                  }}
+                      ],
+                    },
+                  ]}
                 />
-                        </div>
-
-              {/* Quick Actions */}
-              <div className="relative bg-bg-surface rounded-2xl shadow-card border border-white/5 p-6">
-                <div className="absolute inset-0 rounded-2xl bg-metal-sheen pointer-events-none"></div>
-                <div className="absolute -top-px left-6 right-6 h-px bg-specular-line opacity-30"></div>
-                <div className="relative">
-                  <h2 className="text-2xl font-bold text-text-base mb-6">⚡ Quick Actions</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                  <Link href="/admin/quotes" className="group p-4 border-2 border-white/10 rounded-xl hover:border-accent-blue/50 hover:bg-white/5 transition-all text-center">
-                    <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">💬</div>
-                    <div className="font-semibold text-text-base">Quote Requests</div>
-                    <div className="text-sm text-text-mute">{quoteRequests} pending</div>
-                  </Link>
-                  <Link href="/admin/products-enhanced" className="group p-4 border-2 border-white/10 rounded-xl hover:border-accent-violet/50 hover:bg-white/5 transition-all text-center">
-                    <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">📦</div>
-                    <div className="font-semibold text-text-base">Manage Products</div>
-                    <div className="text-sm text-text-mute">Add & edit items with image upload</div>
-                  </Link>
-                  <Link href="/admin/setup" className="group p-4 border-2 border-white/10 rounded-xl hover:border-yellow-400/50 hover:bg-yellow-500/10 transition-all text-center">
-                    <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">⚙️</div>
-                    <div className="font-semibold text-text-base">Database Setup</div>
-                    <div className="text-sm text-text-mute">Create tables & sample data</div>
-                  </Link>
-                  <Link href="/admin/orders" className="group p-4 border-2 border-white/10 rounded-xl hover:border-accent-cyan/50 hover:bg-white/5 transition-all text-center">
-                    <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">🛒</div>
-                    <div className="font-semibold text-text-base">Order Management</div>
-                    <div className="text-sm text-text-mute">{metrics.activeOrders} active</div>
-                  </Link>
-                  <button className="group p-4 border-2 border-white/10 rounded-xl hover:border-red-400/50 hover:bg-red-500/10 transition-all text-center">
-                    <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">🛡️</div>
-                    <div className="font-semibold text-text-base">Moderation</div>
-                    <div className="text-sm text-text-mute">{metrics.chatsUnderReview} under review</div>
-                          </button>
-                  <Link href="/admin/team" className="group p-4 border-2 border-white/10 rounded-xl hover:border-accent-blue/50 hover:bg-white/5 transition-all text-center">
-                    <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">👥</div>
-                    <div className="font-semibold text-text-base">Team Management</div>
-                    <div className="text-sm text-text-mute">Manage team members</div>
-                  </Link>
-                </div>
-                </div>
-              </div>
-                            </>
-                          )}
-
-          {activeTab === 'finance' && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <div className="bg-white rounded-2xl shadow-lg p-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">💰 Escrow & Payouts</h2>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
-                    <span className="font-medium">Total Escrow Balance</span>
-                    <span className="text-2xl font-bold text-green-600">{formatCurrency(125000)}</span>
-                  </div>
-                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
-                    <span className="font-medium">Pending Release Approvals</span>
-                    <span className="text-xl font-semibold text-orange-600">{formatCurrency(metrics.pendingPayouts)}</span>
-                  </div>
-                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
-                    <span className="font-medium">Upcoming Payout Runs</span>
-                    <span className="text-xl font-semibold text-blue-600">3 scheduled</span>
-                        </div>
-                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
-                    <span className="font-medium">Refunds This Week</span>
-                    <span className="text-xl font-semibold text-red-600">{formatCurrency(2400)}</span>
-            </div>
-          </div>
-        </div>
-
-              <div className="bg-white rounded-2xl shadow-lg p-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">📈 Revenue Analytics</h2>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
-                    <span className="font-medium">Platform Commission</span>
-                    <span className="text-xl font-semibold text-purple-600">15.2%</span>
-                  </div>
-                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
-                    <span className="font-medium">Net Payouts to Freelancers</span>
-                    <span className="text-xl font-semibold text-green-600">{formatCurrency(40100)}</span>
-                  </div>
-                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
-                    <span className="font-medium">Refund Ratio</span>
-                    <span className="text-xl font-semibold text-orange-600">2.1%</span>
-                  </div>
-                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
-                    <span className="font-medium">Revenue Trend</span>
-                    <span className="text-xl font-semibold text-green-600">↗ +18% MoM</span>
-                  </div>
-                </div>
               </div>
             </div>
-          )}
 
-          {activeTab === 'moderation' && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <div className="bg-white rounded-2xl shadow-lg p-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">🛡️ Moderation Overview</h2>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
-                    <span className="font-medium">Messages Blocked</span>
-                    <span className="text-xl font-semibold text-red-600">{metrics.moderation.messagesBlocked} this week</span>
+            <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-card">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-text-base">Activity feed</h3>
+                {activityLoading && (
+                  <div className="flex items-center gap-2 text-xs text-text-mute">
+                    <span className="h-2 w-2 animate-ping rounded-full bg-brand-b"></span>
+                    Loading…
                   </div>
-                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
-                    <span className="font-medium">Muted Users</span>
-                    <span className="text-xl font-semibold text-orange-600">{metrics.moderation.mutedUsers}</span>
-                  </div>
-                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
-                    <span className="font-medium">Top Violation Type</span>
-                    <span className="text-xl font-semibold text-purple-600">{metrics.moderation.topViolationType}</span>
-                  </div>
-                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
-                    <span className="font-medium">Chats Under Review</span>
-                    <span className="text-xl font-semibold text-blue-600">{metrics.moderation.chatsUnderReview}</span>
-                  </div>
-                </div>
-                <div className="mt-6">
-                  <button className="w-full px-6 py-3 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 transition-colors">
-                    View Flagged Chats
+                )}
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                {activityFilters.map((filter) => (
+                  <button
+                    key={filter.id}
+                    onClick={() => setActivityTab(filter.id as typeof activityTab)}
+                    className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+                      activityTab === filter.id
+                        ? 'bg-brand-b/20 text-brand-b'
+                        : 'bg-white/5 text-text-mute hover:bg-white/10'
+                    }`}
+                  >
+                    {filter.label}
                   </button>
-                </div>
+                ))}
               </div>
 
-              <div className="bg-white rounded-2xl shadow-lg p-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">📊 Violation Breakdown</h2>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
-                    <span className="font-medium">Contact Sharing</span>
-                    <span className="text-xl font-semibold text-red-600">61%</span>
+              <div className="mt-4 max-h-[420px] space-y-4 overflow-y-auto pr-1">
+                {activityLoading ? (
+                  <div className="flex items-center justify-center py-20 text-sm text-text-mute">
+                    Pulling latest activity…
                   </div>
-                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
-                    <span className="font-medium">Pricing Language</span>
-                    <span className="text-xl font-semibold text-orange-600">23%</span>
+                ) : activityFeed.length === 0 ? (
+                  <div className="flex items-center justify-center py-20 text-sm text-text-mute">
+                    No activity for this filter yet.
                   </div>
-                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
-                    <span className="font-medium">External URLs</span>
-                    <span className="text-xl font-semibold text-yellow-600">12%</span>
-                  </div>
-                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
-                    <span className="font-medium">PII Sharing</span>
-                    <span className="text-xl font-semibold text-purple-600">4%</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'users' && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <div className="bg-white rounded-2xl shadow-lg p-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">👥 User Analytics</h2>
-                  <div className="space-y-4">
-                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
-                    <span className="font-medium">Active Freelancers</span>
-                    <span className="text-xl font-semibold text-blue-600">{metrics.activeFreelancers} (▲15% MoM)</span>
-                  </div>
-                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
-                    <span className="font-medium">Active Clients</span>
-                    <span className="text-xl font-semibold text-green-600">{metrics.activeClients} (▲10% MoM)</span>
-                    </div>
-                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
-                    <span className="font-medium">Verified Suppliers</span>
-                    <span className="text-xl font-semibold text-purple-600">{metrics.verifiedSuppliers}</span>
-                    </div>
-                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
-                    <span className="font-medium">Applications Pending</span>
-                    <span className="text-xl font-semibold text-orange-600">{metrics.applicationsPending}</span>
-                    </div>
-                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
-                    <span className="font-medium">Suspended Accounts</span>
-                    <span className="text-xl font-semibold text-red-600">{metrics.suspendedAccounts}</span>
-                    </div>
-                    </div>
-                  </div>
-
-              <div className="bg-white rounded-2xl shadow-lg p-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">📦 Dropshipping Summary</h2>
-                  <div className="space-y-4">
-                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
-                    <span className="font-medium">Orders in Fulfillment</span>
-                    <span className="text-xl font-semibold text-blue-600">32</span>
-                  </div>
-                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
-                    <span className="font-medium">Avg Fulfillment Time</span>
-                    <span className="text-xl font-semibold text-green-600">19 hrs</span>
-                    </div>
-                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
-                    <span className="font-medium">Supplier Fill Rate</span>
-                    <span className="text-xl font-semibold text-purple-600">98%</span>
-                    </div>
-                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
-                    <span className="font-medium">Avg Margin per Order</span>
-                    <span className="text-xl font-semibold text-green-600">18.4%</span>
+                ) : (
+                  activityFeed.map((item) => (
+                    <div
+                      key={item.id}
+                      className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-text-soft transition hover:border-brand-b/40"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <span className="text-lg">{getActivityIcon(item.type)}</span>
+                          <div>
+                            <p className="font-medium text-text-base">{item.message}</p>
+                            {item.user && (
+                              <p className="text-xs text-text-mute">
+                                {item.user} {item.role && `· ${item.role}`}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <span className="text-xs text-text-mute">{item.timestamp}</span>
                       </div>
                     </div>
-                  </div>
-                </div>
-          )}
-
-          {activeTab === 'operations' && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <div className="bg-white rounded-2xl shadow-lg p-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">⚙️ Platform Operations</h2>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
-                    <span className="font-medium">Freelancer Approvals</span>
-                    <span className="text-xl font-semibold text-orange-600">{metrics.applicationsPending} pending</span>
-                  </div>
-                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
-                    <span className="font-medium">Product Updates</span>
-                    <span className="text-xl font-semibold text-blue-600">3 pending</span>
-                  </div>
-                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
-                    <span className="font-medium">Unreplied Quotes</span>
-                    <span className="text-xl font-semibold text-yellow-600">6 overdue</span>
-                  </div>
-                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
-                    <span className="font-medium">System Flags</span>
-                    <span className="text-xl font-semibold text-red-600">2 active</span>
-                  </div>
-                </div>
-                <div className="mt-6 space-y-2">
-                  <button className="w-full px-6 py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 transition-colors">
-                    Approve All Pending
-                      </button>
-                  <button className="w-full px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors">
-                    Review System Flags
-                  </button>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-2xl shadow-lg p-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">🔧 System Health</h2>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
-                    <span className="font-medium">Database Latency</span>
-                    <span className="text-xl font-semibold text-green-600">✅ {metrics.systemHealth.databaseLatency}ms</span>
-                  </div>
-                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
-                    <span className="font-medium">Edge Function Errors</span>
-                    <span className={`text-xl font-semibold ${metrics.systemHealth.edgeFunctionErrors > 0 ? 'text-yellow-600' : 'text-green-600'}`}>
-                      {metrics.systemHealth.edgeFunctionErrors > 0 ? '⚠️' : '✅'} {metrics.systemHealth.edgeFunctionErrors} today
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
-                    <span className="font-medium">Email API Uptime</span>
-                    <span className="text-xl font-semibold text-green-600">✅ {metrics.systemHealth.emailApiUptime}%</span>
-                  </div>
-                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
-                    <span className="font-medium">Payment Webhook</span>
-                    <span className="text-xl font-semibold text-green-600">✅ {metrics.systemHealth.paymentWebhook}</span>
-                  </div>
-                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
-                    <span className="font-medium">File Scan Service</span>
-                    <span className="text-xl font-semibold text-green-600">✅ {metrics.systemHealth.fileScanService}</span>
-                </div>
+                  ))
+                )}
               </div>
             </div>
-          </div>
-        )}
+          </section>
 
-          {/* Notifications & Tasks Panel */}
-          <div className="mt-8 bg-white rounded-2xl shadow-lg p-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">📋 Notifications & Tasks</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="p-4 border-2 border-orange-200 rounded-xl bg-orange-50">
-                <div className="text-2xl mb-2">👥</div>
-                <div className="font-semibold text-gray-900">Approve Pending Freelancers</div>
-                <div className="text-sm text-gray-600">{metrics.applicationsPending} waiting</div>
-              </div>
-              <div className="p-4 border-2 border-red-200 rounded-xl bg-red-50">
-                <div className="text-2xl mb-2">🛡️</div>
-                <div className="font-semibold text-gray-900">Review Flagged Chats</div>
-                <div className="text-sm text-gray-600">{metrics.chatsUnderReview} under review</div>
-              </div>
-              <div className="p-4 border-2 border-green-200 rounded-xl bg-green-50">
-                <div className="text-2xl mb-2">💰</div>
-                <div className="font-semibold text-gray-900">Release Escrow</div>
-                <div className="text-sm text-gray-600">3 completed projects</div>
-              </div>
-              <div className="p-4 border-2 border-purple-200 rounded-xl bg-purple-50">
-                <div className="text-2xl mb-2">⚖️</div>
-                <div className="font-semibold text-gray-900">Respond to Disputes</div>
-                <div className="text-sm text-gray-600">{metrics.openDisputes} open cases</div>
-              </div>
+          <section className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-card">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-text-base">Delivery pipeline</h3>
+              <span className="text-xs text-text-mute">
+                Drag-and-drop between stages to keep the team aligned.
+              </span>
             </div>
-          </div>
-        </div>
+            <div className="mt-4 overflow-x-auto">
+              <KanbanPipeline
+                columns={kanbanColumns}
+                onCardMove={handleKanbanCardMove}
+                onCardClick={(card) => handleEntitySelect('project', card.id)}
+                onAddCard={(status) => addToast(`New card placeholder for ${status}`, 'info')}
+              />
+            </div>
+          </section>
+
+          <section className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-card">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-semibold text-text-base">Freelancer snapshot</h3>
+                <p className="text-xs text-text-mute">
+                  {pendingCount} pending · {approvedCount} approved
+                </p>
+              </div>
+              <Link
+                href="/admin/freelancers"
+                className="rounded-xl border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold text-text-base transition hover:border-brand-b/40 hover:text-brand-b"
+              >
+                Review applications
+              </Link>
+            </div>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {topFreelancers.length === 0 ? (
+                <p className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-text-mute">
+                  No freelancer applications yet. Invite talent to kickstart the marketplace.
+                </p>
+              ) : (
+                topFreelancers.map((freelancer) => (
+                  <div
+                    key={freelancer.id}
+                    className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-text-soft transition hover:border-brand-b/40"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-semibold text-text-base">
+                          {freelancer.display_name || 'Freelancer'}
+                        </p>
+                        <p className="text-xs text-text-mute capitalize">{freelancer.status}</p>
+                      </div>
+                      <span className="rounded-full bg-white/5 px-3 py-1 text-xs font-semibold text-text-base">
+                        ⭐ {Number(freelancer.rating ?? 0).toFixed(1)}
+                      </span>
+                    </div>
+                    <p className="mt-4 text-xs text-text-mute">
+                      Joined {new Date(freelancer.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
+        </main>
       </div>
     </>
-  )
+  );
 }
 
 export const getServerSideProps: GetServerSideProps = async () => {
   try {
-    let freelancers = []
-    let quoteRequests = 0
+    let freelancers: any[] = [];
+    let quoteRequests = 0;
 
     try {
-      const { data: freelancersData, error } = await supabase
-      .from('freelancers')
-      .select('*')
-      .order('created_at', { ascending: false })
-
-      if (!error && freelancersData) {
-        freelancers = freelancersData
+      freelancers = await query(
+        `
+          SELECT id, display_name, status, rating, created_at, updated_at
+          FROM freelancers
+          ORDER BY created_at DESC
+          LIMIT 50
+        `,
+      );
+    } catch (error: any) {
+      if (error?.code !== 'ER_NO_SUCH_TABLE') {
+        console.error('Error fetching freelancers:', error);
       }
-
-      // Fetch quote requests count from Supabase
-      try {
-    const { count: quoteCount } = await supabase
-      .from('quote_requests')
-      .select('*', { count: 'exact', head: true })
-          .eq('status', 'pending');
-
-        quoteRequests = quoteCount || 0;
-      } catch (supabaseError) {
-        console.log('Error fetching quote requests count:', supabaseError);
-      }
-    } catch (supabaseError) {
-      console.log('Supabase not configured, using fallback data')
     }
 
-    const pendingCount = freelancers?.filter(f => f.status === 'pending').length || 0
-    const approvedCount = freelancers?.filter(f => f.status === 'approved').length || 0
+    const serializedFreelancers = Array.isArray(freelancers)
+      ? freelancers.map((freelancer) => ({
+          ...freelancer,
+          created_at: freelancer?.created_at
+            ? new Date(freelancer.created_at).toISOString()
+            : null,
+          updated_at: freelancer?.updated_at
+            ? new Date(freelancer.updated_at).toISOString()
+            : null,
+        }))
+      : [];
+
+    let pendingCount = serializedFreelancers.filter((f) => f.status === 'pending').length;
+    let approvedCount = serializedFreelancers.filter((f) => f.status === 'approved').length;
+
+    try {
+      const [row] = await query<{ count: number }>(
+        `SELECT COUNT(*) as count FROM quote_requests WHERE status = 'pending'`,
+      );
+      quoteRequests = row?.count ?? 0;
+    } catch (error: any) {
+      if (error?.code !== 'ER_NO_SUCH_TABLE') {
+        console.error('Error counting quote requests:', error);
+      }
+    }
 
     return {
       props: {
-        freelancers: freelancers || [],
+        freelancers: serializedFreelancers,
         pendingCount,
         approvedCount,
         quoteRequests,
       },
-    }
+    };
   } catch (error) {
-    console.error('Error in admin page:', error)
+    console.error('Error in admin page:', error);
     return {
       props: {
         freelancers: [],
@@ -1109,6 +1183,7 @@ export const getServerSideProps: GetServerSideProps = async () => {
         approvedCount: 0,
         quoteRequests: 0,
       },
-    }
+    };
   }
-}
+};
+

@@ -1,6 +1,27 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { supabase } from '../../../src/lib/supabase';
 import bcrypt from 'bcryptjs';
+import type { ResultSetHeader } from 'mysql2';
+import { queryOne, transaction } from '../../../src/lib/mysql';
+
+type DbUser = {
+  id: number;
+  email: string;
+  display_name: string | null;
+  role: 'admin' | 'freelancer' | 'client' | 'team_member';
+  is_active: 'TRUE' | 'FALSE';
+  email_verified: 'TRUE' | 'FALSE';
+  created_at: string;
+};
+
+const VALID_ROLES = ['ADMIN', 'TEAM_MEMBER', 'FREELANCER', 'CLIENT'] as const;
+type ValidRole = (typeof VALID_ROLES)[number];
+
+const ROLE_TO_DB_ROLE: Record<ValidRole, DbUser['role']> = {
+  ADMIN: 'admin',
+  TEAM_MEMBER: 'team_member',
+  FREELANCER: 'freelancer',
+  CLIENT: 'client'
+};
 
 export default async function handler(
   req: NextApiRequest,
@@ -11,115 +32,132 @@ export default async function handler(
   }
 
   try {
-    const { name, email, password, userType } = req.body;
+    const { name, email, password, userType } = req.body ?? {};
 
-    // Validate required fields
     if (!name || !email || !password || !userType) {
-      return res.status(400).json({ 
-        error: 'Missing required fields' 
+      return res.status(400).json({
+        error: 'Missing required fields'
       });
     }
 
-    // Validate email format
+    const normalizedUserType = String(userType).toUpperCase() as ValidRole;
+
+    if (!VALID_ROLES.includes(normalizedUserType)) {
+      return res.status(400).json({
+        error: 'Invalid user type'
+      });
+    }
+
+    if (normalizedUserType !== 'FREELANCER' && normalizedUserType !== 'CLIENT') {
+      return res.status(400).json({
+        error: 'Only FREELANCER and CLIENT roles are supported for signup'
+      });
+    }
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      return res.status(400).json({ 
-        error: 'Invalid email format' 
+      return res.status(400).json({
+        error: 'Invalid email format'
       });
     }
 
-    // Validate password length
     if (password.length < 6) {
-      return res.status(400).json({ 
-        error: 'Password must be at least 6 characters' 
+      return res.status(400).json({
+        error: 'Password must be at least 6 characters'
       });
     }
 
-    // Validate user type
-    const validRoles = ['ADMIN', 'TEAM_MEMBER', 'FREELANCER', 'CLIENT'];
-    if (!validRoles.includes(userType)) {
-      return res.status(400).json({ 
-        error: 'Invalid user type' 
+    const normalizedEmail = String(email).toLowerCase();
+
+    const existingUser = await queryOne<{ id: number }>(
+      `
+        SELECT id
+        FROM users
+        WHERE email = ?
+        LIMIT 1
+      `,
+      [normalizedEmail]
+    );
+
+    if (existingUser) {
+      return res.status(400).json({
+        error: 'User with this email already exists'
       });
     }
 
-    // Check if user already exists in freelancers table
-    const { data: existingFreelancer } = await supabase
-      .from('freelancers')
-      .select('id')
-      .eq('email', email.toLowerCase())
-      .single();
-
-    // Check if user already exists in clients table
-    const { data: existingClient } = await supabase
-      .from('clients')
-      .select('id')
-      .eq('email', email.toLowerCase())
-      .single();
-
-    if (existingFreelancer || existingClient) {
-      return res.status(400).json({ 
-        error: 'User with this email already exists' 
-      });
-    }
-
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 12);
+    const dbRole = ROLE_TO_DB_ROLE[normalizedUserType];
 
-    // Create user based on userType
-    let newUser;
-    if (userType === 'FREELANCER') {
-      const { data, error } = await supabase
-        .from('freelancers')
-        .insert({
-          email: email.toLowerCase(),
-          name,
-          password: hashedPassword,
-          status: 'pending'
-        })
-        .select()
-        .single();
+    const userId = await transaction(async (connection) => {
+      const [userResult] = await connection.execute<ResultSetHeader>(
+        `
+          INSERT INTO users (email, password_hash, role, display_name, is_active, email_verified)
+          VALUES (?, ?, ?, ?, 'TRUE', 'FALSE')
+        `,
+        [normalizedEmail, hashedPassword, dbRole, name]
+      );
 
-      if (error) {
-        console.error('Error creating freelancer:', error);
-        return res.status(500).json({ error: 'Failed to create account' });
+      const { insertId } = userResult;
+
+      if (!insertId) {
+        throw new Error('Failed to create user account');
       }
-      newUser = data;
-    } else if (userType === 'CLIENT') {
-      const { data, error } = await supabase
-        .from('clients')
-        .insert({
-          email: email.toLowerCase(),
-          name,
-          password: hashedPassword
-        })
-        .select()
-        .single();
 
-      if (error) {
-        console.error('Error creating client:', error);
-        return res.status(500).json({ error: 'Failed to create account' });
+      if (normalizedUserType === 'FREELANCER') {
+        await connection.execute(
+          `
+            INSERT INTO freelancers (user_id, display_name)
+            VALUES (?, ?)
+          `,
+          [insertId, name]
+        );
+      } else if (normalizedUserType === 'CLIENT') {
+        await connection.execute(
+          `
+            INSERT INTO clients (
+              owner_id,
+              user_id,
+              client_type,
+              company_name,
+              display_name,
+              contact_name,
+              contact_email
+            )
+            VALUES (?, ?, 'individual', ?, ?, ?, ?)
+          `,
+          [insertId, insertId, name, name, name, normalizedEmail]
+        );
       }
-      newUser = data;
-    } else {
-      return res.status(400).json({ 
-        error: 'Only FREELANCER and CLIENT roles are supported for signup' 
-      });
+
+      return insertId;
+    });
+
+    const newUser = await queryOne<DbUser>(
+      `
+        SELECT id, email, display_name, role, is_active, email_verified, created_at
+        FROM users
+        WHERE id = ?
+        LIMIT 1
+      `,
+      [userId]
+    );
+
+    if (!newUser) {
+      throw new Error('User was created but could not be retrieved');
     }
 
-    return res.status(201).json({ 
+    return res.status(201).json({
       success: true,
       message: 'Account created successfully!',
       user: {
         id: newUser.id,
-        name: newUser.name,
+        name: newUser.display_name ?? newUser.email.split('@')[0],
         email: newUser.email,
-        role: userType
+        role: normalizedUserType
       }
     });
-
   } catch (error) {
-    console.error('Unexpected error:', error);
+    console.error('Unexpected error during signup:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

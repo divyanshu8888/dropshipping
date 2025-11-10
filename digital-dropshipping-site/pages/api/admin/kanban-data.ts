@@ -1,5 +1,15 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { supabase } from '../../../src/lib/supabase';
+import { safeQuery } from '../../../src/lib/dbHelpers';
+
+type Project = {
+  id: number | string;
+  title: string;
+  status: string;
+  budget: number | null;
+  created_at: string | Date;
+  client_id?: number | string | null;
+  freelancer_id?: number | string | null;
+};
 
 export default async function handler(
   req: NextApiRequest,
@@ -10,48 +20,48 @@ export default async function handler(
   }
 
   try {
-    // Get user from session/token to verify admin access
-    // For now, we'll skip auth check but in production you'd verify the user is admin
-    
-    // Fetch projects and organize them into kanban columns
-    const { data: projects, error } = await supabase
-      .from('projects')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const projects = await safeQuery<Project>(
+      `SELECT id, title, status, budget, created_at, client_id, freelancer_id
+         FROM projects
+         ORDER BY created_at DESC
+         LIMIT 200`,
+      [],
+      'kanban-projects'
+    );
 
-    if (error) throw error;
+    const organize = (status: string) =>
+      projects.filter((project) => (project.status || '').toLowerCase() === status);
 
-    // Organize projects into kanban columns
     const columns = [
       {
         id: 'open',
         title: 'New Requests',
         color: 'bg-green-500',
-        cards: projects?.filter(p => p.status === 'open') || []
+        cards: organize('open')
       },
       {
         id: 'review',
         title: 'Quotes Under Review',
         color: 'bg-yellow-500',
-        cards: projects?.filter(p => p.status === 'open') || [] // Using open as review for now
+        cards: organize('open')
       },
       {
         id: 'assigned',
         title: 'SOW Signed',
         color: 'bg-blue-500',
-        cards: projects?.filter(p => p.status === 'assigned') || []
+        cards: organize('assigned')
       },
       {
         id: 'in_progress',
         title: 'In Delivery',
         color: 'bg-purple-500',
-        cards: projects?.filter(p => p.status === 'assigned') || [] // Using assigned as in progress
+        cards: organize('assigned')
       },
       {
         id: 'completed',
         title: 'Completed',
         color: 'bg-gray-500',
-        cards: projects?.filter(p => p.status === 'completed') || []
+        cards: organize('completed')
       }
     ];
 
@@ -60,7 +70,6 @@ export default async function handler(
       columns,
       lastUpdated: new Date().toISOString()
     });
-
   } catch (error) {
     console.error('Error fetching kanban data:', error);
     return res.status(500).json({
