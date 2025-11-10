@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { safeCount, safeQuery, safeSum } from '../../../src/lib/dbHelpers';
+import { safeCount, safeQuery } from '../../../src/lib/dbHelpers';
 
 type CountResult = { count: number };
 type OrderAmountRow = { total_amount: number | null };
@@ -32,37 +32,23 @@ export default async function handler(
       end: new Date(now - 7 * DAYS)
     };
 
-    const [
-      totalUsers,
-      totalProjects,
-      activeUsers,
-      pendingFreelancers,
-      approvedFreelancers,
-      totalOrders,
-      pendingOrders,
-      completedOrders,
-      totalProducts,
-      recentOrders,
-      recentUsers,
-      quoteRequests
-    ] = await Promise.all([
-      safeCount('users'),
-      safeCount('projects'),
-      safeCount('users', "is_active = 'TRUE' OR is_active = 1"),
-      safeCount('freelancers', "status = 'pending'"),
-      safeCount('freelancers', "status = 'approved'"),
-      safeCount('orders'),
-      safeCount('orders', "status IN ('pending','processing')"),
-      safeCount('orders', "status = 'completed'"),
-      safeCount('products'),
-      safeQuery<OrderAmountRow>(
-        `SELECT total_amount FROM orders WHERE created_at >= ?`,
-        [thirtyDaysAgo],
-        'orders-last-30d'
-      ),
-      safeCount('users', 'created_at >= ?', [thirtyDaysAgo], 'users-last-30d'),
-      safeCount('quote_requests')
-    ]);
+    const totalUsers = await safeCount('users');
+    const totalProjects = await safeCount('projects');
+    const activeUsers = await safeCount('users', "is_active = 'TRUE' OR is_active = 1");
+    const pendingFreelancers = await safeCount('freelancers', "status = 'pending'");
+    const approvedFreelancers = await safeCount('freelancers', "status = 'approved'");
+    const totalOrders = await safeCount('orders');
+    const pendingOrders = await safeCount('orders', "status IN ('pending','processing')");
+    const completedOrders = await safeCount('orders', "status = 'completed'");
+    const totalProducts = await safeCount('products');
+
+    const recentOrders = await safeQuery<OrderAmountRow>(
+      `SELECT total_amount FROM orders WHERE created_at >= ?`,
+      [thirtyDaysAgo],
+      'orders-last-30d'
+    );
+    const recentUsers = await safeCount('users', 'created_at >= ?', [thirtyDaysAgo], 'users-last-30d');
+    const quoteRequests = await safeCount('quote_requests');
 
     const todayOrders = await safeQuery<OrderAmountRow>(
       `SELECT total_amount FROM orders WHERE created_at >= ?`,
@@ -110,28 +96,24 @@ export default async function handler(
     const activeFreelancers = approvedFreelancers;
     const activeClients = await safeCount('clients');
 
-    const [newRequests, quotesUnderReview, sowSigned, inDelivery, completed] = await Promise.all([
-      safeCount('projects', "status = 'open'"),
-      safeCount('projects', "status = 'open'"), // placeholder
-      safeCount('projects', "status = 'assigned'"),
-      safeCount('projects', "status = 'assigned'"), // placeholder for delivery
-      safeCount('projects', "status = 'completed'")
-    ]);
+    const newRequests = await safeCount('projects', "status = 'open'");
+    const quotesUnderReview = await safeCount('projects', "status = 'open'");
+    const sowSigned = await safeCount('projects', "status = 'assigned'");
+    const inDelivery = await safeCount('projects', "status = 'assigned'");
+    const completed = await safeCount('projects', "status = 'completed'");
 
-    const [lastWeekNewRequests, lastWeekCompleted] = await Promise.all([
-      safeCount(
-        'projects',
-        "status = 'open' AND created_at >= ? AND created_at < ?",
-        [sevenToFourteen.start, sevenToFourteen.end],
-        'projects-lastweek-open'
-      ),
-      safeCount(
-        'projects',
-        "status = 'completed' AND created_at >= ? AND created_at < ?",
-        [sevenToFourteen.start, sevenToFourteen.end],
-        'projects-lastweek-completed'
-      )
-    ]);
+    const lastWeekNewRequests = await safeCount(
+      'projects',
+      "status = 'open' AND created_at >= ? AND created_at < ?",
+      [sevenToFourteen.start, sevenToFourteen.end],
+      'projects-lastweek-open'
+    );
+    const lastWeekCompleted = await safeCount(
+      'projects',
+      "status = 'completed' AND created_at >= ? AND created_at < ?",
+      [sevenToFourteen.start, sevenToFourteen.end],
+      'projects-lastweek-completed'
+    );
 
     const newRequestsChange =
       lastWeekNewRequests > 0

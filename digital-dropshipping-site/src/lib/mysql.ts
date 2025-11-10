@@ -63,6 +63,8 @@ function getMySQLConfig(): mysql.PoolOptions {
     );
   }
 
+  const connectionLimit = parseInt(process.env.MYSQL_POOL_LIMIT || '5', 10);
+
   return {
     host,
     port,
@@ -70,7 +72,9 @@ function getMySQLConfig(): mysql.PoolOptions {
     password, // Never log or expose this
     database,
     waitForConnections: true,
-    connectionLimit: 10,
+    connectionLimit: Number.isFinite(connectionLimit) && connectionLimit > 0 ? connectionLimit : 5,
+    maxIdle: 5,
+    idleTimeout: 60000,
     queueLimit: 0,
     enableKeepAlive: true,
     keepAliveInitialDelay: 0,

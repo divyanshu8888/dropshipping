@@ -159,6 +159,70 @@ const formatCurrency = (amount: number) =>
 
 const formatNumber = (value: number) => new Intl.NumberFormat('en-US').format(value);
 
+const EMPTY_METRICS: DashboardMetrics = {
+  gmvToday: 0,
+  gmvMTD: 0,
+  gmvTrailing28d: 0,
+  netRevenueMTD: 0,
+  netRevenueAfterRefunds: 0,
+  revenueChange: 0,
+  aov: 0,
+  conversionRate: 0,
+  totalProjects: 0,
+  revenueThisMonth: 0,
+  pendingPayouts: 0,
+  activeOrders: 0,
+  activeUsers: 0,
+  flaggedChats: 0,
+  openDisputes: 0,
+  avgResponseTime: 0,
+  newRequests: 0,
+  newRequestsChange: 0,
+  quotesUnderReview: 0,
+  sowSigned: 0,
+  inDelivery: 0,
+  completed: 0,
+  completedChange: 0,
+  messagesBlocked: 0,
+  mutedUsers: 0,
+  topViolationType: 'n/a',
+  chatsUnderReview: 0,
+  activeFreelancers: 0,
+  activeClients: 0,
+  verifiedSuppliers: 0,
+  applicationsPending: 0,
+  suspendedAccounts: 0,
+  totalUsers: 0,
+  totalOrders: 0,
+  pendingOrders: 0,
+  completedOrders: 0,
+  totalProducts: 0,
+  pendingQuoteRequests: 0,
+  systemHealth: {
+    databaseLatency: 0,
+    edgeFunctionErrors: 0,
+    emailApiUptime: 0,
+    paymentWebhook: 'offline',
+    fileScanService: 'offline',
+  },
+  workQueue: {
+    pendingKYC: 0,
+    flaggedChats: 0,
+    refundRequests: 0,
+    chargebacks: 0,
+    stockAlerts: 0,
+    failedWebhooks: 0,
+    payoutHolds: 0,
+    totalItems: 0,
+  },
+  moderation: {
+    messagesBlocked: 0,
+    mutedUsers: 0,
+    topViolationType: 'n/a',
+    chatsUnderReview: 0,
+  },
+};
+
 export default function AdminDashboard({
   freelancers,
   pendingCount,
@@ -435,19 +499,8 @@ export default function AdminDashboard({
     fetchActivityData(activityTab);
   };
 
-  if (loading || metricsLoading || !metrics) {
-    return (
-      <div className="min-h-screen bg-superhuman text-text-base">
-        <Header />
-        <div className="flex min-h-screen items-center justify-center px-6">
-          <div className="text-center space-y-4">
-            <div className="mx-auto h-12 w-12 animate-spin rounded-full border-2 border-brand-b border-t-transparent"></div>
-            <p className="text-text-soft">Preparing your command center…</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const metricsReady = Boolean(metrics) && !metricsLoading;
+  const displayMetrics = metrics ?? EMPTY_METRICS;
 
   const heroGreeting = user ? `Welcome back, ${user.name.split(' ')[0]}` : 'Admin Command Center';
   const lastUpdatedLabel = lastUpdated
@@ -458,65 +511,65 @@ export default function AdminDashboard({
     () => [
       {
         title: 'GMV Today',
-        value: formatCurrency(metrics.gmvToday),
+        value: formatCurrency(displayMetrics.gmvToday),
         caption: 'Gross merchandise processed today',
-        delta: metrics.revenueChange,
+        delta: displayMetrics.revenueChange,
         icon: '💸',
         accent: 'from-brand-a via-brand-b to-brand-c',
       },
       {
         title: 'Net Revenue',
-        value: formatCurrency(metrics.netRevenueAfterRefunds),
+        value: formatCurrency(displayMetrics.netRevenueAfterRefunds),
         caption: 'After refunds & adjustments',
         icon: '🏦',
         accent: 'from-brand-b via-brand-c to-brand-a',
       },
       {
         title: 'Active Users',
-        value: formatNumber(metrics.activeUsers),
+        value: formatNumber(displayMetrics.activeUsers),
         caption: 'Engaged accounts in the last 24h',
         icon: '👥',
         accent: 'from-emerald-500 to-teal-500',
       },
       {
         title: 'Total Orders',
-        value: formatNumber(metrics.totalOrders),
+        value: formatNumber(displayMetrics.totalOrders),
         caption: 'Orders logged this month',
         icon: '📦',
         accent: 'from-amber-400 to-rose-400',
       },
     ],
-    [metrics],
+    [displayMetrics],
   );
 
   const pipelineHighlights = useMemo(
     () => [
       {
         label: 'New Requests',
-        value: formatNumber(metrics.newRequests),
-        delta: metrics.newRequestsChange,
+        value: formatNumber(displayMetrics.newRequests),
+        delta: displayMetrics.newRequestsChange,
         icon: '🧾',
       },
       {
         label: 'Quotes Under Review',
-        value: formatNumber(metrics.quotesUnderReview),
+        value: formatNumber(displayMetrics.quotesUnderReview),
         delta: 0,
         icon: '📝',
       },
       {
         label: 'In Delivery',
-        value: formatNumber(metrics.inDelivery),
+        value: formatNumber(displayMetrics.inDelivery),
         delta: 0,
         icon: '🚚',
       },
       {
         label: 'Completed',
-        value: formatNumber(metrics.completed),
-        delta: metrics.completedChange,
+        value: formatNumber(displayMetrics.completed),
+        delta: displayMetrics.completedChange,
         icon: '✅',
       },
     ],
-    [metrics],
+    [displayMetrics],
   );
 
   const workQueueHighlights = useMemo(
@@ -537,39 +590,39 @@ export default function AdminDashboard({
       },
       {
         label: 'Open Flags',
-        value: metrics.workQueue.totalItems,
+        value: displayMetrics.workQueue.totalItems,
         helper: 'Across moderation & payments',
         accent: 'bg-amber-500/15 text-amber-400',
         icon: '🚩',
       },
     ],
-    [metrics.workQueue.totalItems, workQueueData.pendingKYC.length, workQueueData.refundRequests.length],
+    [displayMetrics.workQueue.totalItems, workQueueData.pendingKYC.length, workQueueData.refundRequests.length],
   );
 
   const healthHighlights = useMemo(
     () => [
       {
         label: 'Database latency',
-        value: `${metrics.systemHealth.databaseLatency}ms`,
-        status: metrics.systemHealth.databaseLatency < 80 ? 'Healthy' : 'Investigate',
+        value: `${displayMetrics.systemHealth.databaseLatency}ms`,
+        status: displayMetrics.systemHealth.databaseLatency < 80 ? 'Healthy' : 'Investigate',
       },
       {
         label: 'Email uptime',
-        value: `${metrics.systemHealth.emailApiUptime}%`,
+        value: `${displayMetrics.systemHealth.emailApiUptime}%`,
         status: 'Transactional mail',
       },
       {
         label: 'Payment webhook',
-        value: metrics.systemHealth.paymentWebhook,
+        value: displayMetrics.systemHealth.paymentWebhook,
         status: 'Stripe listener',
       },
       {
         label: 'File scan service',
-        value: metrics.systemHealth.fileScanService,
+        value: displayMetrics.systemHealth.fileScanService,
         status: 'Uploads & AV',
       },
     ],
-    [metrics.systemHealth],
+    [displayMetrics.systemHealth],
   );
 
   const quickLinks = useMemo(
@@ -757,7 +810,7 @@ export default function AdminDashboard({
                 <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                   <EditableCard
                     title="GMV Today"
-                    value={formatCurrency(metrics.gmvToday)}
+                    value={formatCurrency(displayMetrics.gmvToday)}
                     icon="💰"
                     color="from-green-500 to-emerald-500"
                     editable
@@ -770,7 +823,7 @@ export default function AdminDashboard({
                   />
                   <EditableCard
                     title="GMV (MTD)"
-                    value={formatCurrency(metrics.gmvMTD)}
+                    value={formatCurrency(displayMetrics.gmvMTD)}
                     icon="📈"
                     color="from-blue-500 to-cyan-500"
                     editable
@@ -778,7 +831,7 @@ export default function AdminDashboard({
                   />
                   <EditableCard
                     title="Net Revenue"
-                    value={formatCurrency(metrics.netRevenueAfterRefunds)}
+                    value={formatCurrency(displayMetrics.netRevenueAfterRefunds)}
                     icon="🏦"
                     color="from-purple-500 to-indigo-500"
                     editable
@@ -791,7 +844,7 @@ export default function AdminDashboard({
                   />
                   <EditableCard
                     title="Active Users"
-                    value={formatNumber(metrics.activeUsers)}
+                    value={formatNumber(displayMetrics.activeUsers)}
                     icon="👥"
                     color="from-emerald-500 to-teal-500"
                     editable
@@ -959,10 +1012,10 @@ export default function AdminDashboard({
 
           <section className="grid gap-6 lg:grid-cols-[3fr_2fr]">
             <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-card">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-text-base">Live event stream</h3>
-                <span className="text-xs text-text-mute">{eventStream.length} events</span>
-              </div>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-text-base">Live event stream</h3>
+                  <span className="text-xs text-text-mute">{eventStream.length} events</span>
+                </div>
               <div className="mt-4 rounded-2xl border border-white/10 bg-white/5">
                 <EventStream
                   events={eventStream}
@@ -1070,20 +1123,20 @@ export default function AdminDashboard({
           </section>
 
           <section className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-card">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h3 className="text-lg font-semibold text-text-base">Freelancer snapshot</h3>
-                <p className="text-xs text-text-mute">
-                  {pendingCount} pending · {approvedCount} approved
-                </p>
-              </div>
-              <Link
-                href="/admin/freelancers"
-                className="rounded-xl border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold text-text-base transition hover:border-brand-b/40 hover:text-brand-b"
-              >
-                Review applications
-              </Link>
-            </div>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-lg font-semibold text-text-base">Freelancer snapshot</h3>
+                    <p className="text-xs text-text-mute">
+                      {pendingCount} pending · {approvedCount} approved
+                    </p>
+                  </div>
+                  <Link
+                    href="/admin/freelancers"
+                    className="rounded-xl border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold text-text-base transition hover:border-brand-b/40 hover:text-brand-b"
+                  >
+                    Review applications
+                  </Link>
+                </div>
             <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {topFreelancers.length === 0 ? (
                 <p className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-text-mute">

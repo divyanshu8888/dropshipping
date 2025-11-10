@@ -6,13 +6,18 @@ type MySqlError = {
 };
 
 function logError(error: MySqlError, context?: string) {
+  const prefix = context ? `[${context}] ` : '';
+
   if (error?.code === 'ER_NO_SUCH_TABLE') {
-    const prefix = context ? `[${context}] ` : '';
     console.warn(`${prefix}Table missing:`, error?.sqlMessage || error?.message || error);
     return;
   }
 
-  const prefix = context ? `[${context}] ` : '';
+  if (error?.code === 'ER_BAD_FIELD_ERROR') {
+    console.warn(`${prefix}Column missing:`, error?.sqlMessage || error?.message || error);
+    return;
+  }
+
   console.error(`${prefix}Database error:`, error);
 }
 
@@ -49,10 +54,11 @@ export async function safeCount(
   params: any[] = [],
   context?: string
 ): Promise<number> {
+  const effectiveContext = context ?? `count:${table}`;
   const rows = await safeQuery<{ count: number }>(
     `SELECT COUNT(*) as count FROM ${table} ${whereClause ? `WHERE ${whereClause}` : ''}`,
     params,
-    context
+    effectiveContext
   );
   return rows[0]?.count ?? 0;
 }
@@ -64,10 +70,11 @@ export async function safeSum(
   params: any[] = [],
   context?: string
 ): Promise<number> {
+  const effectiveContext = context ?? `sum:${table}.${column}`;
   const rows = await safeQuery<{ total: number }>(
     `SELECT COALESCE(SUM(${column}), 0) as total FROM ${table} ${whereClause ? `WHERE ${whereClause}` : ''}`,
     params,
-    context
+    effectiveContext
   );
 
   return Number(rows[0]?.total ?? 0);
