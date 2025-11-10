@@ -159,6 +159,26 @@ const formatCurrency = (amount: number) =>
 
 const formatNumber = (value: number) => new Intl.NumberFormat('en-US').format(value);
 
+const formatTimestamp = (value: string | number | Date) =>
+  new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true,
+    timeZone: 'UTC',
+  }).format(typeof value === 'string' || typeof value === 'number' ? new Date(value) : value);
+
+const formatDate = (value: string | number | Date) =>
+  new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    timeZone: 'UTC',
+  }).format(typeof value === 'string' || typeof value === 'number' ? new Date(value) : value);
+
 const EMPTY_METRICS: DashboardMetrics = {
   gmvToday: 0,
   gmvMTD: 0,
@@ -503,9 +523,7 @@ export default function AdminDashboard({
   const displayMetrics = metrics ?? EMPTY_METRICS;
 
   const heroGreeting = user ? `Welcome back, ${user.name.split(' ')[0]}` : 'Admin Command Center';
-  const lastUpdatedLabel = lastUpdated
-    ? new Date(lastUpdated).toLocaleString()
-    : new Date().toLocaleString();
+  const lastUpdatedLabel = lastUpdated ? formatTimestamp(lastUpdated) : 'Sync pending';
 
   const primaryHighlights = useMemo(
     () => [
@@ -883,7 +901,7 @@ export default function AdminDashboard({
                       {
                         field: 'created_at',
                         headerName: 'Submitted',
-                        renderCell: (row) => new Date(row.created_at).toLocaleDateString(),
+                        renderCell: (row) => formatDate(row.created_at),
                       },
                       {
                         field: 'status',
@@ -922,7 +940,7 @@ export default function AdminDashboard({
                       {
                         field: 'created_at',
                         headerName: 'Requested',
-                        renderCell: (row) => new Date(row.created_at).toLocaleDateString(),
+                        renderCell: (row) => formatDate(row.created_at),
                       },
                     ]}
                     onRowClick={(row) => handleEntitySelect('order', row.id)}
@@ -1160,7 +1178,7 @@ export default function AdminDashboard({
                       </span>
                     </div>
                     <p className="mt-4 text-xs text-text-mute">
-                      Joined {new Date(freelancer.created_at).toLocaleDateString()}
+                      Joined {freelancer.created_at ? formatDate(freelancer.created_at) : '—'}
                     </p>
                   </div>
                 ))
