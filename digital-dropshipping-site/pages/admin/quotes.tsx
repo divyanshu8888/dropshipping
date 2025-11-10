@@ -3,22 +3,25 @@ import { GetServerSideProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import Header from '../../src/components/Header';
+import { query } from '../../src/lib/mysql';
 
 interface QuoteRequest {
-  id: string;
+  id: number;
   client_name: string;
   client_email: string;
-  client_phone?: string;
+  client_phone?: string | null;
+  phone_country?: string | null;
   project_title: string;
   project_description: string;
-  budget?: number;
-  timeline?: string;
+  budget?: number | null;
+  timeline?: string | null;
   category: string;
   status: string;
   priority: string;
-  notes?: string;
-  admin_notes?: string;
-  assigned_to?: string;
+  notes?: string | null;
+  admin_notes?: string | null;
+  assigned_to?: string | null;
+  attachments?: Array<{ url: string; originalName: string; storedName: string; size: number; type?: string | null }>;
   created_at: string;
   updated_at: string;
 }
@@ -34,6 +37,7 @@ export default function QuotesPage({ initialQuoteRequests, totalPages, currentPa
   const [loading, setLoading] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedQuote, setSelectedQuote] = useState<QuoteRequest | null>(null);
+  const [adminNotesDraft, setAdminNotesDraft] = useState('');
 
   const fetchQuoteRequests = async (status = selectedStatus, page = 1) => {
     setLoading(true);
@@ -55,7 +59,7 @@ export default function QuotesPage({ initialQuoteRequests, totalPages, currentPa
     }
   };
 
-  const updateQuoteStatus = async (id: string, status: string, adminNotes?: string) => {
+  const updateQuoteStatus = async (id: number, status: string, adminNotes?: string) => {
     try {
       const response = await fetch('/api/admin/quote-requests', {
         method: 'PATCH',
@@ -70,14 +74,28 @@ export default function QuotesPage({ initialQuoteRequests, totalPages, currentPa
       });
 
       if (response.ok) {
-        // Refresh the quote requests
-        fetchQuoteRequests();
-        setSelectedQuote(null);
+        const data = await response.json();
+        if (data.quoteRequest) {
+          setQuoteRequests((prev) =>
+            prev.map((quote) => (quote.id === data.quoteRequest.id ? { ...quote, ...data.quoteRequest } : quote)),
+          );
+          setSelectedQuote((prev) => (prev ? { ...prev, ...data.quoteRequest } : prev));
+        } else {
+          setSelectedQuote((prev) => (prev ? { ...prev, status } : prev));
+        }
       }
     } catch (error) {
       console.error('Error updating quote status:', error);
     }
   };
+
+  useEffect(() => {
+    if (selectedQuote) {
+      setAdminNotesDraft(selectedQuote.admin_notes ?? '');
+    } else {
+      setAdminNotesDraft('');
+    }
+  }, [selectedQuote]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -250,6 +268,9 @@ export default function QuotesPage({ initialQuoteRequests, totalPages, currentPa
                         <div>
                           <label className="text-sm text-text-mute">Phone</label>
                           <div className="text-white">{selectedQuote.client_phone}</div>
+                          {selectedQuote.phone_country && (
+                            <p className="text-xs text-text-mute">Country code: {selectedQuote.phone_country}</p>
+                          )}
                         </div>
                       )}
                     </div>
@@ -302,29 +323,51 @@ export default function QuotesPage({ initialQuoteRequests, totalPages, currentPa
                 <div>
                   <label className="text-sm text-text-mute">Admin Notes</label>
                   <textarea
-                    defaultValue={selectedQuote.admin_notes || ''}
+                    value={adminNotesDraft}
+                    onChange={(event) => setAdminNotesDraft(event.target.value)}
                     className="w-full mt-2 p-4 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 resize-none"
                     rows={3}
                     placeholder="Add admin notes..."
                   />
                 </div>
 
+                {selectedQuote.attachments && selectedQuote.attachments.length > 0 && (
+                  <div>
+                    <label className="text-sm text-text-mute">Attachments</label>
+                    <ul className="mt-2 space-y-2">
+                      {selectedQuote.attachments.map((file) => (
+                        <li key={file.storedName} className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white/80">
+                          <a
+                            href={file.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="truncate underline-offset-2 hover:underline"
+                          >
+                            {file.originalName}
+                          </a>
+                          <span className="text-xs text-white/50">{(file.size / 1024 / 1024).toFixed(1)} MB</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
                 {/* Actions */}
                 <div className="flex gap-4 pt-4 border-t border-white/10">
                   <button
-                    onClick={() => updateQuoteStatus(selectedQuote.id, 'approved')}
+                    onClick={() => updateQuoteStatus(selectedQuote.id, 'approved', adminNotesDraft)}
                     className="px-6 py-3 bg-green-500/20 text-green-400 rounded-xl hover:bg-green-500/30 transition-colors"
                   >
                     Approve
                   </button>
                   <button
-                    onClick={() => updateQuoteStatus(selectedQuote.id, 'rejected')}
+                    onClick={() => updateQuoteStatus(selectedQuote.id, 'rejected', adminNotesDraft)}
                     className="px-6 py-3 bg-red-500/20 text-red-400 rounded-xl hover:bg-red-500/30 transition-colors"
                   >
                     Reject
                   </button>
                   <button
-                    onClick={() => updateQuoteStatus(selectedQuote.id, 'in_progress')}
+                    onClick={() => updateQuoteStatus(selectedQuote.id, 'in_progress', adminNotesDraft)}
                     className="px-6 py-3 bg-blue-500/20 text-blue-400 rounded-xl hover:bg-blue-500/30 transition-colors"
                   >
                     Mark In Progress
@@ -339,41 +382,27 @@ export default function QuotesPage({ initialQuoteRequests, totalPages, currentPa
   );
 }
 
-export const getServerSideProps: GetServerSideProps = async (context) => {
+export const getServerSideProps: GetServerSideProps = async () => {
   try {
-    // Import supabase for server-side fetching
-    const { createClient } = require('@supabase/supabase-js');
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-    
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
-    
-    const { data: quoteRequests, error } = await supabase
-      .from('quote_requests')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(10);
-    
-    if (error) {
-      console.error('Error fetching quote requests:', error);
-      return {
-        props: {
-          initialQuoteRequests: [],
-          totalPages: 1,
-          currentPage: 1,
-        },
-      };
-    }
+    const rows = await query<any>(
+      `SELECT * FROM project_leads ORDER BY created_at DESC LIMIT 10`,
+    );
+
+    const formatted: QuoteRequest[] = rows.map((row: any) => ({
+      ...row,
+      budget: row.budget !== null ? Number(row.budget) : null,
+      attachments: row.attachments ? JSON.parse(row.attachments) : [],
+    }));
 
     return {
       props: {
-        initialQuoteRequests: quoteRequests || [],
+        initialQuoteRequests: formatted,
         totalPages: 1,
         currentPage: 1,
       },
     };
   } catch (error) {
-    console.error('Error in getServerSideProps:', error);
+    console.error('Error fetching quote requests:', error);
     return {
       props: {
         initialQuoteRequests: [],

@@ -98,7 +98,7 @@ const Header: React.FC = () => {
                                 <Link href="/login" className="relative text-white/75 hover:text-white transition-all duration-300 after:absolute after:left-0 after:-bottom-1.5 after:h-[2px] after:w-0 after:bg-gradient-to-r from-cyan-400 to-violet-400 hover:after:w-full after:transition-all after:duration-300 focus:ring-2 focus:ring-white/50 focus:outline-none rounded px-2 py-1 text-sm font-medium">
                                     Log in
                                 </Link>
-                                <Link href="/signup" className="group inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500 text-white px-5 py-2.5 font-semibold text-sm shadow-[0_6px_18px_-6px_rgba(0,216,255,.35)] hover:shadow-[0_8px_22px_-6px_rgba(0,216,255,.42)] hover:scale-[1.05] transition-all duration-300 focus:ring-2 focus:ring-white/50 focus:outline-none">
+                                <Link href="/signup" className="group inline-flex items-center gap-2 rounded-xl bg-[#3E5BF1] hover:bg-[#334fe6] text-white px-5 py-2.5 font-semibold text-sm shadow-[0_10px_28px_-8px_rgba(62,91,241,.5)] transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7aa2ff]/40">
                                     Get started
                                     <svg className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="none">
                                         <path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>

@@ -1,97 +1,118 @@
-import { NextApiRequest, NextApiResponse } from 'next';
-import { supabaseAdmin } from '../../../src/lib/supabase';
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { query } from '../../../src/lib/mysql';
+
+const parseIntParam = (value: string | string[] | undefined, fallback: number) => {
+  if (!value) return fallback;
+  const parsed = parseInt(Array.isArray(value) ? value[0] ?? '' : value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'GET') {
     try {
-      const { status, page = '1', limit = '10' } = req.query;
-      
-      const pageNum = parseInt(page as string);
-      const limitNum = parseInt(limit as string);
-      const offset = (pageNum - 1) * limitNum;
+      const statusParam = Array.isArray(req.query.status) ? req.query.status[0] : req.query.status;
+      const page = parseIntParam(req.query.page, 1);
+      const limit = parseIntParam(req.query.limit, 10);
+      const offset = (page - 1) * limit;
 
-      // Build the query
-      let query = supabaseAdmin
-        .from('quote_requests')
-        .select('*', { count: 'exact' })
-        .order('created_at', { ascending: false });
-
-      if (status && status !== 'all') {
-        query = query.eq('status', status as string);
+      let whereClause = '';
+      const params: any[] = [];
+      if (statusParam && statusParam !== 'all') {
+        whereClause = 'WHERE status = ?';
+        params.push(statusParam);
       }
 
-      // Add pagination
-      query = query.range(offset, offset + limitNum - 1);
+      const rows = await query<any>(
+        `SELECT * FROM project_leads ${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+        [...params, limit, offset],
+      );
 
-      const { data: quoteRequests, error, count } = await query;
+      const countResult = await query<{ total: number }>(
+        `SELECT COUNT(*) as total FROM project_leads ${whereClause}`,
+        params,
+      );
 
-      if (error) {
-        console.error('Supabase error:', error);
-        return res.status(500).json({ 
-          message: 'Failed to fetch quote requests',
-          error: error.message 
-        });
-      }
+      const quoteRequests = rows.map((row) => ({
+        ...row,
+        budget: row.budget !== null ? Number(row.budget) : null,
+        attachments: row.attachments ? JSON.parse(row.attachments) : [],
+      }));
+
+      const total = countResult[0]?.total ?? 0;
 
       res.status(200).json({
-        quoteRequests: quoteRequests || [],
+        quoteRequests,
         pagination: {
-          page: pageNum,
-          limit: limitNum,
-          total: count || 0,
-          pages: Math.ceil((count || 0) / limitNum)
-        }
+          page,
+          limit,
+          total,
+          pages: Math.ceil(total / limit),
+        },
       });
-
     } catch (error) {
       console.error('Error fetching quote requests:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         message: 'Failed to fetch quote requests',
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
     }
-  } else if (req.method === 'PATCH') {
+    return;
+  }
+
+  if (req.method === 'PATCH') {
     try {
-      const { id, status, admin_notes, assigned_to, priority } = req.body;
+      const { id, status, adminNotes, assignedTo, priority } = req.body;
 
       if (!id) {
         return res.status(400).json({ message: 'Quote request ID is required' });
       }
 
-      const updateData: any = {};
-      if (status) updateData.status = status;
-      if (admin_notes !== undefined) updateData.admin_notes = admin_notes;
-      if (assigned_to !== undefined) updateData.assigned_to = assigned_to;
-      if (priority) updateData.priority = priority;
+      const fields: string[] = [];
+      const values: any[] = [];
 
-      const { data: updatedQuoteRequest, error } = await supabaseAdmin
-        .from('quote_requests')
-        .update(updateData)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Supabase error:', error);
-        return res.status(500).json({ 
-          message: 'Failed to update quote request',
-          error: error.message 
-        });
+      if (status) {
+        fields.push('status = ?');
+        values.push(status);
       }
+      if (adminNotes !== undefined) {
+        fields.push('admin_notes = ?');
+        values.push(adminNotes);
+      }
+      if (assignedTo !== undefined) {
+        fields.push('assigned_to = ?');
+        values.push(assignedTo);
+      }
+      if (priority) {
+        fields.push('priority = ?');
+        values.push(priority);
+      }
+
+      if (fields.length === 0) {
+        return res.status(400).json({ message: 'No fields provided to update.' });
+      }
+
+      values.push(id);
+
+      await query(
+        `UPDATE project_leads SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+        values,
+      );
+
+      const [updated] = await query<any>(`SELECT * FROM project_leads WHERE id = ?`, [id]);
 
       res.status(200).json({
         message: 'Quote request updated successfully',
-        quoteRequest: updatedQuoteRequest
+        quoteRequest: updated,
       });
-
     } catch (error) {
       console.error('Error updating quote request:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         message: 'Failed to update quote request',
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
     }
-  } else {
-    res.status(405).json({ message: 'Method not allowed' });
+    return;
   }
+
+  res.status(405).json({ message: 'Method not allowed' });
 }

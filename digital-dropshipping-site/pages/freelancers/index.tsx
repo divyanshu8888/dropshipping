@@ -5,6 +5,7 @@ import Head from 'next/head'
 import Link from 'next/link'
 import Header from '../../src/components/Header'
 import QuoteRequestForm from '../../src/components/QuoteRequestForm'
+import UnitiFilters, { type FilterControlDescriptor, type UnitiFilterVariant } from '../../src/components/UnitiFilters'
 import { query } from '../../src/lib/mysql'
 import styles from '../../src/styles/freelancers.module.css'
 
@@ -15,7 +16,6 @@ interface Freelancer {
   title: string;
   description: string;
   country: string | null;
-  country_code?: string; // ISO code like 'AU', 'US'
   skills: string[];
   avatar_url: string | null;
   rating: number;
@@ -30,6 +30,7 @@ interface Freelancer {
   languages?: string[];
   industries?: string[];
   portfolio_thumbs?: string[];
+  portfolio_thumbnails?: string[];
   // Calculated fields
   overlap_hours?: string;
 }
@@ -37,20 +38,6 @@ interface Freelancer {
 interface FreelancersPageProps {
   freelancers: Freelancer[];
   initialSearchTerm?: string;
-}
-
-// Helper to get country code from country name
-function getCountryCode(country: string | null): string {
-  if (!country) return '🌍';
-  const countryMap: { [key: string]: string } = {
-    'Australia': 'AU',
-    'United States': 'US',
-    'United Kingdom': 'UK',
-    'Canada': 'CA',
-    'Germany': 'DE',
-    'India': 'IN',
-  };
-  return countryMap[country] || country.substring(0, 2).toUpperCase();
 }
 
 // Helper to calculate timezone overlap (simplified)
@@ -69,7 +56,148 @@ type HeroTrustBadge = {
   icon: ReactNode;
 };
 
-type HeroCategory = string;
+const variantClasses: Record<UnitiFilterVariant, string> = {
+  outline: styles.filterVariantOutline,
+  glass: styles.filterVariantGlass,
+  underline: styles.filterVariantUnderline,
+}
+
+const numOrNull = (value: unknown): number | null => {
+  const numeric = Number(value)
+  return Number.isFinite(numeric) ? numeric : null
+}
+
+const formatRating = (value: number | null): string => {
+  if (value === null) return '—'
+  return value.toFixed(1)
+}
+
+const formatInteger = (value: number | null): string => {
+  if (value === null) return '—'
+  return `${Math.round(value)}`
+}
+
+const parseMediaArray = (value: unknown): string[] => {
+  if (!value) return []
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => {
+        if (typeof item === 'string') return item.trim()
+        if (item && typeof item === 'object' && 'thumbnail_url' in item) {
+          return String((item as Record<string, unknown>).thumbnail_url || '').trim()
+        }
+        if (item && typeof item === 'object' && 'url' in item) {
+          return String((item as Record<string, unknown>).url || '').trim()
+        }
+        return ''
+      })
+      .filter((url) => url.length > 0)
+  }
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value)
+      return parseMediaArray(parsed)
+    } catch (error) {
+      // handle comma-separated strings
+      return value
+        .split(',')
+        .map((item) => item.trim())
+        .filter((url) => url.length > 0)
+    }
+  }
+  return []
+}
+
+const joinClasses = (...classes: Array<string | false | null | undefined>) =>
+  classes.filter(Boolean).join(' ')
+
+const availabilityMeta = (availability: string | undefined) => {
+  const raw = (availability || '').trim()
+  const normalized = raw.toLowerCase()
+  const label = raw.length > 0 ? raw.replace(/_/g, ' ') : 'Unknown'
+
+  if (['available', 'available now', 'open', 'ready'].includes(normalized)) {
+    return {
+      label,
+      tone: 'text-emerald-200',
+      bg: 'bg-emerald-500/15',
+      border: 'border-emerald-300/30',
+      icon: (
+        <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+          <path fillRule="evenodd" d="M16.704 5.296a1 1 0 010 1.414l-7.004 7.005a1 1 0 01-1.414 0L4.296 9.725a1 1 0 011.414-1.414l3.004 3.004 6.297-6.297a1 1 0 011.414 0z" clipRule="evenodd" />
+        </svg>
+      )
+    }
+  }
+
+  if (['booked', 'busy', 'unavailable', 'not available', 'engaged'].includes(normalized)) {
+    return {
+      label,
+      tone: 'text-amber-200',
+      bg: 'bg-amber-500/15',
+      border: 'border-amber-300/30',
+      icon: (
+        <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      )
+    }
+  }
+
+  return {
+    label: label || 'Availability unknown',
+    tone: 'text-white/70',
+    bg: 'bg-white/8',
+    border: 'border-white/15',
+    icon: (
+      <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    )
+  }
+}
+
+const FreelancerSkills = ({ skills }: { skills: string[] }) => {
+  const [expanded, setExpanded] = useState(false)
+
+  if (!skills || skills.length === 0) {
+    return null
+  }
+
+  const visibleSkills = expanded ? skills : skills.slice(0, 3)
+  const remainingCount = skills.length - visibleSkills.length
+
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {visibleSkills.map((skill) => (
+        <span
+          key={skill}
+          className="rounded-lg border border-white/12 bg-white/8 px-3 py-1 text-xs font-medium text-white/85"
+        >
+          {skill}
+        </span>
+      ))}
+      {remainingCount > 0 && !expanded && (
+        <button
+          type="button"
+          onClick={() => setExpanded(true)}
+          className="rounded-lg border border-white/12 bg-transparent px-3 py-1 text-xs font-semibold text-white/70 hover:text-white hover:bg-white/10 transition"
+        >
+          More
+        </button>
+      )}
+      {expanded && skills.length > 3 && (
+        <button
+          type="button"
+          onClick={() => setExpanded(false)}
+          className="rounded-lg border border-white/12 bg-transparent px-3 py-1 text-xs font-semibold text-white/50 hover:text-white/80 transition"
+        >
+          Show less
+        </button>
+      )}
+    </div>
+  )
+}
 
 const heroTrustBadges: HeroTrustBadge[] = [
   {
@@ -116,14 +244,6 @@ const heroTrustBadges: HeroTrustBadge[] = [
       </svg>
     ),
   },
-];
-
-const heroCategories: HeroCategory[] = [
-  'UI/UX Design',
-  'Web Development',
-  'Content Writing',
-  'Branding',
-  'SEO',
 ];
 
 export default function FreelancersPage({ freelancers, initialSearchTerm }: FreelancersPageProps) {
@@ -246,9 +366,10 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
   const [availabilityFilter, setAvailabilityFilter] = useState<string>('all')
   const [experienceFilter, setExperienceFilter] = useState<string>('all')
   const [ratingFilter, setRatingFilter] = useState<string>('all')
-  const [turnaroundFilter, setTurnaroundFilter] = useState<string>('all')
   const [serviceFilter, setServiceFilter] = useState<string>('all')
   const [sortBy, setSortBy] = useState<string>('rating')
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [countPulse, setCountPulse] = useState(false)
 
   // Service categories for filtering
   const serviceCategories = [
@@ -260,6 +381,102 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
     { value: 'content-writing', label: 'Content Writing', skills: ['Content Writing', 'SEO', 'Copywriting', 'Technical Writing', 'Blog Writing'] },
     { value: 'marketing', label: 'Marketing', skills: ['SEO', 'Social Media', 'Content Strategy', 'Email Marketing'] },
     { value: 'data-science', label: 'Data Science', skills: ['Python', 'Data Analysis', 'Machine Learning', 'SQL', 'R'] },
+  ]
+
+  const filterControls: FilterControlDescriptor[] = [
+    {
+      id: 'availability-filter',
+      label: 'Availability',
+      shortLabel: 'Avail',
+      icon: (
+        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M5 12h14M5 12a7 7 0 0111.31-5.31L19 9m0 0l-2.69 2.31A7 7 0 015 12z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M5 15h14" />
+        </svg>
+      ),
+      value: availabilityFilter,
+      defaultValue: 'all',
+      onChange: (val: string) => setAvailabilityFilter(val),
+      options: [
+        { value: 'all', label: 'All Availability' },
+        { value: 'available', label: 'Available Now' },
+        { value: 'within_1_week', label: 'Available in 1 Week' },
+        { value: 'within_2_weeks', label: 'Available in 2 Weeks' },
+      ],
+    },
+    {
+      id: 'service-filter',
+      label: 'Service',
+      shortLabel: 'Service',
+      icon: (
+        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9.75 3a6 6 0 104.5 10.25L21 18l-3 3-6.75-6.75A6 6 0 109.75 3z" />
+        </svg>
+      ),
+      value: serviceFilter,
+      defaultValue: 'all',
+      onChange: (val: string) => setServiceFilter(val),
+      options: serviceCategories.map((service) => ({
+        value: service.value,
+        label: service.label,
+      })),
+    },
+    {
+      id: 'experience-filter',
+      label: 'Experience',
+      shortLabel: 'Exp',
+      icon: (
+        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 6v6l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ),
+      value: experienceFilter,
+      defaultValue: 'all',
+      onChange: (val: string) => setExperienceFilter(val),
+      options: [
+        { value: 'all', label: 'All Experience Levels' },
+        { value: 'intermediate', label: 'Intermediate (2-5 years)' },
+        { value: 'senior', label: 'Senior (5-10 years)' },
+        { value: 'expert', label: 'Expert (10+ years)' },
+      ],
+    },
+    {
+      id: 'rating-filter',
+      label: 'Rating',
+      shortLabel: 'Rating',
+      icon: (
+        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+        </svg>
+      ),
+      value: ratingFilter,
+      defaultValue: 'all',
+      onChange: (val: string) => setRatingFilter(val),
+      options: [
+        { value: 'all', label: 'All Ratings' },
+        { value: '4.5+', label: '4.5+ Stars' },
+        { value: '4.8+', label: '4.8+ Stars' },
+      ],
+    },
+    {
+      id: 'sort-filter',
+      label: 'Sort',
+      shortLabel: 'Sort',
+      icon: (
+        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 6h16M6 12h12M10 18h8" />
+        </svg>
+      ),
+      value: sortBy,
+      defaultValue: 'rating',
+      onChange: (val: string) => setSortBy(val),
+      options: [
+        { value: 'rating', label: 'Highest Rated' },
+        { value: 'reviews', label: 'Most Reviews' },
+        { value: 'projects', label: 'Most Projects' },
+        { value: 'experience', label: 'Most Experience' },
+      ],
+    },
   ]
 
   // Get active filters for summary
@@ -284,15 +501,6 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
     } else if (availabilityFilter === 'within_2_weeks') {
       filters.push({ key: 'avail', label: 'Available in 2 Weeks', onRemove: () => setAvailabilityFilter('all') })
     }
-    if (turnaroundFilter === '24h') {
-      filters.push({ key: 'del', label: '24 Hours', onRemove: () => setTurnaroundFilter('all') })
-    } else if (turnaroundFilter === '48h') {
-      filters.push({ key: 'del', label: '48 Hours', onRemove: () => setTurnaroundFilter('all') })
-    } else if (turnaroundFilter === '3-5d') {
-      filters.push({ key: 'del', label: '3-5 Days', onRemove: () => setTurnaroundFilter('all') })
-    } else if (turnaroundFilter === '1-2w') {
-      filters.push({ key: 'del', label: '1-2 Weeks', onRemove: () => setTurnaroundFilter('all') })
-    }
     if (serviceFilter !== 'all') {
       const service = serviceCategories.find(s => s.value === serviceFilter)
       if (service) {
@@ -300,13 +508,14 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
       }
     }
     return filters
-  }, [availabilityFilter, experienceFilter, ratingFilter, turnaroundFilter, serviceFilter, serviceCategories])
+  }, [availabilityFilter, experienceFilter, ratingFilter, serviceFilter, serviceCategories])
+
+  const activeFilterCount = activeFilters.length
 
   const clearAllFilters = () => {
     setAvailabilityFilter('all')
     setExperienceFilter('all')
     setRatingFilter('all')
-    setTurnaroundFilter('all')
     setServiceFilter('all')
   }
 
@@ -379,12 +588,6 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
         (ratingFilter === '4.8+' && freelancer.rating >= 4.8)
 
       // Turnaround filter
-      const matchesTurnaround = turnaroundFilter === 'all' ||
-        (turnaroundFilter === '24h' && freelancer.turnaround_days && freelancer.turnaround_days <= 1) ||
-        (turnaroundFilter === '48h' && freelancer.turnaround_days && freelancer.turnaround_days <= 2) ||
-        (turnaroundFilter === '3-5d' && freelancer.turnaround_days && freelancer.turnaround_days >= 3 && freelancer.turnaround_days <= 5) ||
-        (turnaroundFilter === '1-2w' && freelancer.turnaround_days && freelancer.turnaround_days >= 7 && freelancer.turnaround_days <= 14)
-
       // Service filter - match skills to service category
       const matchesService = serviceFilter === 'all' || (() => {
         const service = serviceCategories.find(s => s.value === serviceFilter)
@@ -399,7 +602,7 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
       })()
 
       return matchesSearch && matchesAvailability && matchesExperience && 
-             matchesRating && matchesTurnaround && matchesService
+             matchesRating && matchesService
     })
 
     // Sort
@@ -421,7 +624,13 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
     })
 
     return filtered
-  }, [freelancers, searchTerm, availabilityFilter, experienceFilter, ratingFilter, turnaroundFilter, serviceFilter, sortBy, serviceCategories])
+  }, [freelancers, searchTerm, availabilityFilter, experienceFilter, ratingFilter, serviceFilter, sortBy, serviceCategories])
+
+  useEffect(() => {
+    setCountPulse(true)
+    const timeout = window.setTimeout(() => setCountPulse(false), 280)
+    return () => window.clearTimeout(timeout)
+  }, [filteredFreelancers.length])
 
   return (
     <>
@@ -434,7 +643,7 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
         <Header />
 
         {/* Hero Section - Enhanced Professional Design */}
-        <section className="relative overflow-hidden text-white pt-20 pb-14 md:pt-24 md:pb-18">
+        <section className="relative overflow-hidden text-white pt-24 pb-18 md:pt-28 md:pb-24 min-h-[78vh]">
           <div className="absolute inset-0 bg-[radial-gradient(900px_520px_at_50%_-20%,rgba(255,255,255,0.05),transparent)]" />
           <div className="absolute inset-0 bg-gradient-to-b from-[#0a1019]/90 via-[#080d17]/75 to-[#060910]/95" />
           <div className={`absolute inset-0 ${styles.heroImageOverlay}`} />
@@ -445,20 +654,20 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
           
           {/* Content */}
           <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="pointer-events-none absolute inset-x-0 top-24 h-40 rounded-[32px] bg-black/18 blur-lg -z-10" />
-            <div className="text-center mb-9 animate-fade-in-up">
-              <h1 className="mx-auto font-extrabold text-[clamp(32px,5.2vw,52px)] leading-[1.12] tracking-tight animate-fade-in-up animate-delay-100 drop-shadow-none md:drop-shadow-[0_0_8px_rgba(88,123,255,.18)]">
+            <div className="pointer-events-none absolute inset-x-0 top-20 h-44 rounded-[36px] bg-black/28 blur-3xl -z-10" />
+            <div className="text-center mb-8 animate-fade-in-up">
+              <h1 className="mx-auto font-extrabold text-[clamp(32px,5.2vw,52px)] leading-[1.12] tracking-tight animate-fade-in-up animate-delay-100 drop-shadow-none md:drop-shadow-[0_0_18px_rgba(70,105,255,.24)]">
                 Find the{' '}
                 <span className={styles.heroGradient}>
                   Perfect Freelancer
                 </span>
               </h1>
-              <p className="mx-auto mt-5 text-[clamp(14px,1.5vw,16px)] max-w-[600px] text-[rgba(226,232,240,0.9)] fadeUp animateDelay2 hero-tagline leading-relaxed">
+              <p className="mx-auto mt-5 text-[clamp(14px,1.5vw,16px)] max-w-[600px] text-[rgba(234,238,246,0.92)] fadeUp animateDelay2 hero-tagline leading-relaxed">
                 Discover top-rated professionals ready to design, build, and scale your vision
               </p>
             </div>
 
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-4 sm:gap-5 mb-10 animate-fade-in-up animate-delay-200 text-text-soft">
+            <div className="mt-7 flex flex-wrap items-center justify-center gap-4 sm:gap-5 mb-12 animate-fade-in-up animate-delay-300 text-text-soft">
               {heroTrustBadges.map((badge) => (
                 <div key={badge.label} className={styles.trustBadge}>
                   <span className={styles.trustBadgeIcon}>{badge.icon}</span>
@@ -467,7 +676,7 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
               ))}
               </div>
               
-            <div className="mt-9 flex items-center justify-center animate-fade-in-up animate-delay-300" ref={searchRef}>
+            <div className="mt-6 flex items-center justify-center animate-fade-in-up animate-delay-400" ref={searchRef}>
               <form
                 onSubmit={handleSearchSubmit}
                 className={`relative z-20 flex w-full max-w-[700px] items-center gap-3 rounded-full px-5 h-[52px] border border-white/15 shadow-[0_16px_36px_rgba(8,18,36,0.42)] transition-all duration-300 focus-within:border-brand-b/40 focus-within:shadow-[0_18px_44px_rgba(73,126,227,0.3)] ${styles.heroSearchForm}`}
@@ -488,12 +697,12 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
                     aria-label="Search freelancers"
                     aria-expanded={showSuggestions}
                     aria-haspopup="listbox"
-                  className="h-full flex-1 bg-transparent text-slate-100 font-medium text-sm placeholder-slate-500 outline-none tracking-wide focus-visible:outline-none"
+                  className="h-full flex-1 bg-transparent text-slate-100 font-medium text-[15px] placeholder-slate-300 outline-none tracking-wide focus-visible:outline-none"
                     placeholder="Try 'Web Designer', 'Logo Animation', or 'SEO Audit'..."
                   />
                   <button
                     type="submit"
-                  className="shrink-0 h-[40px] px-5 rounded-full text-white font-semibold transition-all text-sm bg-[#3E5BF1] hover:bg-[#334fe6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7aa2ff]/40 focus-visible:ring-offset-0"
+                  className="shrink-0 h-[40px] px-6 rounded-full text-white font-semibold transition-all text-sm bg-[#3E5BF1] hover:bg-[#334fe6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7aa2ff]/40 focus-visible:ring-offset-0"
                     >
                     Search
                   </button>
@@ -579,25 +788,10 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
               </div>
               
               {/* Quick Category Chips */}
-            <div className={`mt-8 flex flex-wrap items-center justify-center gap-3 sm:gap-4 animate-fade-in-up ${styles.animateDelay3}`}>
-              <span className="text-text-soft text-xs font-semibold uppercase tracking-wide">Popular</span>
-              {heroCategories.map((category) => (
-                  <button
-                    key={category}
-                    onClick={() => runSearch(category)}
-                  type="button"
-                  aria-pressed={searchTerm === category}
-                  className={`${styles.heroCategoryButton} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/40`}
-                  >
-                    {category}
-                  </button>
-                ))}
-            </div>
-
-            <div className={`mt-10 flex justify-center animate-fade-in-up ${styles.animateDelay4}`}>
-              <div className="flex items-center gap-2 text-white/40 text-xs uppercase tracking-[0.4em]">
+            <div className={`mt-10 flex justify-center animate-fade-in-up animate-delay-500`}>
+              <div className="flex items-center gap-2 text-white/50 text-xs uppercase tracking-[0.4em]">
                 <span>Scroll to explore</span>
-                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-white/20 text-white/60">
+                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-white/20 text-white/60 bounce-slow">
                   ↓
                 </span>
               </div>
@@ -605,320 +799,260 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
           </div>
         </section>
 
-        {/* Premium Filters Section - Polished Product Grade */}
-        <section className="sticky top-16 z-30 backdrop-blur-sm bg-[#0b0e13]/70 ring-1 ring-white/10 shadow-[0_6px_16px_rgba(0,0,0,.25)] border-b border-white/10">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-            {/* Main Filter Row - Professional Dropdown Filters */}
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-3 pb-4 border-b border-white/10">
-              {/* Availability Dropdown */}
-              <div className="flex flex-col gap-1.5">
-                <label className={`${styles.filterLabel} text-white/70`}>AVAILABILITY</label>
-                <select
-                  value={availabilityFilter}
-                  onChange={(e) => setAvailabilityFilter(e.target.value)}
-                  className={styles.filterDropdown}
-                  aria-label="Filter by availability"
-                >
-                  <option value="all">All Availability</option>
-                  <option value="available">Available Now</option>
-                  <option value="within_1_week">Available in 1 Week</option>
-                  <option value="within_2_weeks">Available in 2 Weeks</option>
-                </select>
-              </div>
-
-              {/* Rating Dropdown */}
-              <div className="flex flex-col gap-1.5">
-                <label className={`${styles.filterLabel} text-white/70`}>RATING</label>
-                <select
-                  value={ratingFilter}
-                  onChange={(e) => setRatingFilter(e.target.value)}
-                  className={styles.filterDropdown}
-                  aria-label="Filter by rating"
-                >
-                  <option value="all">All Ratings</option>
-                  <option value="4.5+">4.5+ Stars</option>
-                  <option value="4.8+">4.8+ Stars</option>
-                </select>
-              </div>
-
-              {/* Experience Dropdown */}
-              <div className="flex flex-col gap-1.5">
-                <label className={`${styles.filterLabel} text-white/70`}>EXPERIENCE</label>
-                <select
-                  value={experienceFilter}
-                  onChange={(e) => setExperienceFilter(e.target.value)}
-                  className={styles.filterDropdown}
-                  aria-label="Filter by experience level"
-                >
-                  <option value="all">All Experience Levels</option>
-                  <option value="intermediate">Intermediate (2-5 years)</option>
-                  <option value="senior">Senior (5-10 years)</option>
-                  <option value="expert">Expert (10+ years)</option>
-                </select>
-              </div>
-
-              {/* Delivery Dropdown */}
-              <div className="flex flex-col gap-1.5">
-                <label className={`${styles.filterLabel} text-white/70`}>DELIVERY</label>
-                <select
-                  value={turnaroundFilter}
-                  onChange={(e) => setTurnaroundFilter(e.target.value)}
-                  className={styles.filterDropdown}
-                  aria-label="Filter by delivery speed"
-                >
-                  <option value="all">All Delivery Times</option>
-                  <option value="24h">24 Hours</option>
-                  <option value="48h">48 Hours</option>
-                  <option value="3-5d">3-5 Days</option>
-                  <option value="1-2w">1-2 Weeks</option>
-                </select>
-              </div>
-
-              {/* Service Filter */}
-              <div className="flex flex-col gap-1.5">
-                <label className={`${styles.filterLabel} text-white/70`}>SERVICE</label>
-                <select
-                  value={serviceFilter}
-                  onChange={(e) => setServiceFilter(e.target.value)}
-                  className={styles.filterDropdown}
-                  aria-label="Filter by service category"
-                >
-                  {serviceCategories.map((service) => (
-                    <option key={service.value} value={service.value}>
-                      {service.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Sort Dropdown */}
-              <div className="flex flex-col gap-1.5 ml-auto">
-                <label className={`${styles.filterLabel} text-white/70`}>SORT</label>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                  className={styles.filterDropdown}
-                  aria-label="Sort freelancers"
-              >
-                <option value="rating">Highest Rated</option>
-                <option value="reviews">Most Reviews</option>
-                  <option value="projects">Most Projects</option>
-                  <option value="experience">Most Experience</option>
-              </select>
-              </div>
-            </div>
-
-            {/* Active Filters Summary - Premium Polish */}
-            {activeFilters.length > 0 && (
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <div className="flex items-center gap-2 bg-white/5 backdrop-blur-sm rounded-full px-3 py-1.5 w-fit">
-                        <span className={`text-white/70 text-xs uppercase tracking-wide ${styles.filterLabel}`}>Active:</span>
-                        {activeFilters.map((filter) => (
-                          <button
-                            key={filter.key}
-                            onClick={filter.onRemove}
-                            className={styles.chip}
-                      aria-label={`Remove ${filter.label} filter`}
-                    >
-                      {filter.label}
-                      <span aria-hidden className="text-white/60 hover:text-white ml-1 transition-colors">×</span>
-                    </button>
-                  ))}
-                  <button
-                    onClick={clearAllFilters}
-                    className="ml-2 text-white/70 hover:text-white transition-colors text-xs uppercase tracking-wide"
-                  >
-                    Clear all
-                  </button>
-                </div>
-                <span className="text-white/50 text-xs ml-3" aria-live="polite">
-                  • {filteredFreelancers.length} {filteredFreelancers.length === 1 ? 'expert' : 'experts'}
-                </span>
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* Stats Bar - Simplified Single Line */}
-        <section className="relative bg-[#0c0f14] border-b border-white/10 py-3">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-wrap items-center justify-center gap-4 text-sm text-white/70">
-              <span className="flex items-center gap-1.5">
-                <svg className="w-5 h-5 text-emerald-400" fill="currentColor" viewBox="0 0 20 20" style={{ opacity: 0.6 }}>
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                {freelancers.length}+ verified experts
-              </span>
-              <span className="text-white/20">·</span>
-              <span className="flex items-center gap-1.5">
-                <svg className="w-5 h-5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ opacity: 0.6 }}>
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                Fast quotes
-              </span>
-              <span className="text-white/20">·</span>
-              <span className="flex items-center gap-1.5">
-                <svg className="w-5 h-5 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ opacity: 0.6 }}>
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
-                Secure milestones
-              </span>
-            </div>
-          </div>
-        </section>
+        <UnitiFilters
+          variant="glass"
+          controls={filterControls}
+          onClearAll={clearAllFilters}
+          activeFilters={activeFilters}
+          filteredCount={filteredFreelancers.length}
+          totalCount={freelancers.length}
+        />
 
         {/* Freelancers Grid */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="mb-6 flex items-center justify-between">
-            <p className="text-white/70">
-              Showing <span className="font-semibold text-white">{filteredFreelancers.length}</span> freelancers
+        <section className={`${styles.resultsSection} max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 pb-12 md:pt-3`}>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm md:text-base text-white/70">
+              Showing{' '}
+              <span className={countPulse ? 'font-semibold text-sky-300 transition-colors duration-200' : 'font-semibold text-white transition-colors duration-200'}>
+                {filteredFreelancers.length}
+              </span>{' '}
+              freelancers
             </p>
+            <div className={styles.viewToggle}>
+              <button
+                type="button"
+                onClick={() => setViewMode('grid')}
+                className={`${styles.viewToggleButton} ${viewMode === 'grid' ? styles.viewToggleButtonActive : ''}`}
+                aria-pressed={viewMode === 'grid'}
+                aria-label="Grid view"
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <rect x="4" y="4" width="6.4" height="6.4" rx="1.2" />
+                  <rect x="13.6" y="4" width="6.4" height="6.4" rx="1.2" />
+                  <rect x="4" y="13.6" width="6.4" height="6.4" rx="1.2" />
+                  <rect x="13.6" y="13.6" width="6.4" height="6.4" rx="1.2" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('list')}
+                className={`${styles.viewToggleButton} ${viewMode === 'list' ? styles.viewToggleButtonActive : ''}`}
+                aria-pressed={viewMode === 'list'}
+                aria-label="List view"
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <rect x="5.2" y="6" width="13.6" height="2.2" rx="1.1" />
+                  <rect x="5.2" y="11.4" width="13.6" height="2.2" rx="1.1" />
+                  <rect x="5.2" y="16.8" width="13.6" height="2.2" rx="1.1" />
+                </svg>
+              </button>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+          <div
+            className={`${styles.resultsGridRefresh} ${viewMode === 'list' ? 'grid grid-cols-1 gap-6' : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8'}`}
+          >
             {filteredFreelancers.map((freelancer) => {
-              const countryCode = freelancer.country_code || getCountryCode(freelancer.country);
               const overlapHours = freelancer.overlap_hours || calculateOverlapHours(freelancer.timezone_offset);
               const turnaround = freelancer.turnaround_days 
                 ? `≈${freelancer.turnaround_days * 24}h` 
                 : freelancer.response_time || '≈72h';
+              const isVerified = freelancer.verification_state === 'verified';
+              const countryLabel = freelancer.country || 'Remote';
+              const portfolioImages: string[] = Array.isArray(freelancer.portfolio_thumbs)
+                ? (freelancer.portfolio_thumbs as string[])
+                : [];
+            const projectCount = numOrNull(freelancer.completed_projects);
+            const reviewCount = numOrNull(freelancer.total_reviews);
+            const ratingValue = numOrNull(freelancer.rating);
+            const isNewFreelancer = !projectCount || projectCount === 0;
+            const hasPortfolio = portfolioImages.length > 0;
+            const industries: string[] = Array.isArray(freelancer.industries)
+              ? (freelancer.industries as string[])
+              : [];
+            const isTopRated = ratingValue !== null && ratingValue >= 4.8 && (reviewCount ?? 0) >= 10;
+            const availabilityInfo = availabilityMeta(freelancer.availability);
 
               return (
               <div
                 key={freelancer.id}
-                  className="group relative overflow-hidden rounded-2xl bg-gradient-to-b from-[#0c0f14] to-[#0a0d12] border border-white/10 hover:border-white/20 transition-all duration-300 hover:-translate-y-1"
+                  className={`group relative overflow-hidden rounded-[20px] border border-white/12 bg-gradient-to-b from-[#101722] via-[#0c121d] to-[#060910] transition-all duration-300 hover:-translate-y-1 hover:border-white/20 ${viewMode === 'list' ? 'md:flex md:items-stretch' : ''}`}
                   style={{
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.25)'
+                    boxShadow: '0 16px 38px -24px rgba(8, 13, 24, 0.55)'
                   }}
               >
-                  <div className="p-8">
+                  <div className="flex flex-col gap-4 p-6">
                   {/* Header */}
-                    <div className="flex items-start gap-5 mb-6">
-                      <div className="relative flex-shrink-0">
+                    <div className="flex items-start gap-4">
+                      <div className="relative h-14 w-14 flex-shrink-0">
                         {freelancer.avatar_url ? (
                           <img 
                             src={freelancer.avatar_url} 
                             alt={freelancer.display_name} 
-                            className="h-16 w-16 rounded-xl object-cover ring-2 ring-white/10" 
+                            className="h-14 w-14 rounded-xl object-cover ring-2 ring-white/10" 
                           />
                         ) : (
-                          <div className="h-16 w-16 rounded-xl bg-gradient-to-br from-sky-500/30 to-violet-500/30 flex items-center justify-center text-white font-bold text-xl ring-2 ring-white/10">
+                          <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-sky-500/30 to-violet-500/30 flex items-center justify-center text-white font-bold text-lg ring-2 ring-white/10">
                         {freelancer.display_name.charAt(0)}{freelancer.display_name.split(' ')[1]?.charAt(0) || ''}
                       </div>
                         )}
-                        {freelancer.verification_state === 'verified' && (
-                          <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-emerald-500 rounded-full border-2 border-[#0c0f14] flex items-center justify-center shadow-lg">
-                            <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        {isTopRated && (
+                          <span className="absolute -top-2 left-0 rounded-full border border-cyan-300/40 bg-cyan-400/25 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-50 shadow-[0_4px_12px_rgba(56,189,248,0.35)]">
+                            Top
+                          </span>
+                        )}
+                        {isVerified && (
+                          <div className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-[#0c121d] bg-[#1d9bf0] shadow-[0_4px_12px_rgba(29,155,240,0.5)]">
+                            <svg className="h-3 w-3 text-white" viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M9.55 16.8a.75.75 0 01-1.06 0l-3.29-3.29a.75.75 0 011.06-1.06l2.76 2.76 5.68-5.68a.75.75 0 011.06 1.06l-6.21 6.21z" />
                             </svg>
                   </div>
                     )}
                   </div>
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-start justify-between gap-3 mb-2">
-                          <div className="flex-1">
-                            <h3 className="text-white text-xl font-bold mb-1">{freelancer.display_name}</h3>
-                            <p className="text-white/70 text-base">{freelancer.headline || freelancer.title}</p>
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <h3 className="truncate text-lg md:text-xl font-semibold text-white">{freelancer.display_name}</h3>
+                              {isTopRated && (
+                                <span className="md:hidden inline-flex items-center rounded-full border border-cyan-300/40 bg-cyan-400/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-100">
+                                  Top
+                                </span>
+                              )}
+                              {!isTopRated && isNewFreelancer && (
+                                <span className="inline-flex items-center rounded-full border border-white/12 bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/75">
+                                  New
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex flex-col gap-1 text-xs md:text-sm text-white/70">
+                              <span className="truncate">{freelancer.headline || freelancer.title}</span>
+                              {freelancer.country && (
+                                <span className="flex items-center gap-1 text-[12px] text-white/60">
+                                  <svg className="h-3.5 w-3.5 text-cyan-300" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M10 2a6 6 0 00-6 6c0 4.418 6 10 6 10s6-5.582 6-10a6 6 0 00-6-6zm0 8a2 2 0 110-4 2 2 0 000 4z" clipRule="evenodd" />
+                                  </svg>
+                                  <span className="truncate">{countryLabel}</span>
+                                </span>
+                              )}
+                            </div>
                           </div>
                           <button 
                             aria-label="Shortlist" 
-                            className="flex-shrink-0 rounded-lg p-2 text-white/50 hover:text-white hover:bg-white/10 transition-all"
+                            className="flex-shrink-0 rounded-full p-1.5 text-white/60 hover:text-white hover:bg-white/10 transition-all"
                           >
-                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                             </svg>
                           </button>
                         </div>
-                        {freelancer.country && (
-                          <div className="inline-flex items-center gap-1.5 text-sm text-white/60">
-                            <svg className="h-4 w-4 text-white/50" viewBox="0 0 24 24" fill="currentColor">
-                              <path fillRule="evenodd" d="M12 2.25c-3.728 0-6.75 3.022-6.75 6.75 0 1.496.472 2.879 1.273 4.017L12 21.362l5.477-8.345a6.724 6.724 0 001.273-4.017c0-3.728-3.022-6.75-6.75-6.75zM12 11.25a2.25 2.25 0 100-4.5 2.25 2.25 0 000 4.5z" clipRule="evenodd" />
-                            </svg>
-                            {freelancer.country}
-                          </div>
-                        )}
                       </div>
                     </div>
 
-                    {/* Key Stats - Simplified */}
-                    <div className="mb-6 space-y-3">
-                      <div className="flex items-center gap-3">
+                    {/* Metrics */}
+                    <div className="grid grid-cols-1 gap-y-1.5 text-[11px] leading-tight text-white/75 sm:grid-cols-2 md:flex md:flex-wrap md:items-center md:gap-x-3 md:gap-y-0 md:text-[12px]">
                         <div className="flex items-center gap-1.5">
-                          <svg className="h-5 w-5 text-amber-400 fill-current" viewBox="0 0 20 20">
+                        <svg className="h-3.5 w-3.5 text-amber-400 fill-current" viewBox="0 0 20 20">
                           <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                         </svg>
-                          <span className="text-white font-semibold text-base">{freelancer.rating.toFixed(1)}</span>
-                          <span className="text-white/60 text-sm">({freelancer.total_reviews} reviews)</span>
+                        <span className="font-semibold text-white whitespace-nowrap">{formatRating(ratingValue)}</span>
+                        {reviewCount !== null ? (
+                          <span className="text-white/55">({Math.round(reviewCount)})</span>
+                        ) : null}
                         </div>
-                        <span className="text-white/20">•</span>
-                        <div className="flex items-center gap-1.5 text-white/80 text-sm">
-                          <svg className="h-4 w-4 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
+                      <div className="flex items-center gap-1.5">
+                        <svg className="h-3.5 w-3.5 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                           </svg>
-                          {freelancer.completed_projects} projects
+                        {isNewFreelancer ? (
+                          <span className="rounded-full border border-cyan-300/35 bg-cyan-400/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-100">
+                            New to Uniti
+                          </span>
+                        ) : (
+                          <>
+                            <span className="font-semibold text-white whitespace-nowrap">{formatInteger(projectCount)}</span>
+                            <span className="text-white/55">projects</span>
+                          </>
+                        )}
                         </div>
-                      </div>
-                      <div className="flex items-center gap-4 text-sm text-white/70">
                         <div className="flex items-center gap-1.5">
-                          <svg className="h-4 w-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="h-3.5 w-3.5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
-                          First concept {turnaround}
+                        <span className="font-semibold text-white whitespace-nowrap">{turnaround}</span>
+                        <span className="text-white/55 whitespace-nowrap">first concept</span>
                         </div>
                       </div>
+                    <div className="mt-1 flex items-center justify-between">
+                      <div className="flex items-center gap-1 text-[11px] text-white/55 sm:text-xs">
+                        <span>Availability</span>
+                      </div>
+                      <span
+                        className={joinClasses(
+                          'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.22em]',
+                          availabilityInfo.bg,
+                          availabilityInfo.border,
+                          availabilityInfo.tone
+                        )}
+                      >
+                        {availabilityInfo.icon}
+                        <span className="whitespace-nowrap">{availabilityInfo.label}</span>
+                      </span>
                     </div>
 
                     {/* Portfolio Thumbnails - Optional, only if available */}
-                    {freelancer.portfolio_thumbs && freelancer.portfolio_thumbs.length > 0 && (
-                      <div className="mb-6 grid grid-cols-2 gap-3">
-                        {freelancer.portfolio_thumbs.slice(0, 2).map((url, i) => (
-                          <div key={i} className="relative overflow-hidden rounded-xl ring-1 ring-white/10 group-hover:ring-white/20 transition-all aspect-video">
-                            <img 
-                              src={url} 
-                              alt={`Portfolio ${i + 1}`}
-                              className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            />
+                    {hasPortfolio ? (
+                      <div className="relative overflow-hidden rounded-[14px] ring-1 ring-white/10">
+                        <img 
+                          src={portfolioImages[0]} 
+                          alt={`Portfolio preview for ${freelancer.display_name}`}
+                          className="h-[160px] w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                        />
+                        {portfolioImages.length > 1 && (
+                          <div className="absolute inset-0 flex items-center justify-between bg-gradient-to-b from-transparent via-black/35 to-black/65 px-4 py-3 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                            <span className="rounded-full border border-white/30 bg-black/40 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/85">
+                              View portfolio
+                            </span>
+                            <span className="rounded-full border border-white/20 bg-white/15 px-2 py-0.5 text-[11px] font-semibold text-white/90">
+                              +{portfolioImages.length - 1} more
+                            </span>
                     </div>
-                        ))}
+                        )}
+                      </div>
+                    ) : (
+                      <div className="h-[160px] rounded-[14px] border border-dashed border-white/18 bg-white/3 flex flex-col items-center justify-center text-white/60">
+                        <svg className="h-7 w-7 text-white/40" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M5 6h14a1 1 0 011 1v10a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1z" />
+                        </svg>
+                        <span className="mt-2 text-sm font-semibold text-white/70">No portfolio yet</span>
+                        <span className="text-xs text-white/50">Ask for samples</span>
                   </div>
                     )}
 
                     {/* Skills - Reduced */}
                     {freelancer.skills && freelancer.skills.length > 0 && (
-                      <div className="mb-6 flex flex-wrap gap-2">
-                        {freelancer.skills.slice(0, 4).map((skill) => (
-                          <span 
-                            key={skill} 
-                            className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white/80"
-                          >
-                            {skill}
-                          </span>
-                        ))}
-                        {freelancer.skills.length > 4 && (
-                          <span className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white/60">
-                            +{freelancer.skills.length - 4} more
-                          </span>
-                        )}
+                      <div className="flex flex-col gap-2">
+                        <FreelancerSkills skills={freelancer.skills} />
                     </div>
                     )}
 
                     {/* CTAs */}
-                    <div className="flex items-center gap-3 pt-4 border-t border-white/10">
+                    <div className="mt-3 flex flex-col-reverse gap-2 md:flex-row md:items-center md:justify-between">
+                      <Link
+                        href={`/freelancers/profile/${freelancer.id}`}
+                        className="text-sm font-semibold text-white/60 underline-offset-4 transition hover:text-white hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/40"
+                      >
+                        {hasPortfolio ? 'View profile' : 'Ask for samples'}
+                      </Link>
                       <button
                         onClick={() => {
                           setSelectedFreelancer(freelancer.id);
                           setShowQuoteForm(true);
                         }}
-                        className="flex-1 rounded-xl bg-gradient-to-r from-[#00C6FF] to-[#7D2AE8] px-5 py-3 text-base font-semibold text-white shadow-lg hover:shadow-xl hover:brightness-110 transition-all"
+                        className="flex-1 rounded-xl bg-gradient-to-r from-[#00C6FF] to-[#7D2AE8] px-4 py-3 text-sm font-semibold text-white shadow-lg hover:shadow-xl hover:brightness-110 transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300 md:max-w-[62%]"
                       >
-                        Request a Quote
+                        Request Proposal
                       </button>
-                      <Link
-                        href={`/freelancers/profile/${freelancer.id}`}
-                        className="rounded-xl bg-white/10 px-5 py-3 text-base font-semibold text-white hover:bg-white/15 transition-all border border-white/10"
-                      >
-                        View Profile
-                      </Link>
                     </div>
                   </div>
                 </div>
@@ -938,25 +1072,106 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
         </section>
 
         {/* CTA Panel */}
-        <section className="bg-white/5 border-t border-white/10 py-12">
-          <div className="max-w-4xl mx-auto text-center px-4">
-            <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">
-              Can't find the perfect match?
+        <section className="relative overflow-hidden border-t border-white/10 bg-gradient-to-br from-[#090F1A] via-[#070C16] to-[#060910] py-14">
+          <div className="pointer-events-none absolute -left-28 top-1/2 h-[18rem] w-[18rem] -translate-y-1/2 rounded-full bg-[radial-gradient(circle,_rgba(0,198,255,0.25)_0%,rgba(13,17,28,0)_72%)] blur-3xl" />
+          <div className="pointer-events-none absolute -right-16 top-12 h-[16rem] w-[16rem] rounded-full bg-[radial-gradient(circle,_rgba(125,42,232,0.28)_0%,rgba(13,17,28,0)_68%)] blur-3xl" />
+
+          <div className="relative mx-auto flex max-w-6xl flex-col gap-10 px-6 md:flex-row md:items-center md:justify-between">
+            <div className="max-w-xl space-y-4">
+              <p className="text-[11px] uppercase tracking-[0.36em] text-white/55">Need help choosing?</p>
+              <h2 className="bg-gradient-to-r from-[#E3F6FF] via-white to-[#C6D5FF] bg-clip-text text-3xl font-semibold leading-tight text-transparent md:text-[32px]">
+                Didn’t find the perfect match? We’ll shortlist great freelancers for you.
             </h2>
-            <p className="text-lg text-white/70 mb-6">
-              Post a project and get proposals in hours.
-            </p>
+              <p className="text-sm text-white/70">
+                Tell us what you need, and our team will send you a few vetted options.
+              </p>
+              <div className="flex flex-wrap items-center gap-3 text-xs text-white/65">
+                <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1">
+                  ✨ We do the matching
+                </span>
+                <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1">
+                  ✓ Identity verified
+                </span>
+                <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1">
+                  🔐 Escrow-ready
+                </span>
+              </div>
+              <div className="flex flex-col gap-3 pt-4 sm:flex-row sm:items-center sm:gap-4">
             <Link
               href="/projects"
-              className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-[#00C6FF] to-[#7D2AE8] text-white rounded-xl font-semibold hover:brightness-110 transition-all shadow-lg"
+                  className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#00C6FF] to-[#7D2AE8] px-6 py-3 text-sm font-semibold tracking-[0.16em] text-white shadow-[0_18px_40px_-22px_rgba(0,198,255,0.65)] transition hover:shadow-[0_28px_70px_-26px_rgba(125,42,232,0.55)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300"
             >
               Post a Project
-              <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="ml-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
               </svg>
             </Link>
+                <Link
+                  href="/contact"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-white/80 transition hover:border-white/30 hover:text-white"
+                >
+                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-sm">💬</span>
+                  Talk to a talent advisor
+            </Link>
+              </div>
+              <p className="text-[11px] uppercase tracking-[0.28em] text-white/45">
+                Free to post · No obligation · Most projects matched within 24h
+              </p>
+            </div>
+
+            <div className="relative w-full max-w-sm overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl backdrop-blur-md md:ml-auto">
+              <div className="mb-5 flex items-center justify-between">
+                <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/30 px-3 py-1 text-[11px] uppercase tracking-[0.32em] text-white/65">
+                  Match queue
+                </span>
+                <span className="text-xs text-white/45">Sample workflow</span>
+              </div>
+              <div className="space-y-4 text-sm text-white/70">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.3em] text-white/45">Active brief</p>
+                  <p className="mt-1 text-base font-semibold text-white">New client project</p>
+                  <p className="text-white/60">Our team is screening a shortlist of freelancers</p>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs text-white/55">
+                    <span>Current step</span>
+                    <span className="font-semibold text-white">Shortlisting</span>
+                  </div>
+                  <div className="relative h-2 rounded-full bg-white/10">
+                    <span className="absolute inset-y-0 left-0 w-1/3 rounded-full bg-gradient-to-r from-[#00C6FF] to-[#7D2AE8]" />
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="h-10 w-10 rounded-full border border-white/15 bg-white/10" />
+                  <div>
+                    <p className="text-sm font-semibold text-white">Talent review team</p>
+                    <p className="text-xs text-white/60">Checking portfolios, recent work, and availability.</p>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-6 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-xs text-emerald-100">
+                “Share your brief and we’ll bring back 2–3 freelancers who are a strong fit.”
+              </div>
+            </div>
           </div>
         </section>
+
+        <footer className="border-t border-white/10 bg-[#080C16]">
+          <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-6 py-6 text-xs text-white/60 md:flex-row">
+            <p>© {new Date().getFullYear()} Uniti. All rights reserved.</p>
+            <div className="flex items-center gap-5">
+              <Link href="/terms" className="hover:text-white transition-colors">
+                Terms
+              </Link>
+              <Link href="/privacy" className="hover:text-white transition-colors">
+                Privacy
+              </Link>
+              <Link href="/contact" className="hover:text-white transition-colors">
+                Contact
+              </Link>
+            </div>
+          </div>
+        </footer>
       </div>
 
       {/* Quote Request Form Modal */}
@@ -1013,93 +1228,38 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       FROM freelancers f
       WHERE f.status = 'approved'
       ORDER BY f.rating DESC
-    `);
+    `)
 
-    // Parse JSON fields and transform data
-    const freelancersWithData = freelancers.map((freelancer: any) => {
-      let parsedSkills: string[] = [];
-      let parsedLanguages: string[] = [];
-      let parsedIndustries: string[] = [];
-      let parsedPortfolioThumbs: string[] = [];
-
-      try {
-        parsedSkills = typeof freelancer.skills === 'string' 
-          ? JSON.parse(freelancer.skills) 
-          : freelancer.skills || [];
-      } catch (e) {
-        parsedSkills = [];
-      }
-
-      try {
-        parsedLanguages = typeof freelancer.languages === 'string' 
-          ? JSON.parse(freelancer.languages) 
-          : freelancer.languages || [];
-      } catch (e) {
-        parsedLanguages = [];
-      }
-
-      try {
-        parsedIndustries = typeof freelancer.industries === 'string' 
-          ? JSON.parse(freelancer.industries) 
-          : freelancer.industries || [];
-      } catch (e) {
-        parsedIndustries = [];
-      }
-
-      // Use portfolio_thumbnails from query if available, otherwise use portfolio_thumbs
-      let thumbUrls: string[] = [];
-      try {
-        if (freelancer.portfolio_thumbnails) {
-          thumbUrls = typeof freelancer.portfolio_thumbnails === 'string'
-            ? JSON.parse(freelancer.portfolio_thumbnails)
-            : freelancer.portfolio_thumbnails || [];
-        } else if (freelancer.portfolio_thumbs) {
-          thumbUrls = typeof freelancer.portfolio_thumbs === 'string'
-            ? JSON.parse(freelancer.portfolio_thumbs)
-            : freelancer.portfolio_thumbs || [];
-        }
-      } catch (e) {
-        thumbUrls = [];
-      }
+    const normalizedFreelancers = (freelancers as any[]).map((freelancer) => {
+      const skills = parseMediaArray(freelancer.skills)
+      const languages = parseMediaArray(freelancer.languages)
+      const industries = parseMediaArray(freelancer.industries)
+      const portfolioThumbs = parseMediaArray(freelancer.portfolio_thumbs)
+      const portfolioExtra = parseMediaArray((freelancer as any).portfolio_thumbnails)
+      const portfolio = Array.from(new Set([...portfolioThumbs, ...portfolioExtra]))
 
       return {
-        id: String(freelancer.id),
-        display_name: freelancer.display_name || '',
-        headline: freelancer.headline || null,
-        title: freelancer.title || '',
-        description: freelancer.description || '',
-        country: freelancer.country || null,
-        skills: parsedSkills,
-        avatar_url: freelancer.avatar_url || null,
-        rating: Number(freelancer.rating) || 0,
-        total_reviews: Number(freelancer.total_reviews) || 0,
-        completed_projects: Number(freelancer.completed_projects) || 0,
-        response_time: freelancer.response_time || null,
-        availability: freelancer.availability || 'available',
-        verification_state: freelancer.verification_state || null,
-        experience_level: freelancer.experience_level || null,
-        turnaround_days: freelancer.turnaround_days != null ? Number(freelancer.turnaround_days) : null,
-        timezone_offset: freelancer.timezone_offset != null ? Number(freelancer.timezone_offset) : null,
-        languages: parsedLanguages,
-        industries: parsedIndustries,
-        portfolio_thumbs: thumbUrls,
-        portfolio_thumbnails: thumbUrls, // Alias for compatibility
-      };
-    });
+        ...freelancer,
+        skills,
+        languages,
+        industries,
+        portfolio_thumbs: portfolio
+      }
+    })
 
     return {
       props: {
-        freelancers: freelancersWithData,
+        freelancers: normalizedFreelancers,
         initialSearchTerm,
       },
-    };
+    }
   } catch (error) {
-    console.error('Error in getServerSideProps:', error);
+    console.error('Error fetching freelancers', error)
     return {
       props: {
         freelancers: [],
         initialSearchTerm: '',
       },
-    };
   }
+}
 }

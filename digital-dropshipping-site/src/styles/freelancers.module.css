@@ -6,22 +6,12 @@
 
 /* Hero Gradient - Freelancers Page Specific */
 .heroGradient {
-  background: linear-gradient(100deg, rgba(110, 231, 249, 0.88) 0%, rgba(96, 165, 250, 0.94) 55%, rgba(167, 139, 250, 0.88) 100%);
+  background: linear-gradient(100deg, rgba(110, 231, 249, 0.92) 0%, rgba(96, 165, 250, 0.96) 50%, rgba(129, 140, 248, 0.95) 100%);
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   letter-spacing: -0.01em;
   text-shadow: 0 0 0 rgba(0, 0, 0, 0);
-}
-
-.heroImageOverlay {
-  background-image: url("/images/freelancers-hero.jpg");
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  opacity: 0.18;
-  filter: none;
-  mix-blend-mode: normal;
 }
 
 .heroNoise {
@@ -32,11 +22,11 @@
 }
 
 .heroAurora {
-  background: radial-gradient(circle at 22% 22%, rgba(255, 255, 255, 0.09), transparent 55%),
-    radial-gradient(circle at 78% 32%, rgba(214, 226, 245, 0.08), transparent 50%),
-    radial-gradient(circle at 50% 78%, rgba(148, 163, 184, 0.06), transparent 60%);
-  filter: blur(32px);
-  opacity: 0.16;
+  background: radial-gradient(circle at 22% 22%, rgba(7, 16, 36, 0.55), transparent 55%),
+    radial-gradient(circle at 78% 32%, rgba(11, 27, 58, 0.4), transparent 55%),
+    radial-gradient(circle at 50% 78%, rgba(8, 17, 36, 0.45), transparent 65%);
+  filter: blur(42px);
+  opacity: 0.45;
   animation: auroraDrift 18s ease-in-out infinite alternate;
 }
 
@@ -56,22 +46,24 @@
 .trustBadge {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.38rem 0.8rem;
+  gap: 0.45rem;
+  padding: 0.48rem 1rem;
   border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: rgba(229, 234, 244, 0.88);
-  font-size: 0.8rem;
-  font-weight: 500;
-  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+  background: rgba(18, 25, 38, 0.52);
+  border: 1px solid rgba(108, 132, 176, 0.45);
+  color: rgba(243, 248, 255, 0.92);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease, transform 0.2s ease;
 }
 
 .trustBadge:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.16);
-  box-shadow: none;
-  color: rgba(243, 246, 251, 0.92);
+  background: rgba(34, 47, 74, 0.75);
+  border-color: rgba(148, 186, 255, 0.55);
+  color: rgba(255, 255, 255, 0.95);
+  transform: translateY(-1px);
 }
 
 .trustBadgeIcon {
@@ -80,25 +72,23 @@
   justify-content: center;
   width: 1.15rem;
   height: 1.15rem;
-  color: rgba(149, 186, 255, 0.85);
+  color: rgba(135, 206, 255, 0.9);
 }
 
 .heroSearchForm {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(135deg, rgba(13, 18, 28, 0.78), rgba(13, 18, 28, 0.6));
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  box-shadow: 0 12px 30px rgba(7, 12, 21, 0.42);
+  background: rgba(18, 26, 38, 0.88);
+  box-shadow: 0 22px 48px rgba(5, 12, 26, 0.45);
 }
 
 .heroSearchForm::before {
   content: '';
   position: absolute;
   inset: -40%;
-  background: linear-gradient(120deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0));
+  background: linear-gradient(125deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0));
   transform: rotate(5deg);
-  opacity: 0.18;
+  opacity: 0.3;
   pointer-events: none;
 }
 
@@ -107,7 +97,7 @@
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  border: 1px solid rgba(148, 163, 184, 0.24);
+  border: 1px solid rgba(94, 117, 163, 0.4);
   pointer-events: none;
 }
 
@@ -118,9 +108,9 @@
   height: 2.5rem;
   padding: 0 1.25rem;
   border-radius: 9999px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(232, 235, 244, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(12, 19, 36, 0.12);
+  color: rgba(226, 232, 240, 0.88);
   font-size: 0.8125rem;
   font-weight: 500;
   transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
@@ -128,8 +118,8 @@
 
 .heroCategoryButton:hover {
   transform: translateY(-1px);
-  border-color: rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(148, 163, 184, 0.5);
+  background: rgba(32, 52, 91, 0.3);
   color: rgba(248, 249, 252, 0.95);
 }
 
@@ -143,64 +133,567 @@
 }
 
 /* Filter Styles - Freelancers Page Specific */
-.filterLabel {
-  font-size: 0.6875rem; /* 11px */
-  font-weight: 600;
+.filtersSection {
+  position: relative;
+  top: auto;
+  z-index: 10;
+  background: linear-gradient(180deg, rgba(6, 10, 18, 0.94), rgba(6, 10, 18, 0.78));
+  backdrop-filter: blur(18px);
+  box-shadow: 0 18px 32px -18px rgba(10, 16, 28, 0.52);
+  padding: 0.6rem 0 0.1rem;
+}
+
+.filtersHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+  padding-bottom: 0.28rem;
+}
+
+.filtersHeadingGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
+.filtersHeadingOverline {
+  font-size: 0.64rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 0.25rem;
+  letter-spacing: 0.26em;
+  color: rgba(244, 246, 252, 0.82);
 }
 
-.filterDropdown {
-  min-width: 160px;
-  padding: 0.5rem 0.75rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 0.5rem;
-  color: white;
-  font-size: 0.875rem;
-  font-weight: 500;
-  transition: all 0.2s ease;
+.filtersHeadingSub {
+  font-size: 0.64rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(224, 232, 246, 0.6);
+}
+
+.filtersClearButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.34rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(217, 230, 255, 0.16);
+  padding: 0.18rem 0.68rem;
+  font-size: 0.58rem;
+  font-weight: 600;
+  line-height: 1.1;
+  color: rgba(235, 241, 255, 0.84);
+  background: rgba(16, 22, 36, 0.42);
+  box-shadow: 0 7px 14px -10px rgba(59, 130, 246, 0.22);
+  transition: border-color 0.15s ease-out, color 0.15s ease-out, transform 0.15s ease-out;
+}
+
+.filtersClearButton:hover {
+  transform: translateY(-0.5px);
+  border-color: rgba(94, 234, 212, 0.34);
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.filtersClearButton:focus-visible {
+  outline: 2px solid rgba(125, 211, 252, 0.45);
+  outline-offset: 3px;
+}
+
+.filterSummaryRow {
+  margin-top: 0.4rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.32rem;
+}
+
+.filtersSummaryDivider {
+  display: none;
+}
+
+.resultsSection {
+  position: relative;
+}
+
+.resultsSection::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(6, 10, 18, 0.1), rgba(6, 10, 18, 0));
+}
+
+.viewToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  padding: 0.24rem 0.3rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: linear-gradient(145deg, rgba(19, 26, 36, 0.94), rgba(9, 13, 24, 0.72));
+  box-shadow: 0 12px 24px -18px rgba(11, 17, 27, 0.68), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(18px);
+}
+
+.viewToggleButton {
+  width: 1.72rem;
+  height: 1.72rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  color: rgba(226, 232, 240, 0.55);
+  background: transparent;
+  border: none;
   cursor: pointer;
+  transition: color 0.16s ease, transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
 }
 
-.filterDropdown:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.2);
+.viewToggleButton svg {
+  width: 0.78rem;
+  height: 0.78rem;
 }
 
-.filterDropdown:focus {
+.viewToggleButton:hover {
+  color: rgba(255, 255, 255, 0.9);
+  transform: translateY(-0.4px) scale(1.02);
+}
+
+.viewToggleButton:focus-visible {
+  outline: 2px solid rgba(125, 211, 252, 0.58);
+  outline-offset: 3px;
+}
+
+.viewToggleButtonActive {
+  color: #070c16;
+  background: linear-gradient(160deg, #ffffff, #f2f6ff);
+  box-shadow: 0 12px 24px -16px rgba(14, 22, 42, 0.48), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  transform: translateY(-0.6px);
+}
+
+.viewToggleButtonActive:hover {
+  color: #070c16;
+}
+
+.resultsGridRefresh {
+  animation: gridFadeIn 0.18s ease-out;
+}
+
+@keyframes gridFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.filterSummaryCount {
+  font-size: 0.64rem;
+  color: rgba(230, 236, 248, 0.78);
+}
+
+.filterSummaryCountMuted {
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: rgba(218, 226, 240, 0.5);
+}
+
+.chipClose {
+  margin-left: 0.25rem;
+  color: rgba(17, 24, 39, 0.35);
+  transition: color 0.18s ease;
+}
+
+.chipClose:hover {
+  color: rgba(17, 24, 39, 0.65);
+}
+
+.filterVariantOutline {
+  background:
+    radial-gradient(circle at 50% -120%, rgba(82, 109, 182, 0.12), transparent 60%),
+    linear-gradient(180deg, rgba(7, 11, 18, 0.9), rgba(7, 11, 18, 0.82));
+}
+
+.filterVariantGlass {
+  background: linear-gradient(180deg, rgba(8, 12, 22, 0.94), rgba(6, 10, 18, 0.82));
+  backdrop-filter: blur(26px);
+  box-shadow: 0 26px 58px -26px rgba(8, 12, 18, 0.64);
+}
+
+.filterVariantGlass .filterControl {
+  backdrop-filter: blur(18px);
+  background: linear-gradient(180deg, rgba(18, 26, 44, 0.94), rgba(11, 18, 36, 0.9));
+  border: 1px solid rgba(148, 185, 255, 0.18);
+  box-shadow: 0 22px 44px -26px rgba(14, 23, 42, 0.7);
+}
+
+.filterVariantGlass .filterControl:hover {
+  border-color: rgba(125, 211, 252, 0.3);
+  box-shadow: 0 28px 52px -28px rgba(14, 23, 42, 0.82);
+}
+
+.filterVariantGlass .filterControlActive {
+  border-color: rgba(125, 211, 252, 0.4);
+  background: linear-gradient(180deg, rgba(22, 32, 54, 0.98), rgba(12, 18, 32, 0.94));
+}
+
+.filterVariantGlass .filterSelectWrapper::after {
+  border-color: rgba(230, 233, 242, 0.92);
+}
+
+.filterVariantGlass .filterLabel {
+  color: #aab4c5;
+}
+
+.filterVariantGlass .filterControlActive .filterLabel {
+  color: #c7d0dc;
+}
+
+.filterVariantGlass .filtersClearButton {
+  border-color: rgba(230, 233, 242, 0.24);
+  color: rgba(235, 241, 255, 0.88);
+  background: rgba(18, 26, 42, 0.52);
+}
+
+.filterVariantUnderline {
+  background: linear-gradient(180deg, rgba(6, 9, 15, 0.92), rgba(6, 9, 15, 0.86));
+  border-bottom: 1px solid rgba(120, 140, 180, 0.18);
+  box-shadow: 0 16px 44px rgba(6, 10, 18, 0.4);
+}
+
+.filterVariantUnderline .filterScroller {
+  gap: 1.2rem;
+}
+
+.filterVariantUnderline .filterControl {
+  min-width: 120px;
+  border-radius: 0;
+  background: transparent;
+  border: none;
+  padding: 0.2rem 0;
+  box-shadow: none;
+}
+
+.filterVariantUnderline .filterHeader {
+  margin-bottom: 0.18rem;
+}
+
+.filterVariantUnderline .filterCoin,
+.filterVariantUnderline .filterCoinAura {
+  display: none;
+}
+
+.filterVariantUnderline .filterLabel {
+  font-size: 0.58rem;
+  letter-spacing: 0.18em;
+  color: rgba(210, 220, 245, 0.6);
+}
+
+.filterVariantUnderline .filterSelectWrapper {
+  border-radius: 0;
+}
+
+.filterVariantUnderline .filterSelect {
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  border-bottom: 1.5px solid rgba(110, 140, 200, 0.35);
+  padding: 0.25rem 0;
+  color: rgba(236, 240, 255, 0.92);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.filterVariantUnderline .filterSelect:hover {
+  box-shadow: none;
+  border-bottom-color: rgba(156, 190, 255, 0.6);
+}
+
+.filterVariantUnderline .filterSelect:focus {
+  box-shadow: none;
+  border-bottom-color: rgba(176, 212, 255, 0.9);
+}
+
+.filterVariantUnderline .filtersClearButton {
+  border: none;
+  border-radius: 0;
+  padding: 0.25rem 0;
+  color: rgba(214, 226, 255, 0.7);
+  background: transparent;
+  box-shadow: none;
+}
+
+.filterVariantUnderline .filtersClearButton:hover {
+  background: none;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.filterScroller {
+  display: flex;
+  align-items: stretch;
+  gap: 0.9rem;
+  overflow-x: auto;
+  padding: 0.2rem 0.1rem 0.4rem;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+}
+
+.filterScroller::-webkit-scrollbar {
+  display: none;
+}
+
+.filterControl {
+  position: relative;
+  flex: 1 0 clamp(170px, 16vw, 206px);
+  border-radius: 0.64rem;
+  background: linear-gradient(180deg, rgba(13, 19, 34, 0.98), rgba(8, 13, 24, 0.92));
+  border: 1px solid rgba(118, 142, 194, 0.18);
+  padding: 0.52rem 0 0.24rem;
+  box-shadow: 0 20px 36px -28px rgba(8, 15, 30, 0.72);
+  transition: transform 0.15s ease-out, box-shadow 0.15s ease-out, border-color 0.15s ease-out, background 0.15s ease-out;
+  scroll-snap-align: center;
+}
+
+.filterControl:hover {
+  transform: translateY(-1px);
+  border-color: rgba(125, 211, 252, 0.24);
+  box-shadow: 0 24px 48px -28px rgba(14, 23, 42, 0.78);
+}
+
+.filterControlActive {
+  border-color: rgba(125, 211, 252, 0.32);
+  background: linear-gradient(180deg, rgba(18, 28, 48, 0.98), rgba(10, 16, 30, 0.96));
+}
+
+.filterContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.32rem;
+  padding: 0 0.4rem;
+}
+
+.filterLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.48rem;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.135em;
+  color: #c1cad7;
+}
+
+.filterCoin {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.filterCoinAura {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: conic-gradient(from 120deg, rgba(125, 211, 252, 0.24), rgba(99, 102, 241, 0.24), rgba(125, 211, 252, 0.24));
+  opacity: 0.24;
+  transition: opacity 0.15s ease-out;
+}
+
+.filterCoinGlyph {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: #8ddbf9;
+  font-size: 0.78rem;
+  transition: color 0.18s ease-out;
+}
+
+.filterCoinGlyph :global(svg) {
+  width: 1rem;
+  height: 1rem;
+}
+
+.filterControl:hover .filterCoinAura,
+.filterControl:focus-within .filterCoinAura {
+  opacity: 0.44;
+}
+
+.filterControl:hover .filterCoinGlyph,
+.filterControl:focus-within .filterCoinGlyph {
+  color: #bfe6ff;
+}
+
+.filterLabelFull {
+  display: none;
+}
+
+.filterLabelShort {
+  display: inline;
+}
+
+@media (min-width: 992px) {
+  .filterLabelFull {
+    display: inline;
+  }
+
+  .filterLabelShort {
+    display: none;
+  }
+}
+
+.filterSelectWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  isolation: isolate;
+}
+
+.filterSelectWrapper::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 0.6rem;
+  pointer-events: none;
+  border: 1px solid #e6e9f2;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+  transition: transform 0.15s ease-out, box-shadow 0.1s ease-out, border-color 0.15s ease-out;
+  z-index: -1;
+}
+
+.filterControl:hover .filterSelectWrapper::after {
+  transform: scale(1.01);
+  border-color: rgba(56, 189, 248, 0.35);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12), 0 0 0 1px rgba(56, 189, 248, 0.15);
+}
+
+.filterSelectWrapper:focus-within::after {
+  transform: scale(1.01);
+  border-color: rgba(56, 189, 248, 0.55);
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.5);
+}
+
+.filterSelect {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.25rem;
+  appearance: none;
+  position: relative;
+  z-index: 1;
+  background: linear-gradient(180deg, #ffffff 0%, #f6f7fb 100%);
+  border: 1px solid rgba(230, 233, 242, 0.95);
+  border-radius: 0.56rem;
+  padding: 0.34rem 1.6rem 0.32rem 0.72rem;
+  color: #0b0f19;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.005em;
+  line-height: 1.3;
+  cursor: pointer;
+  box-shadow: none;
+  transform: translateY(0);
+  transition: transform 0.15s ease-out, color 0.15s ease-out, border-color 0.15s ease-out, background 0.15s ease-out;
+}
+
+.filterSelect:hover,
+.filterControl:hover .filterSelect {
+  transform: scale(1.01);
+}
+
+.filterSelect:focus {
   outline: none;
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(96, 165, 250, 0.5);
-  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.2);
+  border-color: rgba(56, 189, 248, 0.5);
+  box-shadow: none;
 }
 
-.filterDropdown option {
-  background: #0b0e13;
-  color: white;
+.filterCaret {
+  pointer-events: none;
+  position: absolute;
+  top: calc(50% + 6px);
+  right: 0.62rem;
+  transform: translateY(-50%);
+  width: 0.66rem;
+  height: 0.66rem;
+  color: rgba(148, 163, 184, 0.82);
+  transition: color 0.15s ease-out;
+}
+
+.filterSelect:focus + .filterCaret,
+.filterControl:hover .filterCaret {
+  color: rgba(126, 196, 255, 0.86);
+}
+
+.filterSelect option {
+  background: #ffffff;
+  color: #111827;
   padding: 0.5rem;
 }
 
-/* Active Filter Chip - Freelancers Page Specific */
 .chip {
   display: inline-flex;
   align-items: center;
-  gap: 0.375rem;
-  padding: 0.375rem 0.75rem;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  gap: 0.3rem;
+  padding: 0.35rem 0.75rem;
   border-radius: 9999px;
-  color: white;
-  font-size: 0.75rem;
+  border: 1px solid rgba(17, 24, 39, 0.1);
+  background: rgba(255, 255, 255, 0.92);
+  color: rgba(17, 24, 39, 0.72);
+  font-size: 0.7rem;
   font-weight: 500;
-  transition: all 0.15s ease;
+  letter-spacing: 0.02em;
+  transition: border-color 0.18s ease, background 0.18s ease;
   cursor: pointer;
 }
 
 .chip:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.25);
+  border-color: rgba(59, 130, 246, 0.35);
+  background: rgba(239, 246, 255, 0.95);
+}
+
+.filterClearAllButton {
+  margin-left: auto;
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .filterClearAllButton {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border-radius: 9999px;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    padding: 0.35rem 0.9rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: rgba(226, 232, 240, 0.8);
+    background: rgba(8, 12, 20, 0.6);
+    transition: border-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
+  }
+
+  .filterClearAllButton:hover {
+    transform: translateY(-1px);
+    border-color: rgba(94, 234, 212, 0.28);
+    color: rgba(190, 246, 255, 0.9);
+  }
+
+  .filterClearAllButton:focus-visible {
+    outline: 2px solid rgba(59, 130, 246, 0.45);
+    outline-offset: 3px;
+  }
 }
 
 /* Animation delay for freelancers page */
@@ -214,5 +707,15 @@
 
 .animateDelay4 {
   animation-delay: 1000ms;
+}
+
+.heroImageOverlay {
+  background-image: url("/images/freelancers-hero.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0.34;
+  filter: saturate(0.85);
+  mix-blend-mode: screen;
 }
 

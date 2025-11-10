@@ -620,7 +620,7 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
         <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-gradient-to-r from-cyan-400/20 via-blue-500/20 to-violet-500/20 blur-3xl animate-[pulse_8s_ease-in-out_infinite]"></div>
         
         {/* Full-screen video banner */}
-        <div className="relative w-full min-h-[75vh] overflow-hidden text-center">
+        <div className="relative w-full min-h-[78vh] overflow-hidden text-center pt-6 md:pt-8">
             <video
               className="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 hero-video-bg-refined"
               style={{ opacity: Math.max(0.4, 0.7 - scrollY / 1000) }}
@@ -639,7 +639,7 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
             {/* Light glow specifically behind gradient text area - much stronger */}
             <div className="pointer-events-none absolute left-1/2 top-[12vh] -translate-x-1/2 w-[650px] max-w-[75vw] h-[14vh] rounded-[24px] bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-violet-500/20 blur-[32px]"></div>
 
-            <div className="relative z-10 mx-auto max-w-[900px] px-6 pt-[12vh] text-center">
+            <div className="relative z-10 mx-auto max-w-[900px] px-6 pt-[16vh] pb-12 text-center">
               {/* HEADLINE */}
               <h1
                 className="mx-auto font-extrabold 
@@ -661,7 +661,7 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
               </p>
 
               {/* SEARCH – pushed further down */}
-              <div className="flex items-center justify-center animate-fade-in-up animate-delay-500 search-container-wrap">
+              <div className="mt-6 flex items-center justify-center animate-fade-in-up animate-delay-500 search-container-wrap">
                 <form onSubmit={handleSearchSubmit} className="relative flex w-full max-w-[680px] items-center gap-3 rounded-full px-4 h-[50px] search-form-airglass">
                   <svg className="h-5 w-5 text-white/70 shrink-0" viewBox="0 0 24 24" fill="none">
                     <path d="M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
@@ -700,7 +700,7 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
               </div>
 
               {/* CTAS */}
-              <div className="cta-buttons-container animate-fade-in-up animate-delay-400">
+              <div className="mt-6 cta-buttons-container animate-fade-in-up animate-delay-400">
               <button
               onClick={() => setShowQuoteForm(true)}
                   type="button"
@@ -721,7 +721,7 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
             </div>
           
               {/* TRUST INDICATORS - Matching Freelancer Page Style */}
-              <div className="mt-6 flex flex-wrap items-center justify-center gap-6 mb-12 text-white/80 text-sm animate-fade-in-up animate-delay-400">
+              <div className="mt-7 flex flex-wrap items-center justify-center gap-6 mb-14 text-white/80 text-sm animate-fade-in-up animate-delay-600">
                 {/* Fast quotes */}
                 <div className="flex items-center gap-2">
                   <svg className="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

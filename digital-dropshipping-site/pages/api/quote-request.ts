@@ -1,89 +1,176 @@
-import { NextApiRequest, NextApiResponse } from 'next';
-import { supabaseAdmin } from '../../src/lib/supabase-admin';
+import type { NextApiRequest, NextApiResponse } from 'next';
+import formidable from 'formidable';
+import path from 'path';
+import { promises as fs } from 'fs';
+import { query } from '../../src/lib/mysql';
+
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
+type QuoteRequestFields = {
+  clientName?: string | string[];
+  clientEmail?: string | string[];
+  clientPhone?: string | string[];
+  phoneCountryCode?: string | string[];
+  projectTitle?: string | string[];
+  projectDescription?: string | string[];
+  budget?: string | string[];
+  timeline?: string | string[];
+  category?: string | string[];
+  notes?: string | string[];
+};
+
+const toStringField = (value: string | string[] | undefined): string => {
+  if (!value) return '';
+  return Array.isArray(value) ? value[0] ?? '' : value;
+};
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
-  try {
-    const {
-      clientName,
-      clientEmail,
-      clientPhone,
-      projectTitle,
-      projectDescription,
-      budget,
-      timeline,
-      category,
-      notes
-    } = req.body;
+  const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'project-briefs');
+  await fs.mkdir(uploadDir, { recursive: true });
 
-    // Validate required fields
+  const form = formidable({
+    multiples: true,
+    uploadDir,
+    keepExtensions: true,
+    maxFileSize: 15 * 1024 * 1024,
+    filename: (_name, file) => {
+      const safeName = (file.originalFilename || 'attachment')
+        .replace(/[^a-zA-Z0-9.\-_]/g, '_')
+        .replace(/_{2,}/g, '_');
+      return `${Date.now()}-${safeName}`;
+    },
+  });
+
+  let attachmentsMetadata: Array<{ originalName: string; storedName: string; url: string; size: number; type?: string | null }> = [];
+
+  try {
+    const { fields, files } = await new Promise<{ fields: QuoteRequestFields; files: formidable.Files }>((resolve, reject) => {
+      form.parse(req, (err, fields, files) => {
+        if (err) reject(err);
+        else resolve({ fields: fields as QuoteRequestFields, files });
+      });
+    });
+
+    const clientName = toStringField(fields.clientName).trim();
+    const clientEmail = toStringField(fields.clientEmail).trim();
+    const clientPhone = toStringField(fields.clientPhone).trim();
+    const phoneCountryCode = toStringField(fields.phoneCountryCode).trim() || null;
+    const projectTitle = toStringField(fields.projectTitle).trim();
+    const projectDescription = toStringField(fields.projectDescription).trim();
+    const budgetRaw = toStringField(fields.budget).trim();
+    const timeline = toStringField(fields.timeline).trim();
+    const category = toStringField(fields.category).trim();
+    const notes = toStringField(fields.notes).trim();
+
     if (!clientName || !clientEmail || !projectTitle || !projectDescription || !category) {
-      return res.status(400).json({ 
-        message: 'Missing required fields: clientName, clientEmail, projectTitle, projectDescription, category' 
+      return res.status(400).json({
+        message: 'Missing required fields: clientName, clientEmail, projectTitle, projectDescription, category',
       });
     }
 
-    // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(clientEmail)) {
       return res.status(400).json({ message: 'Invalid email format' });
     }
 
-    // Create quote request in Supabase
-    const { data: quoteRequest, error } = await supabaseAdmin
-      .from('quote_requests')
-      .insert({
-        client_name: clientName,
-        client_email: clientEmail,
-        client_phone: clientPhone || null,
-        project_title: projectTitle,
-        project_description: projectDescription,
-        budget: budget || null,
-        timeline: timeline || null,
-        category,
-        notes: notes || null,
-        status: 'pending',
-        priority: 'medium'
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Supabase error:', error);
-      return res.status(500).json({ 
-        message: 'Failed to save quote request to database',
-        error: error.message 
+    const attachmentsArray: formidable.File[] = [];
+    const rawFiles = files.attachments;
+    if (Array.isArray(rawFiles)) {
+      rawFiles.forEach((file) => {
+        if (file && typeof file !== 'string') attachmentsArray.push(file);
       });
+    } else if (rawFiles && typeof rawFiles !== 'string') {
+      attachmentsArray.push(rawFiles);
     }
 
-    // Log the submission for admin notification
-    console.log('New quote request submitted:', {
-      id: quoteRequest.id,
-      clientName,
-      clientEmail,
-      projectTitle,
-      category,
-      budget,
-      timeline
-    });
+    attachmentsMetadata = attachmentsArray.map((file) => ({
+      originalName: file.originalFilename || file.newFilename,
+      storedName: path.basename(file.filepath),
+      url: `/uploads/project-briefs/${path.basename(file.filepath)}`,
+      size: file.size,
+      type: file.mimetype,
+    }));
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS project_leads (
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        client_name VARCHAR(255) NOT NULL,
+        client_email VARCHAR(255) NOT NULL,
+        client_phone VARCHAR(50) NULL,
+        phone_country VARCHAR(10) NULL,
+        project_title VARCHAR(255) NOT NULL,
+        project_description MEDIUMTEXT NOT NULL,
+        budget DECIMAL(12,2) NULL,
+        timeline VARCHAR(120) NULL,
+        category VARCHAR(160) NOT NULL,
+        notes MEDIUMTEXT NULL,
+        attachments JSON NULL,
+        status VARCHAR(32) NOT NULL DEFAULT 'pending',
+        priority ENUM('low','medium','high','urgent') NOT NULL DEFAULT 'medium',
+        admin_notes MEDIUMTEXT NULL,
+        assigned_to VARCHAR(160) NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    const budgetValue = budgetRaw ? Number(budgetRaw) : null;
+
+    const result = await query(
+      `
+        INSERT INTO project_leads
+          (client_name, client_email, client_phone, phone_country, project_title, project_description, budget, timeline, category, notes, attachments, status, priority)
+        VALUES
+          (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      [
+        clientName,
+        clientEmail,
+        clientPhone || null,
+        phoneCountryCode,
+        projectTitle,
+        projectDescription,
+        budgetValue,
+        timeline || null,
+        category,
+        notes || null,
+        attachmentsMetadata.length > 0 ? JSON.stringify(attachmentsMetadata) : null,
+        'pending',
+        'medium',
+      ],
+    );
+
+    const insertId = (Array.isArray(result) && (result as any).insertId) || (result as any).insertId || null;
 
     res.status(201).json({
       message: 'Quote request submitted successfully',
       quoteRequest: {
-        id: quoteRequest.id,
-        status: quoteRequest.status,
-        createdAt: quoteRequest.created_at
-      }
+        id: insertId,
+        status: 'pending',
+        attachments: attachmentsMetadata,
+      },
     });
-
   } catch (error) {
+    if (attachmentsMetadata.length > 0) {
+      await Promise.all(
+        attachmentsMetadata.map(async (file) => {
+          const filePath = path.join(uploadDir, file.storedName);
+          return fs.unlink(filePath).catch(() => undefined);
+        }),
+      );
+    }
     console.error('Error creating quote request:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'Failed to submit quote request',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 }
