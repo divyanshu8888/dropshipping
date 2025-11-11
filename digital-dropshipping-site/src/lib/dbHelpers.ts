@@ -86,35 +86,78 @@ export async function safeSum(
   return Number(rows[0]?.total ?? 0);
 }
 
-const tableExistsCache = new Map<string, boolean>();
+type TableCacheState = {
+  tables: Set<string>;
+  refreshedAt: number;
+  ttl: number;
+  unhealthyUntil?: number;
+};
 
-export async function tableExists(table: string): Promise<boolean> {
-  if (tableExistsCache.has(table)) {
-    return tableExistsCache.get(table)!;
+const TABLE_CACHE_TTL = 60 * 1000;
+const TABLE_CACHE_ERROR_COOLDOWN = 10 * 1000;
+
+let tableCacheState: TableCacheState | null = null;
+
+async function refreshTableCache(): Promise<Set<string>> {
+  const now = Date.now();
+  if (tableCacheState?.unhealthyUntil && now < tableCacheState.unhealthyUntil) {
+    return tableCacheState.tables;
+  }
+
+  if (tableCacheState && now - tableCacheState.refreshedAt < tableCacheState.ttl) {
+    return tableCacheState.tables;
   }
 
   try {
-    const rows = await query<{ found: number }>(
-      `SELECT 1 as found
+    const rows = await query<{ table_name?: string; TABLE_NAME?: string }>(
+      `SELECT table_name
          FROM information_schema.tables
-        WHERE table_schema = DATABASE()
-          AND table_name = ?
-        LIMIT 1`,
-      [table]
+        WHERE table_schema = DATABASE()`
     );
 
-    const exists = rows.length > 0;
-    tableExistsCache.set(table, exists);
-    return exists;
+    const tables = new Set(
+      rows
+        .map((row) => row.table_name ?? row.TABLE_NAME ?? '')
+        .filter((name) => typeof name === 'string' && name.length > 0)
+        .map((name) => name.toLowerCase())
+    );
+    tableCacheState = {
+      tables,
+      refreshedAt: now,
+      ttl: TABLE_CACHE_TTL
+    };
+    return tables;
   } catch (error: any) {
-    logError(error, `table-exists:${table}`);
-    tableExistsCache.set(table, false);
-    return false;
+    logError(error, 'table-list');
+    const cooldownUntil = now + TABLE_CACHE_ERROR_COOLDOWN;
+    tableCacheState = {
+      tables: tableCacheState?.tables ?? new Set(),
+      refreshedAt: tableCacheState?.refreshedAt ?? 0,
+      ttl: TABLE_CACHE_TTL,
+      unhealthyUntil: cooldownUntil
+    };
+    return tableCacheState.tables;
   }
 }
 
+export async function tableExists(table: string): Promise<boolean> {
+  const tableName = table.toLowerCase();
+  const tables = await refreshTableCache();
+
+  if (tables.size === 0 && tableCacheState?.unhealthyUntil && Date.now() < tableCacheState.unhealthyUntil) {
+    return false;
+  }
+
+  if (!tables.has(tableName)) {
+    const refreshedTables = await refreshTableCache();
+    return refreshedTables.has(tableName);
+  }
+
+  return true;
+}
+
 export function clearTableExistsCache() {
-  tableExistsCache.clear();
+  tableCacheState = null;
 }
 
 

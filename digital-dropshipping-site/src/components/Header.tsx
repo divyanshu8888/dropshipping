@@ -108,7 +108,7 @@ const Header: React.FC = () => {
                                             : 'bg-gradient-to-br from-slate-500 to-slate-600'
                                     }`}
                                 >
-                                    {user.name?.charAt(0).toUpperCase()}
+                                        {user.name?.charAt(0).toUpperCase()}
                                 </div>
                                 <div className="flex flex-col items-start">
                                     <span className="text-xs font-semibold text-white/90">{user.name}</span>
@@ -149,8 +149,8 @@ const Header: React.FC = () => {
                                             <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">
                                                 {user.role?.replace('_', ' ')}
                                             </p>
-                                        </div>
-                                    </div>
+                                </div>
+                            </div>
                                     <div className="mt-3 space-y-1">
                                         <Link
                                             href="/admin"
@@ -172,32 +172,26 @@ const Header: React.FC = () => {
                                         </Link>
                                     </div>
                                     <div className="mt-3 border-t border-white/10 pt-3">
-                                        <button
-                                            onClick={handleLogout}
+                            <button
+                                onClick={handleLogout}
                                             className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-500/20 px-3 py-2 text-sm font-semibold text-red-300 transition hover:bg-red-500/30"
-                                        >
+                            >
                                             ⏏ Logout
-                                        </button>
+                            </button>
                                     </div>
                                 </div>
                             )}
                         </div>
-                    ) : (
+                        ) : (
                         <div className="ml-4 flex items-center gap-3">
                             <Link
                                 href="/login"
-                                className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-semibold text-white/80 transition hover:border-white/30 hover:text-white"
+                                className="relative text-white/75 hover:text-white transition-all duration-300 after:absolute after:left-0 after:-bottom-1.5 after:h-[2px] after:w-0 after:bg-gradient-to-r from-cyan-400 to-violet-400 hover:after:w-full after:transition-all after:duration-300 focus:ring-2 focus:ring-white/50 focus:outline-none rounded px-2 py-1 text-sm font-medium"
                             >
-                                Log in / Sign up
-                            </Link>
-                            <Link
-                                href="/login?mode=admin"
-                                className="rounded-full bg-gradient-to-r from-purple-500 via-indigo-500 to-blue-500 px-4 py-1.5 text-xs font-semibold text-white shadow-lg shadow-purple-500/20 transition hover:shadow-purple-500/40 hover:-translate-y-[1px]"
-                            >
-                                Admin Login
+                                Log in
                             </Link>
                         </div>
-                    )}
+                        )}
                 </nav>
 
                 {/* Mobile Menu Button */}
@@ -279,11 +273,8 @@ const Header: React.FC = () => {
                             </div>
                         ) : (
                             <div className="pt-2 border-t border-white/10 space-y-2">
-                                <Link href="/login" className="block text-text-soft hover:text-text-base hover:bg-white/5 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200">
+                                <Link href="/login" className="text-text-soft hover:text-text-base hover:bg-white/5 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200">
                                     Log in / Sign up
-                                </Link>
-                                <Link href="/login?mode=admin" className="block text-white rounded-xl bg-gradient-to-r from-purple-500 via-indigo-500 to-blue-500 px-4 py-3 text-sm font-semibold shadow-lg shadow-purple-500/20 transition hover:shadow-purple-500/40">
-                                    Admin Login
                                 </Link>
                             </div>
                         )}

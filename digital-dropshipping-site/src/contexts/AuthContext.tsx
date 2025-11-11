@@ -30,61 +30,94 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [verified, setVerified] = useState(false);
   const router = useRouter();
-
-  console.log('AuthProvider - Rendering with user:', user);
 
   // Initialize user from localStorage on mount
   useEffect(() => {
-    const initializeAuth = () => {
-      console.log('AuthProvider - Initializing auth...');
-      if (typeof window !== 'undefined') {
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-          try {
-            const parsedUser = JSON.parse(storedUser);
-            console.log('AuthProvider - Restored user from localStorage:', parsedUser);
-            setUser(parsedUser);
-          } catch (err) {
-            console.error('AuthProvider - Error parsing stored user:', err);
-            localStorage.removeItem('user');
-          }
-        }
+    let active = true;
+    const hydrateUser = () => {
+      if (typeof window === 'undefined') return null;
+      const raw = localStorage.getItem('user');
+      if (!raw) return null;
+      try {
+        return JSON.parse(raw) as User;
+      } catch (error) {
+        localStorage.removeItem('user');
+        return null;
       }
-      setLoading(false);
     };
 
-    initializeAuth();
-  }, []);
-
-  // Verify session with server in background
-  useEffect(() => {
-    const verifySession = async () => {
-      if (typeof window === 'undefined' || !user) return;
+    const initialize = async () => {
+      const cachedUser = hydrateUser();
+      if (active) {
+        setUser(cachedUser);
+      }
 
       try {
         const response = await fetch('/api/auth/verify', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-user-data': JSON.stringify(user)
-          }
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user: cachedUser })
         });
 
         if (!response.ok) {
-          console.log('AuthProvider - Session invalid, logging out');
-          localStorage.removeItem('user');
-          setUser(null);
+          if (active) {
+            localStorage.removeItem('user');
+            setUser(null);
+          }
+        } else {
+          const payload = await response.json();
+          if (payload?.user && active) {
+            setUser(payload.user);
+            localStorage.setItem('user', JSON.stringify(payload.user));
+          }
         }
-      } catch (err) {
-        console.error('AuthProvider - Session verification error:', err);
+      } catch (verifyError) {
+        console.error('AuthProvider - verify error:', verifyError);
+      } finally {
+        if (active) {
+          setVerified(true);
+          setLoading(false);
+        }
       }
     };
 
-    // Verify session after 2 seconds
-    const timeoutId = setTimeout(verifySession, 2000);
-    return () => clearTimeout(timeoutId);
-  }, [user]);
+    initialize();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Verify session with server in background
+  useEffect(() => {
+    if (!verified || !user) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const response = await fetch('/api/auth/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user })
+        });
+
+        if (!response.ok) {
+          localStorage.removeItem('user');
+          setUser(null);
+        } else {
+          const payload = await response.json();
+          if (payload?.user) {
+            setUser(payload.user);
+            localStorage.setItem('user', JSON.stringify(payload.user));
+          }
+        }
+      } catch (intervalError) {
+        console.error('AuthProvider - periodic verify error:', intervalError);
+      }
+    }, 5 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, [verified, user]);
 
   const login = async (email: string, password: string) => {
     console.log('AuthProvider - Login called for:', email);

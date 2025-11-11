@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, Save, History, FileText, User, ShoppingCart, Package, AlertTriangle } from 'lucide-react';
 
 interface EntityDrawerProps {
@@ -22,6 +22,11 @@ export default function EntityDrawer({ open, onClose, entity, entityType }: Enti
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [entityDetails, setEntityDetails] = useState<any>(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const [detailsError, setDetailsError] = useState<string | null>(null);
+  const detailsCacheRef = useRef<Map<string, any>>(new Map());
+  const notesCacheRef = useRef<Map<string, string>>(new Map());
+  const historyCacheRef = useRef<Map<string, any[]>>(new Map());
 
   const tabs: TabData[] = [
     { id: 'summary', label: 'Summary', icon: <FileText className="w-4 h-4" /> },
@@ -34,43 +39,95 @@ export default function EntityDrawer({ open, onClose, entity, entityType }: Enti
     if (entity) {
       setEntityDetails(entity);
       setFormData(entity);
-      loadEntityData();
+      loadEntityDetails(entity.id);
     } else {
       setEntityDetails(null);
       setFormData({});
     }
   }, [entity, entityType]);
 
-  const loadEntityData = async () => {
+  useEffect(() => {
     if (!entity?.id) return;
 
+    if (activeTab === 'notes') {
+      loadEntityNotes(entity.id);
+    } else if (activeTab === 'history') {
+      loadEntityHistory(entity.id);
+    }
+  }, [activeTab, entity?.id]);
+
+  const loadEntityDetails = async (entityId: string | number) => {
+    const cacheKey = `${entityType}:${entityId}`;
+    const cached = detailsCacheRef.current.get(cacheKey);
+    if (cached) {
+      setEntityDetails(cached);
+      setFormData(cached);
+      setDetailsLoading(false);
+      return;
+    }
+
+    setDetailsLoading(true);
+    setDetailsError(null);
+
     try {
-      // Load details, notes, and history for this entity
-      const [detailsResponse, notesResponse, historyResponse] = await Promise.all([
-        fetch(`/api/admin/entity-details?entityId=${entity.id}&entityType=${entityType}`),
-        fetch(`/api/admin/entity-notes?entityId=${entity.id}&entityType=${entityType}`),
-        fetch(`/api/admin/entity-history?entityId=${entity.id}&entityType=${entityType}`)
-      ]);
-
-      if (detailsResponse.ok) {
-        const detailsData = await detailsResponse.json();
-        if (detailsData?.entity) {
-          setEntityDetails(detailsData.entity);
-          setFormData(detailsData.entity);
-        }
+      const response = await fetch(`/api/admin/entity-details?entityId=${entityId}&entityType=${entityType}`, {
+        headers: { 'Cache-Control': 'no-cache' }
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch entity details');
       }
 
-      if (notesResponse.ok) {
-        const notesData = await notesResponse.json();
-        setNotes(notesData.notes || '');
-      }
-
-      if (historyResponse.ok) {
-        const historyData = await historyResponse.json();
-        setHistory(historyData.history || []);
+      const data = await response.json();
+      if (data?.entity) {
+        detailsCacheRef.current.set(cacheKey, data.entity);
+        setEntityDetails(data.entity);
+        setFormData(data.entity);
       }
     } catch (error) {
-      console.error('Error loading entity data:', error);
+      console.error('Error loading entity details:', error);
+      setDetailsError('Unable to load details for this entity.');
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
+
+  const loadEntityNotes = async (entityId: string | number) => {
+    const cacheKey = `${entityType}:${entityId}`;
+    if (notesCacheRef.current.has(cacheKey)) {
+      setNotes(notesCacheRef.current.get(cacheKey) || '');
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/admin/entity-notes?entityId=${entityId}&entityType=${entityType}`);
+      if (response.ok) {
+        const data = await response.json();
+        const noteValue = data.notes || '';
+        notesCacheRef.current.set(cacheKey, noteValue);
+        setNotes(noteValue);
+      }
+    } catch (error) {
+      console.error('Error loading entity notes:', error);
+    }
+  };
+
+  const loadEntityHistory = async (entityId: string | number) => {
+    const cacheKey = `${entityType}:${entityId}`;
+    if (historyCacheRef.current.has(cacheKey)) {
+      setHistory(historyCacheRef.current.get(cacheKey) || []);
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/admin/entity-history?entityId=${entityId}&entityType=${entityType}`);
+      if (response.ok) {
+        const data = await response.json();
+        const historyValue = data.history || [];
+        historyCacheRef.current.set(cacheKey, historyValue);
+        setHistory(historyValue);
+      }
+    } catch (error) {
+      console.error('Error loading entity history:', error);
     }
   };
 
@@ -92,7 +149,7 @@ export default function EntityDrawer({ open, onClose, entity, entityType }: Enti
         // Show success toast
         showToast('Changes saved successfully', 'success');
         // Reload data
-        loadEntityData();
+        loadEntityDetails(entity.id);
       } else {
         throw new Error('Failed to save changes');
       }
@@ -120,7 +177,7 @@ export default function EntityDrawer({ open, onClose, entity, entityType }: Enti
 
       if (response.ok) {
         showToast(`${action} completed successfully`, 'success');
-        loadEntityData();
+        loadEntityDetails(entity.id);
       } else {
         throw new Error(`Failed to ${action}`);
       }
@@ -379,7 +436,21 @@ export default function EntityDrawer({ open, onClose, entity, entityType }: Enti
 
           {/* Content */}
           <div className="flex-1 overflow-y-auto p-4">
-            {activeTab === 'summary' && renderSummary()}
+            {activeTab === 'summary' && (
+              <>
+                {detailsLoading && (
+                  <div className="flex items-center justify-center py-20 text-sm text-text-mute">
+                    Loading details…
+                  </div>
+                )}
+                {!detailsLoading && detailsError && (
+                  <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-500">
+                    {detailsError}
+                  </div>
+                )}
+                {!detailsLoading && !detailsError && renderSummary()}
+              </>
+            )}
             {activeTab === 'edit' && renderEdit()}
             {activeTab === 'history' && renderHistory()}
             {activeTab === 'notes' && renderNotes()}
