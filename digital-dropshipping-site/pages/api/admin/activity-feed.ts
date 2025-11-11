@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { query } from '../../../src/lib/mysql';
+import { safeQuery, tableExists } from '../../../src/lib/dbHelpers';
 
 export default async function handler(
   req: NextApiRequest,
@@ -13,6 +13,26 @@ export default async function handler(
     const { type } = req.query;
 
     const [
+      hasUsersTable,
+      hasFreelancersTable,
+      hasClientsTable,
+      hasProjectsTable,
+      hasOrdersTable,
+      hasServicesTable,
+      hasQuoteRequestsTable,
+      hasReviewsTable
+    ] = await Promise.all([
+      tableExists('users'),
+      tableExists('freelancers'),
+      tableExists('clients'),
+      tableExists('projects'),
+      tableExists('orders'),
+      tableExists('freelancer_services'),
+      tableExists('quote_requests'),
+      tableExists('reviews')
+    ]);
+
+    const [
       users,
       freelancers,
       clients,
@@ -22,54 +42,86 @@ export default async function handler(
       quotes,
       reviews
     ] = await Promise.all([
-      query(`
-        SELECT id, email, role, is_active, created_at
-        FROM users
-        ORDER BY created_at DESC
-        LIMIT 20
-      `),
-      query(`
-        SELECT id, display_name, status, rating, created_at
-        FROM freelancers
-        ORDER BY created_at DESC
-        LIMIT 20
-      `),
-      query(`
-        SELECT id, contact_name, company_name, created_at
-        FROM clients
-        ORDER BY created_at DESC
-        LIMIT 20
-      `),
-      query(`
-        SELECT id, title, status, budget, created_at
-        FROM projects
-        ORDER BY created_at DESC
-        LIMIT 20
-      `),
-      query(`
-        SELECT id, total_amount, status, created_at
-        FROM orders
-        ORDER BY created_at DESC
-        LIMIT 20
-      `),
-      query(`
-        SELECT id, title, price, status, created_at
-        FROM freelancer_services
-        ORDER BY created_at DESC
-        LIMIT 20
-      `),
-      query(`
-        SELECT id, project_title, budget, status, created_at
-        FROM quote_requests
-        ORDER BY created_at DESC
-        LIMIT 20
-      `),
-      query(`
-        SELECT id, rating, comment, created_at
-        FROM reviews
-        ORDER BY created_at DESC
-        LIMIT 20
-      `)
+      hasUsersTable
+        ? safeQuery(
+            `SELECT id, email, role, is_active, created_at
+               FROM users
+              ORDER BY created_at DESC
+              LIMIT 20`,
+            [],
+            'activity-users'
+          )
+        : [],
+      hasFreelancersTable
+        ? safeQuery(
+            `SELECT id, display_name, status, rating, created_at
+               FROM freelancers
+              ORDER BY created_at DESC
+              LIMIT 20`,
+            [],
+            'activity-freelancers'
+          )
+        : [],
+      hasClientsTable
+        ? safeQuery(
+            `SELECT id, contact_name, company_name, created_at
+               FROM clients
+              ORDER BY created_at DESC
+              LIMIT 20`,
+            [],
+            'activity-clients'
+          )
+        : [],
+      hasProjectsTable
+        ? safeQuery(
+            `SELECT id, title, status, budget, created_at
+               FROM projects
+              ORDER BY created_at DESC
+              LIMIT 20`,
+            [],
+            'activity-projects'
+          )
+        : [],
+      hasOrdersTable
+        ? safeQuery(
+            `SELECT id, total_amount, status, created_at
+               FROM orders
+              ORDER BY created_at DESC
+              LIMIT 20`,
+            [],
+            'activity-orders'
+          )
+        : [],
+      hasServicesTable
+        ? safeQuery(
+            `SELECT id, title, price, status, created_at
+               FROM freelancer_services
+              ORDER BY created_at DESC
+              LIMIT 20`,
+            [],
+            'activity-services'
+          )
+        : [],
+      hasQuoteRequestsTable
+        ? safeQuery(
+            `SELECT id, project_title, budget, status, created_at
+               FROM quote_requests
+              ORDER BY created_at DESC
+              LIMIT 20`,
+            [],
+            'activity-quote-requests'
+          )
+        : [],
+      hasReviewsTable
+        ? safeQuery(
+            `SELECT id, rating, comment, created_at
+               FROM reviews
+              ORDER BY created_at DESC
+              LIMIT 20`,
+            [],
+            'activity-reviews'
+          )
+        : []
     ]);
 
     const userActivities: any[] = [];

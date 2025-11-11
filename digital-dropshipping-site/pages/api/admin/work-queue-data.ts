@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { safeQuery } from '../../../src/lib/dbHelpers';
+import { safeQuery, tableExists } from '../../../src/lib/dbHelpers';
 
 export default async function handler(
   req: NextApiRequest,
@@ -10,26 +10,40 @@ export default async function handler(
   }
 
   try {
-    const [pendingKYC, refundRequests] = await Promise.all([
-      safeQuery(
-        `SELECT id, email, role, created_at, kyc_status
-         FROM users
-         WHERE kyc_status = 'pending'
-         ORDER BY created_at ASC
-         LIMIT 20`,
-        [],
-        'workqueue-kyc'
-      ),
-      safeQuery(
-        `SELECT id, total_amount, status, created_at, refund_reason
-         FROM orders
-         WHERE status = 'refund_requested'
-         ORDER BY created_at ASC
-         LIMIT 20`,
-        [],
-        'workqueue-refunds'
-      )
+    const [hasFreelancersTable, hasUsersTable, hasOrdersTable] = await Promise.all([
+      tableExists('freelancers'),
+      tableExists('users'),
+      tableExists('orders')
     ]);
+
+    const pendingKYC = hasFreelancersTable && hasUsersTable
+      ? await safeQuery(
+          `SELECT f.id,
+                  u.email,
+                  u.role,
+                  f.status,
+                  f.created_at
+             FROM freelancers f
+             JOIN users u ON u.id = f.user_id
+            WHERE f.status = 'pending'
+            ORDER BY f.created_at ASC
+            LIMIT 20`,
+          [],
+          'workqueue-kyc'
+        )
+      : [];
+
+    const refundRequests = hasOrdersTable
+      ? await safeQuery(
+          `SELECT id, total_amount, status, created_at, refund_reason
+             FROM orders
+            WHERE status = 'refund_requested'
+            ORDER BY created_at ASC
+            LIMIT 20`,
+          [],
+          'workqueue-refunds'
+        )
+      : [];
 
     const workQueueData = {
       pendingKYC,

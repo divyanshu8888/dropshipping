@@ -55,6 +55,9 @@ export async function safeCount(
   context?: string
 ): Promise<number> {
   const effectiveContext = context ?? `count:${table}`;
+  if (!(await tableExists(table))) {
+    return 0;
+  }
   const rows = await safeQuery<{ count: number }>(
     `SELECT COUNT(*) as count FROM ${table} ${whereClause ? `WHERE ${whereClause}` : ''}`,
     params,
@@ -71,6 +74,9 @@ export async function safeSum(
   context?: string
 ): Promise<number> {
   const effectiveContext = context ?? `sum:${table}.${column}`;
+  if (!(await tableExists(table))) {
+    return 0;
+  }
   const rows = await safeQuery<{ total: number }>(
     `SELECT COALESCE(SUM(${column}), 0) as total FROM ${table} ${whereClause ? `WHERE ${whereClause}` : ''}`,
     params,
@@ -78,6 +84,37 @@ export async function safeSum(
   );
 
   return Number(rows[0]?.total ?? 0);
+}
+
+const tableExistsCache = new Map<string, boolean>();
+
+export async function tableExists(table: string): Promise<boolean> {
+  if (tableExistsCache.has(table)) {
+    return tableExistsCache.get(table)!;
+  }
+
+  try {
+    const rows = await query<{ found: number }>(
+      `SELECT 1 as found
+         FROM information_schema.tables
+        WHERE table_schema = DATABASE()
+          AND table_name = ?
+        LIMIT 1`,
+      [table]
+    );
+
+    const exists = rows.length > 0;
+    tableExistsCache.set(table, exists);
+    return exists;
+  } catch (error: any) {
+    logError(error, `table-exists:${table}`);
+    tableExistsCache.set(table, false);
+    return false;
+  }
+}
+
+export function clearTableExistsCache() {
+  tableExistsCache.clear();
 }
 
 

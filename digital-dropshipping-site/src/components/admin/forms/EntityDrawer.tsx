@@ -21,6 +21,7 @@ export default function EntityDrawer({ open, onClose, entity, entityType }: Enti
   const [notes, setNotes] = useState('');
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [entityDetails, setEntityDetails] = useState<any>(null);
 
   const tabs: TabData[] = [
     { id: 'summary', label: 'Summary', icon: <FileText className="w-4 h-4" /> },
@@ -31,21 +32,33 @@ export default function EntityDrawer({ open, onClose, entity, entityType }: Enti
 
   useEffect(() => {
     if (entity) {
+      setEntityDetails(entity);
       setFormData(entity);
-      // Load notes and history
       loadEntityData();
+    } else {
+      setEntityDetails(null);
+      setFormData({});
     }
-  }, [entity]);
+  }, [entity, entityType]);
 
   const loadEntityData = async () => {
     if (!entity?.id) return;
-    
+
     try {
-      // Load notes and history for this entity
-      const [notesResponse, historyResponse] = await Promise.all([
+      // Load details, notes, and history for this entity
+      const [detailsResponse, notesResponse, historyResponse] = await Promise.all([
+        fetch(`/api/admin/entity-details?entityId=${entity.id}&entityType=${entityType}`),
         fetch(`/api/admin/entity-notes?entityId=${entity.id}&entityType=${entityType}`),
         fetch(`/api/admin/entity-history?entityId=${entity.id}&entityType=${entityType}`)
       ]);
+
+      if (detailsResponse.ok) {
+        const detailsData = await detailsResponse.json();
+        if (detailsData?.entity) {
+          setEntityDetails(detailsData.entity);
+          setFormData(detailsData.entity);
+        }
+      }
 
       if (notesResponse.ok) {
         const notesData = await notesResponse.json();
@@ -142,78 +155,89 @@ export default function EntityDrawer({ open, onClose, entity, entityType }: Enti
     }
   };
 
-  const renderSummary = () => (
-    <div className="space-y-6">
-      <div className="bg-gray-50 rounded-lg p-4">
-        <h3 className="text-lg font-semibold mb-4">Entity Details</h3>
-        <div className="grid grid-cols-2 gap-4">
-          {Object.entries(entity || {}).map(([key, value]) => (
-            <div key={key}>
-              <span className="text-sm font-medium text-gray-600 capitalize">
-                {key.replace(/_/g, ' ')}:
-              </span>
-              <p className="text-sm text-gray-900">{String(value)}</p>
-            </div>
-          ))}
-        </div>
-      </div>
+  const renderSummary = () => {
+    const details = entityDetails ?? entity ?? {};
 
-      {/* Quick Actions */}
-      <div className="bg-blue-50 rounded-lg p-4">
-        <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
-        <div className="flex flex-wrap gap-2">
-          {entityType === 'kyc' && (
-            <>
-              <button
-                onClick={() => handleQuickAction('approve')}
-                className="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600"
-              >
-                Approve KYC
-              </button>
-              <button
-                onClick={() => handleQuickAction('reject')}
-                className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
-              >
-                Reject KYC
-              </button>
-            </>
-          )}
-          {entityType === 'order' && (
-            <>
-              <button
-                onClick={() => handleQuickAction('refund')}
-                className="px-3 py-1 bg-orange-500 text-white rounded text-sm hover:bg-orange-600"
-              >
-                Issue Refund
-              </button>
-              <button
-                onClick={() => handleQuickAction('hold')}
-                className="px-3 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600"
-              >
-                Hold Order
-              </button>
-            </>
-          )}
-          {entityType === 'user' && (
-            <>
-              <button
-                onClick={() => handleQuickAction('suspend')}
-                className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
-              >
-                Suspend User
-              </button>
-              <button
-                onClick={() => handleQuickAction('verify')}
-                className="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600"
-              >
-                Verify User
-              </button>
-            </>
+    return (
+      <div className="space-y-6">
+        <div className="bg-gray-50 rounded-lg p-4">
+          <h3 className="text-lg font-semibold mb-4">Entity Details</h3>
+          {Object.keys(details).length === 0 ? (
+            <p className="text-sm text-gray-500">No details available for this entity.</p>
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              {Object.entries(details).map(([key, value]) => (
+                <div key={key}>
+                  <span className="text-sm font-medium text-gray-600 capitalize">
+                    {key.replace(/_/g, ' ')}:
+                  </span>
+                  <p className="text-sm text-gray-900">{String(value)}</p>
+                </div>
+              ))}
+            </div>
           )}
         </div>
+
+        {/* Quick Actions */}
+        <div className="bg-blue-50 rounded-lg p-4">
+          <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
+          <div className="flex flex-wrap gap-2">
+            {entityType === 'kyc' && (
+              <>
+                <button
+                  onClick={() => handleQuickAction('approve')}
+                  className="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600"
+                >
+                  Approve KYC
+                </button>
+                <button
+                  onClick={() => handleQuickAction('reject')}
+                  className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
+                >
+                  Reject KYC
+                </button>
+              </>
+            )}
+            {entityType === 'order' && (
+              <>
+                <button
+                  onClick={() => handleQuickAction('refund')}
+                  className="px-3 py-1 bg-orange-500 text-white rounded text-sm hover:bg-orange-600"
+                >
+                  Issue Refund
+                </button>
+                <button
+                  onClick={() => handleQuickAction('hold')}
+                  className="px-3 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600"
+                >
+                  Hold Order
+                </button>
+              </>
+            )}
+            {entityType === 'user' && (
+              <>
+                <button
+                  onClick={() => handleQuickAction('suspend')}
+                  className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
+                >
+                  Suspend User
+                </button>
+                <button
+                  onClick={() => handleQuickAction('verify')}
+                  className="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600"
+                >
+                  Verify User
+                </button>
+              </>
+            )}
+            {entityType !== 'kyc' && entityType !== 'order' && entityType !== 'user' && (
+              <p className="text-sm text-gray-700">No quick actions available for this entity type.</p>
+            )}
+          </div>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderEdit = () => (
     <div className="space-y-4">
@@ -311,17 +335,23 @@ export default function EntityDrawer({ open, onClose, entity, entityType }: Enti
 
   if (!open) return null;
 
+  const entityTypeLabel = entityType.charAt(0).toUpperCase() + entityType.slice(1);
+  const entityIdValue = entityDetails?.id ?? entity?.id;
+  const entityIdLabel =
+    entityIdValue !== undefined && entityIdValue !== null ? String(entityIdValue).slice(0, 8) : null;
+
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
       <div className="absolute inset-0 bg-black bg-opacity-50" onClick={onClose} />
-      <div className="absolute right-0 top-0 h-full w-96 bg-white shadow-xl">
+      <div className="absolute right-0 top-0 h-full w-96 bg-white shadow-xl text-gray-900">
         <div className="flex flex-col h-full">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b">
             <div className="flex items-center space-x-2">
               {getEntityIcon()}
               <h2 className="text-lg font-semibold">
-                {entityType.charAt(0).toUpperCase() + entityType.slice(1)} #{entity?.id?.slice(0, 8)}
+                {entityTypeLabel}
+                {entityIdLabel ? ` #${entityIdLabel}` : ''}
               </h2>
             </div>
             <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">

@@ -29,39 +29,40 @@ export default async function handler(
       'kanban-projects'
     );
 
-    const organize = (status: string) =>
-      projects.filter((project) => (project.status || '').toLowerCase() === status);
+    const normalizeStatus = (status: string | null | undefined) => (status || '').toLowerCase();
+    const organize = (statuses: string[]) =>
+      projects.filter((project) => statuses.includes(normalizeStatus(project.status)));
 
     const columns = [
       {
         id: 'open',
         title: 'New Requests',
         color: 'bg-green-500',
-        cards: organize('open')
+        cards: organize(['draft', 'open'])
       },
       {
         id: 'review',
         title: 'Quotes Under Review',
         color: 'bg-yellow-500',
-        cards: organize('open')
+        cards: organize(['in_review'])
       },
       {
         id: 'assigned',
         title: 'SOW Signed',
         color: 'bg-blue-500',
-        cards: organize('assigned')
+        cards: organize(['contracted'])
       },
       {
         id: 'in_progress',
         title: 'In Delivery',
         color: 'bg-purple-500',
-        cards: organize('assigned')
+        cards: organize(['in_progress', 'delivered'])
       },
       {
         id: 'completed',
         title: 'Completed',
         color: 'bg-gray-500',
-        cards: organize('completed')
+        cards: organize(['completed'])
       }
     ];
 
