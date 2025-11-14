@@ -2,10 +2,10 @@ import Head from 'next/head';
 import Header from '../src/components/Header';
 import Link from 'next/link';
 import { GetServerSideProps } from 'next';
-import { getProducts } from '../src/lib/api';
+import { getProducts, Product } from '../src/lib/api';
 
 interface CategoriesPageProps {
-  products: any[];
+  products: Product[];
 }
 
 export default function CategoriesPage({ products }: CategoriesPageProps) {

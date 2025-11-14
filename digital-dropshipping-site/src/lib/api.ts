@@ -2,16 +2,269 @@ import { query, queryOne } from './mysql';
 
 export interface Product {
   id: number;
+  slug: string;
   name: string;
-  description: string;
-  price: number;
-  category: string;
-  image_url: string;
-  stock: number;
+  title: string;
+  summary: string | null;
+  description: string | null;
+  category: string | null;
+  category_slug: string | null;
+  category_id: number | null;
+  image_url: string | null;
+  hero_image_url: string | null;
+  icon_url: string | null;
+  service_id: number;
+  service_name: string;
+  service_slug: string;
+  service_short_description: string | null;
+  freelancer_id: number | null;
+  freelancer_name: string | null;
+  base_price_cents: number | null;
+  price_cents: number | null;
+  currency: string;
+  delivery_days: number | null;
+  status: string;
+  is_featured: boolean;
   is_active: boolean;
+  display_order: number;
   created_at: string;
   updated_at: string;
 }
+
+const nowIso = () => new Date().toISOString();
+
+const FALLBACK_PRODUCTS: Product[] = [
+  {
+    id: 101,
+    slug: 'shopify-store-in-a-box',
+    name: 'Shopify Store-in-a-Box',
+    title: 'Shopify Store-in-a-Box',
+    summary: 'Fully managed storefront setup with automation-ready workflows.',
+    description:
+      'Complete Shopify store design, payment gateway configuration, product import templates, and onboarding automation for busy founders.',
+    category: 'Web Development',
+    category_slug: 'web-development',
+    category_id: null,
+    image_url: '/images/products/product-1.jpg',
+    hero_image_url: '/images/products/product-1.jpg',
+    icon_url: null,
+    service_id: 1,
+    service_name: 'Website Development',
+    service_slug: 'website-development',
+    service_short_description: 'Custom website development services',
+    freelancer_id: null,
+    freelancer_name: 'Uniti Studio',
+    base_price_cents: 450000,
+    price_cents: 450000,
+    currency: 'AUD',
+    delivery_days: 21,
+    status: 'active',
+    is_featured: true,
+    is_active: true,
+    display_order: 1,
+    created_at: nowIso(),
+    updated_at: nowIso()
+  },
+  {
+    id: 102,
+    slug: 'amazon-fba-launch-kit',
+    name: 'Amazon FBA Launch Kit',
+    title: 'Amazon FBA Launch Kit',
+    summary: 'Keyword research, listing copy, and PPC starter campaigns.',
+    description:
+      'Done-for-you ASIN launch system that bundles listing optimisation, photo direction, PPC starter campaigns, and growth analytics dashboard.',
+    category: 'E-commerce',
+    category_slug: 'ecommerce',
+    category_id: null,
+    image_url: '/images/products/product-2.jpg',
+    hero_image_url: '/images/products/product-2.jpg',
+    icon_url: null,
+    service_id: 2,
+    service_name: 'E-commerce Development',
+    service_slug: 'ecommerce-development',
+    service_short_description: 'Full-featured e-commerce platform development',
+    freelancer_id: null,
+    freelancer_name: 'Uniti Operations',
+    base_price_cents: 320000,
+    price_cents: 320000,
+    currency: 'AUD',
+    delivery_days: 28,
+    status: 'active',
+    is_featured: false,
+    is_active: true,
+    display_order: 2,
+    created_at: nowIso(),
+    updated_at: nowIso()
+  },
+  {
+    id: 103,
+    slug: 'customer-success-playbook',
+    name: 'Customer Success Playbook',
+    title: 'Customer Success Playbook',
+    summary: 'Onboarding, help-center build, and CS automation program.',
+    description:
+      'Customer success operators build automated onboarding, retention plays, and support macros that keep first-response under 24 hours.',
+    category: 'Operations',
+    category_slug: 'operations',
+    category_id: null,
+    image_url: '/images/products/product-3.jpg',
+    hero_image_url: '/images/products/product-3.jpg',
+    icon_url: null,
+    service_id: 3,
+    service_name: 'Business Consulting',
+    service_slug: 'business-consulting',
+    service_short_description: 'Strategic business consulting services',
+    freelancer_id: null,
+    freelancer_name: 'Uniti CX Guild',
+    base_price_cents: 280000,
+    price_cents: 280000,
+    currency: 'AUD',
+    delivery_days: 14,
+    status: 'active',
+    is_featured: false,
+    is_active: true,
+    display_order: 3,
+    created_at: nowIso(),
+    updated_at: nowIso()
+  }
+];
+
+export interface ProductQueryOptions {
+  categoryName?: string;
+  categorySlug?: string;
+  includeInactive?: boolean;
+  limit?: number;
+  search?: string;
+  status?: string;
+}
+
+type ProductQueryRow = {
+  id: number;
+  slug: string;
+  title: string | null;
+  summary: string | null;
+  listing_description: string | null;
+  hero_image_url: string | null;
+  base_price_cents: number | null;
+  currency: string | null;
+  delivery_days: number | null;
+  status: string;
+  display_order: number;
+  is_featured: 'TRUE' | 'FALSE';
+  created_at: string;
+  updated_at: string;
+  service_id: number;
+  service_slug: string;
+  service_name: string;
+  service_description: string | null;
+  service_short_description: string | null;
+  icon_url: string | null;
+  service_image_url: string | null;
+  service_base_price_cents: number | null;
+  service_currency: string | null;
+  category_id: number | null;
+  category_name: string | null;
+  category_slug: string | null;
+  freelancer_id: number | null;
+  freelancer_name: string | null;
+};
+
+const PRODUCT_SELECT = `
+  SELECT
+    sl.id,
+    sl.slug,
+    sl.title,
+    sl.summary,
+    sl.description AS listing_description,
+    sl.hero_image_url,
+    sl.base_price_cents,
+    sl.currency,
+    sl.delivery_days,
+    sl.status,
+    sl.display_order,
+    sl.is_featured,
+    sl.created_at,
+    sl.updated_at,
+    s.id AS service_id,
+    s.slug AS service_slug,
+    s.name AS service_name,
+    s.description AS service_description,
+    s.short_description AS service_short_description,
+    s.icon_url,
+    s.image_url AS service_image_url,
+    s.base_price_cents AS service_base_price_cents,
+    s.currency AS service_currency,
+    c.id AS category_id,
+    c.name AS category_name,
+    c.slug AS category_slug,
+    f.id AS freelancer_id,
+    f.display_name AS freelancer_name
+  FROM service_listings sl
+  JOIN services s ON s.id = sl.service_id
+  LEFT JOIN categories c ON c.id = s.category_id
+  LEFT JOIN freelancers f ON f.id = sl.freelancer_id
+`;
+
+const PRODUCT_ORDER_BY = `
+  ORDER BY sl.is_featured = 'TRUE' DESC,
+           sl.display_order ASC,
+           sl.created_at DESC
+`;
+
+const FALLBACK_PLACEHOLDER_IMAGE = '/images/products/product-placeholder.jpg';
+
+const toIsoString = (value: string | Date | null | undefined): string => {
+  if (!value) return '';
+  if (value instanceof Date) return value.toISOString();
+  return value;
+};
+
+const mapProductRow = (row: ProductQueryRow): Product => {
+  const description =
+    row.listing_description ||
+    row.summary ||
+    row.service_short_description ||
+    row.service_description;
+
+  const imageUrl = row.hero_image_url || row.service_image_url || FALLBACK_PLACEHOLDER_IMAGE;
+  const priceCents = row.base_price_cents ?? row.service_base_price_cents ?? null;
+
+  return {
+    id: row.id,
+    slug: row.slug,
+    name: row.title || row.service_name,
+    title: row.title || row.service_name,
+    summary: row.summary ?? row.service_short_description ?? null,
+    description: description ?? null,
+    category: row.category_name,
+    category_slug: row.category_slug,
+    category_id: row.category_id,
+    image_url: imageUrl,
+    hero_image_url: row.hero_image_url || row.service_image_url,
+    icon_url: row.icon_url,
+    service_id: row.service_id,
+    service_name: row.service_name,
+    service_slug: row.service_slug,
+    service_short_description: row.service_short_description,
+    freelancer_id: row.freelancer_id,
+    freelancer_name: row.freelancer_name,
+    base_price_cents: priceCents,
+    price_cents: priceCents,
+    currency: row.currency || row.service_currency || 'AUD',
+    delivery_days: row.delivery_days,
+    status: row.status,
+    is_featured: row.is_featured === 'TRUE',
+    is_active: row.status === 'active',
+    display_order: row.display_order,
+    created_at: toIsoString(row.created_at),
+    updated_at: toIsoString(row.updated_at)
+  };
+};
+
+const isTransientDbError = (error: any) => {
+  const transientCodes = ['ETIMEDOUT', 'ECONNREFUSED', 'ECONNRESET', 'PROTOCOL_CONNECTION_LOST'];
+  return transientCodes.includes(error?.code);
+};
 
 export interface Order {
   id: number;
@@ -33,37 +286,110 @@ export interface OrderItem {
 }
 
 // Products API
-export const getProducts = async (): Promise<Product[]> => {
+export const getProducts = async (options: ProductQueryOptions = {}): Promise<Product[]> => {
+  const {
+    categoryName,
+    categorySlug,
+    includeInactive = false,
+    limit,
+    search,
+    status
+  } = options;
+
+  const params: Array<string | number> = [];
+  const conditions: string[] = ["s.is_active = 'TRUE'"];
+
+  if (status) {
+    conditions.push('sl.status = ?');
+    params.push(status);
+  } else if (!includeInactive) {
+    conditions.push("sl.status = 'active'");
+  }
+
+  if (categoryName) {
+    conditions.push('c.name = ?');
+    params.push(categoryName);
+  }
+
+  if (categorySlug) {
+    conditions.push('c.slug = ?');
+    params.push(categorySlug);
+  }
+
+  if (search) {
+    conditions.push(`(
+      sl.title LIKE ? OR
+      s.name LIKE ? OR
+      c.name LIKE ?
+    )`);
+    const term = `%${search}%`;
+    params.push(term, term, term);
+  }
+
+  const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+  let limitClause = '';
+  if (limit && Number.isFinite(limit)) {
+    limitClause = 'LIMIT ?';
+    params.push(limit);
+  }
+
+  const sql = `
+    ${PRODUCT_SELECT}
+    ${whereClause}
+    ${PRODUCT_ORDER_BY}
+    ${limitClause}
+  `;
+
   try {
-    // Note: Products table may not exist in MySQL yet
-    // Return empty array if table doesn't exist
-    const products = await query<Product>(`
-      SELECT * FROM products 
-      WHERE is_active = 'TRUE' 
-      ORDER BY created_at DESC
-    `);
-    return products || [];
+    const rows = await query<ProductQueryRow>(sql, params);
+    return rows.map(mapProductRow);
   } catch (error: any) {
     if (error.code === 'ER_NO_SUCH_TABLE') {
-      console.log('Products table does not exist. Please create it in MySQL database.');
-      return [];
+      console.warn('Service listing tables do not exist yet. Returning fallback catalog.');
+      return FALLBACK_PRODUCTS;
+    }
+    if (isTransientDbError(error)) {
+      console.warn('Products: database unavailable, serving fallback catalog');
+      return FALLBACK_PRODUCTS;
     }
     console.error('Error fetching products:', error);
-    return [];
+    throw error;
   }
 };
 
-export const getProduct = async (id: number): Promise<Product | null> => {
-  try {
-    const product = await queryOne<Product>(`
-      SELECT * FROM products 
-      WHERE id = ? AND is_active = 'TRUE'
-    `, [id]);
+export const getProduct = async (identifier: number | string): Promise<Product | null> => {
+  const isNumericIdentifier =
+    typeof identifier === 'number' || (typeof identifier === 'string' && /^\d+$/.test(identifier));
+  const whereClause = isNumericIdentifier ? 'sl.id = ?' : 'sl.slug = ?';
 
-    return product;
+  try {
+    const row = await queryOne<ProductQueryRow>(
+      `
+        ${PRODUCT_SELECT}
+        WHERE ${whereClause}
+          AND s.is_active = 'TRUE'
+          AND sl.status = 'active'
+        LIMIT 1
+      `,
+      [identifier]
+    );
+
+    if (!row) {
+      return null;
+    }
+
+    return mapProductRow(row);
   } catch (error: any) {
     if (error.code === 'ER_NO_SUCH_TABLE') {
-      return null;
+      return FALLBACK_PRODUCTS.find((product) =>
+        isNumericIdentifier ? product.id === Number(identifier) : product.slug === identifier
+      ) ?? null;
+    }
+    if (isTransientDbError(error)) {
+      return FALLBACK_PRODUCTS.find((product) =>
+        isNumericIdentifier ? product.id === Number(identifier) : product.slug === identifier
+      ) ?? null;
     }
     console.error('Error fetching product:', error);
     throw new Error('Failed to fetch product');

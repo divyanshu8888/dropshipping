@@ -58,3 +58,82 @@ ON DUPLICATE KEY UPDATE
     is_active = VALUES(is_active),
     updated_at = CURRENT_TIMESTAMP;
 
+-- ============================================================================
+-- SERVICE LISTINGS (Freelancer product catalog)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS service_listings (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    freelancer_id INT UNSIGNED NOT NULL,
+    service_id INT UNSIGNED NOT NULL,
+    slug VARCHAR(200) NOT NULL UNIQUE,
+    title VARCHAR(200) NOT NULL,
+    summary VARCHAR(500) NULL,
+    description MEDIUMTEXT NULL,
+    hero_image_url VARCHAR(512) NULL,
+    base_price_cents INT UNSIGNED NOT NULL DEFAULT 0,
+    currency CHAR(3) NOT NULL DEFAULT 'AUD',
+    delivery_days SMALLINT UNSIGNED NULL,
+    status ENUM('draft','active','paused','archived') NOT NULL DEFAULT 'draft',
+    display_order INT UNSIGNED NOT NULL DEFAULT 1000,
+    is_featured ENUM('TRUE','FALSE') NOT NULL DEFAULT 'FALSE',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    INDEX idx_listing_freelancer (freelancer_id),
+    INDEX idx_listing_service (service_id),
+    INDEX idx_listing_status (status),
+
+    CONSTRAINT fk_listing_freelancer
+        FOREIGN KEY (freelancer_id) REFERENCES freelancers(id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_listing_service
+        FOREIGN KEY (service_id) REFERENCES services(id)
+        ON DELETE RESTRICT
+) ENGINE=InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_unicode_ci;
+
+-- Seed listings by pairing approved freelancers with active services
+INSERT INTO service_listings (
+    freelancer_id,
+    service_id,
+    slug,
+    title,
+    summary,
+    description,
+    hero_image_url,
+    base_price_cents,
+    currency,
+    delivery_days,
+    status,
+    display_order,
+    is_featured
+)
+SELECT
+    f.id,
+    s.id,
+    CONCAT(s.slug, '-', f.id),
+    CONCAT(s.name, ' · Operated by ', f.display_name),
+    'Done-for-you package delivered by a verified Uniti operator.',
+    s.description,
+    s.image_url,
+    COALESCE(s.base_price_cents, 250000),
+    s.currency,
+    14,
+    'active',
+    100 + ROW_NUMBER() OVER (ORDER BY f.id),
+    'FALSE'
+FROM freelancers f
+JOIN services s ON s.is_active = 'TRUE'
+WHERE f.status = 'approved'
+LIMIT 9
+ON DUPLICATE KEY UPDATE
+    summary = VALUES(summary),
+    description = VALUES(description),
+    hero_image_url = VALUES(hero_image_url),
+    base_price_cents = VALUES(base_price_cents),
+    delivery_days = VALUES(delivery_days),
+    status = VALUES(status),
+    display_order = VALUES(display_order),
+    updated_at = CURRENT_TIMESTAMP;
+

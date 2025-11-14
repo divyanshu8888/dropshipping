@@ -1,202 +1,203 @@
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
+import { useState } from 'react';
+import { GetServerSideProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import Header from '../../src/components/Header';
-import useCart from '../../src/hooks/useCart';
+import QuoteRequestForm from '../../src/components/QuoteRequestForm';
+import { getProduct, Product } from '../../src/lib/api';
 
-interface Product {
-    id: number;
-    name: string;
-    description: string;
-    price: number;
-    category: string;
-    imageUrl: string;
-    stock: number;
-    isActive: boolean;
-    createdAt: string;
-    updatedAt: string;
+interface ProductDetailProps {
+  product: Product | null;
 }
 
-const ProductDetail = () => {
-    const router = useRouter();
-    const { id } = router.query;
-    const [product, setProduct] = useState<Product | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [quantity, setQuantity] = useState(1);
-    const { addToCart } = useCart();
+const formatPrice = (product: Product) => {
+  if (!product.base_price_cents) {
+    return 'Custom pricing';
+  }
 
-    useEffect(() => {
-        if (id) {
-            const fetchProduct = async () => {
-                try {
-                    const response = await fetch(`/api/products?id=${id}`);
-                    if (response.ok) {
-                        const data = await response.json();
-                        setProduct(data);
-                    } else {
-                        console.error('Product not found');
-                    }
-                } catch (error) {
-                    console.error('Error fetching product:', error);
-                } finally {
-                    setLoading(false);
-                }
-            };
-            fetchProduct();
-        }
-    }, [id]);
+  const amount = product.base_price_cents / 100;
+  try {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: product.currency || 'AUD',
+      maximumFractionDigits: 0
+    }).format(amount);
+  } catch {
+    return `${amount.toFixed(0)} ${product.currency || 'AUD'}`;
+  }
+};
 
-    const handleAddToCart = () => {
-        if (product) {
-            addToCart({
-                id: product.id.toString(),
-                name: product.name,
-                price: product.price,
-                imageUrl: product.imageUrl
-            });
-        }
-    };
+const ProductDetail = ({ product }: ProductDetailProps) => {
+  const [showQuoteModal, setShowQuoteModal] = useState(false);
 
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-gray-50">
-                <Header />
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                    <div className="animate-pulse">
-                        <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                            <div className="h-96 bg-gray-200 rounded"></div>
-                            <div className="space-y-4">
-                                <div className="h-8 bg-gray-200 rounded w-3/4"></div>
-                                <div className="h-4 bg-gray-200 rounded w-full"></div>
-                                <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-                                <div className="h-12 bg-gray-200 rounded w-1/2"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    if (!product) {
-        return (
-            <div className="min-h-screen bg-gray-50">
-                <Header />
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                    <div className="text-center">
-                        <h1 className="text-2xl font-bold text-gray-900 mb-4">Product not found</h1>
-                        <Link href="/products" className="text-indigo-600 hover:text-indigo-500">
-                            ← Back to Products
-                        </Link>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
+  if (!product) {
     return (
-        <>
-            <Head>
-                <title>{product.name} - Uniti Store</title>
-                <meta name="description" content={product.description} />
-            </Head>
-
-            <div className="min-h-screen bg-gray-50">
-                <Header />
-
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                    {/* Breadcrumb */}
-                    <nav className="mb-8">
-                        <ol className="flex items-center space-x-2 text-sm">
-                            <li>
-                                <Link href="/" className="text-gray-500 hover:text-gray-700">
-                                    Home
-                                </Link>
-                            </li>
-                            <li className="text-gray-400">/</li>
-                            <li>
-                                <Link href="/products" className="text-gray-500 hover:text-gray-700">
-                                    Products
-                                </Link>
-                            </li>
-                            <li className="text-gray-400">/</li>
-                            <li className="text-gray-900 font-medium">{product.name}</li>
-                        </ol>
-                    </nav>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        {/* Product Image */}
-                        <div className="aspect-w-1 aspect-h-1">
-                            <img
-                                src={product.imageUrl}
-                                alt={product.name}
-                                className="w-full h-96 object-cover rounded-lg shadow-lg"
-                            />
-                        </div>
-
-                        {/* Product Info */}
-                        <div className="space-y-6">
-                            <div>
-                                <h1 className="text-3xl font-bold text-gray-900 mb-2">{product.name}</h1>
-                                <p className="text-lg text-gray-600 mb-4">{product.category}</p>
-                                <div className="text-2xl font-bold text-gray-900 mb-2">
-                                    Contact for Pricing
-                                </div>
-                                <div className="text-sm text-gray-600 mb-4">
-                                    Get a custom quote based on your requirements
-                                </div>
-                            </div>
-
-                            <div>
-                                <h3 className="text-lg font-semibold text-gray-900 mb-3">Description</h3>
-                                <p className="text-gray-700 leading-relaxed">{product.description}</p>
-                            </div>
-
-                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                                <div className="flex items-center">
-                                    <svg className="w-5 h-5 text-blue-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                                    </svg>
-                                    <span className="text-blue-800 font-medium">Custom Pricing Available</span>
-                                </div>
-                                <p className="text-blue-700 text-sm mt-1">
-                                    Contact our freelancers for personalized quotes based on your specific needs.
-                                </p>
-                            </div>
-
-                            <div className="flex space-x-4">
-                                <Link
-                                    href="/freelancers"
-                                    className="flex-1 py-3 px-6 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors text-center"
-                                >
-                                    Get Quote
-                                </Link>
-                                <Link
-                                    href="/freelancers"
-                                    className="py-3 px-6 border border-indigo-600 text-indigo-600 rounded-lg font-semibold hover:bg-indigo-50 transition-colors"
-                                >
-                                    Browse Freelancers
-                                </Link>
-                            </div>
-
-                            {product.stock > 0 && (
-                                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                                    <div className="flex items-center">
-                                        <svg className="w-5 h-5 text-green-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                        </svg>
-                                        <span className="text-green-800 font-medium">In Stock - Ready to Ship</span>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </>
+      <div className="min-h-screen bg-bg-base">
+        <Header />
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
+          <h1 className="text-3xl font-bold text-white mb-4">Service not found</h1>
+          <p className="text-text-soft mb-6">The service you are looking for is no longer available.</p>
+          <Link href="/products" className="text-cyan-400 hover:text-cyan-300">
+            ← Back to Services
+          </Link>
+        </div>
+      </div>
     );
+  }
+
+  const categoryLabel = product.category || product.service_name;
+  const timelineLabel = product.delivery_days ? `${product.delivery_days} day delivery` : 'Flexible delivery';
+
+  return (
+    <>
+      <Head>
+        <title>{product.title} - Uniti</title>
+        <meta name="description" content={product.description || product.summary || ''} />
+      </Head>
+
+      <div className="min-h-screen bg-bg-base">
+        <Header />
+
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 pt-28">
+          <nav className="mb-8">
+            <ol className="flex items-center space-x-2 text-sm">
+              <li>
+                <Link href="/" className="text-text-mute hover:text-white">
+                  Home
+                </Link>
+              </li>
+              <li className="text-text-mute">/</li>
+              <li>
+                <Link href="/products" className="text-text-mute hover:text-white">
+                  Services
+                </Link>
+              </li>
+              <li className="text-text-mute">/</li>
+              <li className="text-white font-medium">{product.title}</li>
+            </ol>
+          </nav>
+
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+            <div className="lg:col-span-3 bg-white/5 border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
+              <img
+                src={product.image_url || '/images/products/product-placeholder.jpg'}
+                alt={product.title}
+                className="w-full h-96 object-cover"
+              />
+              <div className="p-8 space-y-6">
+                <div>
+                  <span className="inline-flex items-center px-3 py-1 rounded-full bg-white/10 text-xs text-text-soft border border-white/10 uppercase tracking-wide">
+                    {categoryLabel}
+                  </span>
+                  <h1 className="text-3xl font-bold text-white mt-4">{product.title}</h1>
+                  <p className="text-text-soft mt-2">{product.summary || product.description}</p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <p className="text-text-mute">Operated by</p>
+                    <p className="text-white font-semibold mt-1">
+                      {product.freelancer_name || 'Verified Uniti Operator'}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <p className="text-text-mute">Delivery</p>
+                    <p className="text-white font-semibold mt-1">{timelineLabel}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-xl font-semibold text-white mb-3">What&apos;s included</h3>
+                  <p className="text-text-soft leading-relaxed whitespace-pre-line">
+                    {product.description || product.summary || 'Detailed scope coming soon.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="lg:col-span-2 space-y-6">
+              <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
+                <p className="text-text-mute text-sm mb-2">Starting from</p>
+                <p className="text-4xl font-bold text-white">{formatPrice(product)}</p>
+                <p className="text-text-soft text-sm mt-2">
+                  Tell us about your exact scope and we&apos;ll tailor the final quote.
+                </p>
+                <button
+                  onClick={() => setShowQuoteModal(true)}
+                  className="w-full mt-6 inline-flex justify-center px-4 py-3 rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold hover:opacity-90 transition"
+                >
+                  Request Custom Quote
+                </button>
+                <Link
+                  href="/freelancers"
+                  className="mt-3 inline-flex w-full justify-center rounded-2xl border border-white/15 px-4 py-3 text-white/80 hover:text-white hover:bg-white/10 transition"
+                >
+                  Browse Operators
+                </Link>
+              </div>
+
+              <div className="rounded-3xl border border-white/10 bg-white/5 p-6 space-y-4 text-sm text-text-soft">
+                <div className="flex items-start space-x-3">
+                  <span className="text-green-400 mt-1">✓</span>
+                  <div>
+                    <p className="text-white font-medium">Verified delivery playbook</p>
+                    <p>Each offer is backed by Uniti QA, contracts, and milestone tracking.</p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <span className="text-green-400 mt-1">✓</span>
+                  <div>
+                    <p className="text-white font-medium">Flexible engagement</p>
+                    <p>Switch to retainers or pause scopes with 7-day notice.</p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <span className="text-green-400 mt-1">✓</span>
+                  <div>
+                    <p className="text-white font-medium">Payment protection</p>
+                    <p>Funds are held in escrow until deliverables are approved.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {showQuoteModal && (
+        <QuoteRequestForm
+          onClose={() => setShowQuoteModal(false)}
+          onSuccess={() => setShowQuoteModal(false)}
+        />
+      )}
+    </>
+  );
 };
 
 export default ProductDetail;
+
+export const getServerSideProps: GetServerSideProps<ProductDetailProps> = async ({ params }) => {
+  try {
+    const rawId = params?.id;
+    const identifier = Array.isArray(rawId) ? rawId[0] : rawId;
+
+    if (!identifier) {
+      return { notFound: true };
+    }
+
+    const product = await getProduct(identifier);
+
+    if (!product) {
+      return { notFound: true };
+    }
+
+    return {
+      props: {
+        product
+      }
+    };
+  } catch (error) {
+    console.error('Failed to load product detail page:', error);
+    return { notFound: true };
+  }
+};

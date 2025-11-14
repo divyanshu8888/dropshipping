@@ -21,7 +21,8 @@ This document explains all the main tables in the Uniti database and what inform
 15. [Conversations](#conversations)
 16. [Conversation Participants](#conversation-participants)
 17. [Messages](#messages)
-18. [Testimonials](#testimonials)
+18. [Portfolios](#portfolios)
+19. [Testimonials](#testimonials)
 
 ---
 
@@ -372,6 +373,29 @@ This document explains all the main tables in the Uniti database and what inform
 | `is_read` | ENUM('TRUE','FALSE') | Whether message has been read (default: 'FALSE') |
 | `created_at` | DATETIME | Message creation timestamp |
 | `updated_at` | DATETIME | Last update timestamp (auto-updated) |
+
+---
+
+## Portfolios
+
+**Purpose**: Portfolio entries that freelancers showcase on their public profile.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | INT UNSIGNED | Primary key, auto-incrementing |
+| `freelancer_id` | INT UNSIGNED | Foreign key to `freelancers.id` (cascade delete) |
+| `title` | VARCHAR(200) | Project/engagement title |
+| `summary` | TEXT | Short teaser/overview (optional) |
+| `description` | TEXT | Detailed write-up of the work (optional) |
+| `thumbnail_url` | VARCHAR(512) | Featured image |
+| `gallery_urls` | JSON | Array of supporting screenshots/images |
+| `project_url` | VARCHAR(512) | External link to the live project/case study (optional) |
+| `tags` | JSON | Skill/tech stack tags (optional) |
+| `is_public` | ENUM('TRUE','FALSE') | Visibility flag for the item (default: 'TRUE') |
+| `created_at` | DATETIME | Creation timestamp |
+| `updated_at` | DATETIME | Auto-managed update timestamp |
+
+Indexes cover `freelancer_id`, `is_public`, and `created_at` to efficiently fetch public work for a given freelancer.
 
 ---
 

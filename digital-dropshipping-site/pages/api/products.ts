@@ -2,20 +2,40 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { getProducts, getProduct, createProduct, updateProduct, deleteProduct } from '../../src/lib/api';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+    const getFirstQueryValue = (value: string | string[] | undefined) => {
+        if (Array.isArray(value)) {
+            return value[0];
+        }
+        return value;
+    };
+
     switch (req.method) {
         case 'GET':
             try {
-                const { id } = req.query;
-                if (id) {
+                const idParam = getFirstQueryValue(req.query.id);
+                const slugParam = getFirstQueryValue(req.query.slug);
+                const categoryParam = getFirstQueryValue(req.query.category);
+
+                if (idParam || slugParam) {
                     // Get single product
-                    const product = await getProduct(Number(id));
+                    const identifier = slugParam ?? idParam;
+                    if (!identifier) {
+                        return res.status(400).json({ message: 'Product identifier is required' });
+                    }
+                    const product = await getProduct(identifier);
                     if (!product) {
                         return res.status(404).json({ message: 'Product not found' });
                     }
                     res.status(200).json(product);
                 } else {
                     // Get all products
-                    const products = await getProducts();
+                    const products = await getProducts(
+                        categoryParam
+                            ? {
+                                categoryName: categoryParam
+                              }
+                            : {}
+                    );
                     res.status(200).json(products);
                 }
             } catch (error) {

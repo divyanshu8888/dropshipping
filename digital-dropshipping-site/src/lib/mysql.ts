@@ -1,4 +1,5 @@
 import mysql from 'mysql2/promise';
+import type { PoolConnection } from 'mysql2/promise';
 
 /**
  * ============================================================================
@@ -64,6 +65,7 @@ function getMySQLConfig(): mysql.PoolOptions {
   }
 
   const connectionLimit = parseInt(process.env.MYSQL_POOL_LIMIT || '5', 10);
+  const connectTimeout = parseInt(process.env.MYSQL_CONNECT_TIMEOUT || '2000', 10);
 
   return {
     host,
@@ -76,6 +78,7 @@ function getMySQLConfig(): mysql.PoolOptions {
     maxIdle: 5,
     idleTimeout: 60000,
     queueLimit: 0,
+    connectTimeout: Number.isFinite(connectTimeout) ? connectTimeout : 2000,
     enableKeepAlive: true,
     keepAliveInitialDelay: 0,
     // SSL configuration (optional, for production)
@@ -134,17 +137,50 @@ export async function getConnection(): Promise<mysql.PoolConnection> {
  * @param params - Query parameters (optional)
  * @returns Promise resolving to array of result rows
  */
+const MYSQL_QUERY_TIMEOUT = parseInt(process.env.MYSQL_QUERY_TIMEOUT || '2000', 10);
+
+async function executeWithTimeout<T>(
+  connection: PoolConnection,
+  sql: string,
+  params?: any[]
+): Promise<T> {
+  let timeoutId: NodeJS.Timeout | null = null;
+  let timedOut = false;
+
+  const execution = connection.execute(sql, params) as Promise<T>;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      timedOut = true;
+      reject(new Error(`Query timeout after ${MYSQL_QUERY_TIMEOUT}ms for: ${sql.slice(0, 60)}...`));
+    }, MYSQL_QUERY_TIMEOUT);
+  });
+
+  try {
+    const result = await Promise.race([execution, timeoutPromise]);
+    return result as T;
+  } catch (error) {
+    if (timedOut) {
+      connection.destroy();
+    }
+    throw error;
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+    if (!timedOut) {
+      connection.release();
+    }
+  }
+}
+
 export async function query<T = any>(
   sql: string,
   params?: any[]
 ): Promise<T[]> {
   const connection = await getConnection();
-  try {
-    const [results] = await connection.execute(sql, params);
-    return results as T[];
-  } finally {
-    connection.release();
-  }
+  const result = await executeWithTimeout<any>(connection, sql, params);
+  const [rows] = result;
+  return rows as T[];
 }
 
 /**
