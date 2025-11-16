@@ -17,26 +17,17 @@ export function middleware(request: NextRequest) {
   const isFreelancerRoute = FREELANCER_ROUTES.some(route => pathname.startsWith(route));
   const isClientRoute = CLIENT_ROUTES.some(route => pathname.startsWith(route));
   
-  if (!isAdminRoute && !isFreelancerRoute && !isClientRoute) {
-    // Public route, allow access
-    return NextResponse.next();
-  }
-
   // For protected routes, we'll handle authentication in the page components
   // This middleware serves as a first line of defense
   return NextResponse.next();
 }
 
 export const config = {
+  // Only run middleware on protected route prefixes to avoid overhead on public pages
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public files (public folder)
-     */
-    '/((?!api|_next/static|_next/image|favicon.ico|images|public).*)',
+    '/admin/:path*',
+    '/freelancers/dashboard',
+    '/freelancers/profile-setup',
+    '/client-dashboard'
   ],
 };

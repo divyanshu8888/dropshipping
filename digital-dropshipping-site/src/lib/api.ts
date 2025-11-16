@@ -213,6 +213,65 @@ const PRODUCT_ORDER_BY = `
 
 const FALLBACK_PLACEHOLDER_IMAGE = '/images/products/product-placeholder.jpg';
 
+const LOCAL_SERVICE_IMAGES: Record<string, string> = {
+  'web-development': '/images/products/website-development.jpg',
+  'website-development': '/images/products/website-development.jpg',
+  'wordpress-development': '/images/products/wordpress-development.jpg',
+  'ecommerce-development': '/images/products/ecommerce-development.jpg',
+  'logo-design': '/images/products/logo-design.jpg',
+  'ui-ux-design': '/images/products/ui-ux-design.jpg',
+  'seo-services': '/images/products/seo-optimization.jpg',
+  'social-media-management': '/images/products/social-media-management.jpg',
+  'content-writing': '/images/products/content-writing.jpg',
+  copywriting: '/images/products/email-marketing.jpg',
+  'video-editing': '/images/products/video-editing.jpg',
+  animation: '/images/products/voice-over-services.jpg',
+  'business-consulting': '/images/products/technical-consulting.jpg',
+  'custom-software-development': '/images/products/devops-services.jpg',
+  'data-analysis': '/images/products/data-analysis.jpg',
+  'digital-marketing': '/images/products/digital-marketing.jpg',
+  'email-marketing': '/images/products/email-marketing.jpg',
+  'translation-services': '/images/products/translation-services.jpg',
+  'voice-over-services': '/images/products/voice-over-services.jpg',
+  'photography-services': '/images/products/photography-services.jpg'
+};
+
+const LOCAL_SERVICE_ICONS: Record<string, string> = {
+  'web-development': '/images/logo/website-design.png',
+  'website-development': '/images/logo/website-design.png',
+  'wordpress-development': '/images/logo/website-design.png',
+  'ecommerce-development': '/images/logo/website-design.png',
+  'logo-design': '/images/logo/logo-design.png',
+  'ui-ux-design': '/images/logo/ui-ux-design.png',
+  'seo-services': '/images/logo/seo-optimization.png',
+  'social-media-management': '/images/logo/social-media.png',
+  'content-writing': '/images/logo/ugc-videos.png',
+  copywriting: '/images/logo/voice-over.png',
+  'video-editing': '/images/logo/voice-over.png',
+  animation: '/images/logo/voice-over.png',
+  'business-consulting': '/images/logo/devops.png',
+  'custom-software-development': '/images/logo/devops.png',
+  'data-analysis': '/images/logo/data-analytics.png',
+  'digital-marketing': '/images/logo/seo-optimization.png',
+  'email-marketing': '/images/logo/voice-over.png',
+  'translation-services': '/images/logo/voice-over.png',
+  'voice-over-services': '/images/logo/voice-over.png',
+  'photography-services': '/images/logo/ai-development.png'
+};
+
+const isExampleDomain = (url?: string | null) =>
+  typeof url === 'string' && /example\.com/i.test(url);
+
+const resolveLocalServiceImage = (slug?: string | null) => {
+  if (!slug) return undefined;
+  return LOCAL_SERVICE_IMAGES[slug];
+};
+
+const resolveLocalServiceIcon = (slug?: string | null) => {
+  if (!slug) return undefined;
+  return LOCAL_SERVICE_ICONS[slug];
+};
+
 const toIsoString = (value: string | Date | null | undefined): string => {
   if (!value) return '';
   if (value instanceof Date) return value.toISOString();
@@ -226,7 +285,17 @@ const mapProductRow = (row: ProductQueryRow): Product => {
     row.service_short_description ||
     row.service_description;
 
-  const imageUrl = row.hero_image_url || row.service_image_url || FALLBACK_PLACEHOLDER_IMAGE;
+  const preferredHero =
+    !isExampleDomain(row.hero_image_url) && row.hero_image_url ? row.hero_image_url : undefined;
+  const preferredServiceImage =
+    !isExampleDomain(row.service_image_url) && row.service_image_url
+      ? row.service_image_url
+      : undefined;
+
+  const localImage = resolveLocalServiceImage(row.service_slug) || resolveLocalServiceImage(row.category_slug);
+  const localIcon = resolveLocalServiceIcon(row.service_slug) || resolveLocalServiceIcon(row.category_slug);
+
+  const imageUrl = preferredHero || preferredServiceImage || localImage || FALLBACK_PLACEHOLDER_IMAGE;
   const priceCents = row.base_price_cents ?? row.service_base_price_cents ?? null;
 
   return {
@@ -241,7 +310,8 @@ const mapProductRow = (row: ProductQueryRow): Product => {
     category_id: row.category_id,
     image_url: imageUrl,
     hero_image_url: row.hero_image_url || row.service_image_url,
-    icon_url: row.icon_url,
+    icon_url:
+      (!isExampleDomain(row.icon_url || undefined) && row.icon_url ? row.icon_url : localIcon) ?? null,
     service_id: row.service_id,
     service_name: row.service_name,
     service_slug: row.service_slug,

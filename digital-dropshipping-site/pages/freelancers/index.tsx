@@ -1,11 +1,17 @@
 import { useState, useMemo, useEffect, useRef, type ReactNode } from 'react'
 import { useRouter } from 'next/router'
-import { GetServerSideProps } from 'next'
+import { GetStaticProps } from 'next'
 import Head from 'next/head'
 import Link from 'next/link'
-import Header from '../../src/components/Header'
-import QuoteRequestForm from '../../src/components/QuoteRequestForm'
-import UnitiFilters, { type FilterControlDescriptor, type UnitiFilterVariant } from '../../src/components/UnitiFilters'
+import dynamic from 'next/dynamic'
+import { buildQuoteHref } from '../../src/lib/quoteLink'
+import type { FilterControlDescriptor, UnitiFilterVariant } from '../../src/components/UnitiFilters'
+const Header = dynamic(() => import('../../src/components/Header'))
+const UnitiFilters = dynamic(() => import('../../src/components/UnitiFilters'), { ssr: false })
+const FreelancersGrid = dynamic(() => import('../../src/components/FreelancersGrid'), {
+  ssr: false,
+  loading: () => <div className="max-w-7xl mx-auto px-6 py-8 text-white/70">Loading freelancers…</div>
+})
 import { query } from '../../src/lib/mysql'
 import styles from '../../src/styles/freelancers.module.css'
 
@@ -249,8 +255,6 @@ const heroTrustBadges: HeroTrustBadge[] = [
 export default function FreelancersPage({ freelancers, initialSearchTerm }: FreelancersPageProps) {
   const router = useRouter()
   const [searchTerm, setSearchTerm] = useState(initialSearchTerm || '')
-  const [showQuoteForm, setShowQuoteForm] = useState(false)
-  const [selectedFreelancer, setSelectedFreelancer] = useState<string | null>(null)
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1)
   const [recentSearches, setRecentSearches] = useState<string[]>([])
@@ -913,7 +917,12 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
-                              <h3 className="truncate text-lg md:text-xl font-semibold text-white">{freelancer.display_name}</h3>
+                              <Link
+                                href={`/freelancers/profile/${freelancer.id}`}
+                                className="truncate text-lg md:text-xl font-semibold text-white hover:text-cyan-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/40"
+                              >
+                                {freelancer.display_name}
+                              </Link>
                               {isTopRated && (
                                 <span className="md:hidden inline-flex items-center rounded-full border border-cyan-300/40 bg-cyan-400/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-100">
                                   Top
@@ -1037,22 +1046,41 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
                     )}
 
                     {/* CTAs */}
-                    <div className="mt-3 flex flex-col-reverse gap-2 md:flex-row md:items-center md:justify-between">
+                    <div className="mt-3 flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
                       <Link
-                        href={`/freelancers/profile/${freelancer.id}`}
-                        className="text-sm font-semibold text-white/60 underline-offset-4 transition hover:text-white hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/40"
-                      >
-                        {hasPortfolio ? 'View profile' : 'Ask for samples'}
-                      </Link>
-                      <button
-                        onClick={() => {
-                          setSelectedFreelancer(freelancer.id);
-                          setShowQuoteForm(true);
-                        }}
-                        className="flex-1 rounded-xl bg-gradient-to-r from-[#00C6FF] to-[#7D2AE8] px-4 py-3 text-sm font-semibold text-white shadow-lg hover:shadow-xl hover:brightness-110 transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300 md:max-w-[62%]"
+                        href={buildQuoteHref({
+                          source: 'freelancer',
+                          intent: 'proposal',
+                          title: `Proposal with ${freelancer.display_name}`,
+                          subtitle: freelancer.headline || freelancer.title || undefined,
+                          badge: freelancer.country || undefined,
+                          meta: `${formatRating(ratingValue)} · ${projectCount ?? 0} projects`,
+                          category: serviceFilter !== 'all' ? serviceFilter : undefined,
+                          freelancerId: freelancer.id,
+                          freelancerName: freelancer.display_name
+                        })}
+                        className="flex-1 inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-cyan-500 via-fuchsia-500 to-rose-500 px-5 h-12 text-sm font-semibold text-white shadow-lg shadow-indigo-900/40 transition duration-200 hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-cyan-400/50 whitespace-nowrap"
                       >
                         Request Proposal
-                      </button>
+                      </Link>
+                      <Link
+                        href={buildQuoteHref({
+                          source: 'freelancer',
+                          intent: 'samples',
+                          title: `Sample request · ${freelancer.display_name}`,
+                          subtitle: freelancer.headline || freelancer.title || undefined,
+                          badge: freelancer.country || undefined,
+                          meta: isNewFreelancer
+                            ? 'New to Uniti'
+                            : `${formatRating(ratingValue)} · ${formatInteger(projectCount)} projects`,
+                          category: serviceFilter !== 'all' ? serviceFilter : undefined,
+                          freelancerId: freelancer.id,
+                          freelancerName: freelancer.display_name
+                        })}
+                        className="flex-1 inline-flex items-center justify-center rounded-2xl border border-white/15 px-5 h-12 text-sm font-semibold text-white/90 hover:text-white hover:border-white/40 hover:bg-white/5 transition focus:outline-none focus:ring-2 focus:ring-white/20 whitespace-nowrap"
+                      >
+                        Ask for samples
+                      </Link>
                     </div>
                   </div>
                 </div>
@@ -1175,27 +1203,24 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
       </div>
 
       {/* Quote Request Form Modal */}
-      {showQuoteForm && (
-        <QuoteRequestForm
-          onClose={() => {
-            setShowQuoteForm(false);
-            setSelectedFreelancer(null);
-          }}
-          onSuccess={() => {
-            setShowQuoteForm(false);
-            setSelectedFreelancer(null);
-          }}
-        />
-      )}
     </>
   )
 }
 
-export const getServerSideProps: GetServerSideProps = async (context) => {
+export const getStaticProps: GetStaticProps = async () => {
   try {
-    const initialSearchTerm = typeof context.query?.search === 'string' ? context.query.search : ''
+    // Fast-fail when DB is not configured (keeps dev fast)
+    if (!process.env.MYSQL_USER || !process.env.MYSQL_PASSWORD || !process.env.MYSQL_DATABASE) {
+      return {
+        props: {
+          freelancers: [],
+          initialSearchTerm: '',
+        },
+        revalidate: 60,
+      }
+    }
     // Fetch all approved freelancers with all new fields from MySQL database
-    const freelancers = await query(`
+    const freelancersPromise = query(`
       SELECT 
         f.id, 
         f.display_name,
@@ -1228,7 +1253,13 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       FROM freelancers f
       WHERE f.status = 'approved'
       ORDER BY f.rating DESC
+      LIMIT 60
     `)
+    // Hard timeout to avoid long stalls in dev
+    const freelancers = await Promise.race<any[]>([
+      freelancersPromise,
+      new Promise<any[]>((resolve) => setTimeout(() => resolve([]), 1200))
+    ])
 
     const normalizedFreelancers = (freelancers as any[]).map((freelancer) => {
       const skills = parseMediaArray(freelancer.skills)
@@ -1250,8 +1281,9 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     return {
       props: {
         freelancers: normalizedFreelancers,
-        initialSearchTerm,
+        initialSearchTerm: '',
       },
+      revalidate: 60,
     }
   } catch (error) {
     console.error('Error fetching freelancers', error)
@@ -1260,6 +1292,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         freelancers: [],
         initialSearchTerm: '',
       },
+      revalidate: 60,
   }
 }
 }

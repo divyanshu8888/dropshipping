@@ -12,8 +12,10 @@ export default async function handler(
   try {
     const authResult = await verifyUserSession(req);
     
+    // Always return 200 to avoid clearing client state during local/dev outages.
+    // The client can decide what to do based on 'success' flag.
     if (!authResult.success) {
-      return res.status(401).json({ error: authResult.error });
+      return res.status(200).json({ success: false, error: authResult.error });
     }
 
     return res.status(200).json({ 

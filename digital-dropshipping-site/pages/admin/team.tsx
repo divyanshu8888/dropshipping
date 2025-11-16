@@ -4,7 +4,9 @@ import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { Plus, Mail, Users, UserCheck, UserX, ShieldCheck, Clock, MapPin, Phone } from 'lucide-react'
-import Header from '../../src/components/Header'
+import dynamic from 'next/dynamic'
+const Header = dynamic(() => import('../../src/components/Header'))
+import { useAuth } from '../../src/contexts/AuthContext'
 
 interface TeamMember {
   id: number;
@@ -25,6 +27,7 @@ interface AdminProps {
 
 export default function TeamManagement({ user }: AdminProps) {
   const router = useRouter()
+  const auth = useAuth()
   const [loading, setLoading] = useState(true)
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
   const [showAddModal, setShowAddModal] = useState(false)
@@ -52,22 +55,18 @@ export default function TeamManagement({ user }: AdminProps) {
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
 
   useEffect(() => {
-    // Check if user is logged in and is an admin
-    const userData = localStorage.getItem('user')
-    if (!userData) {
-      router.push('/login')
-      return
-    }
-    
-    const userObj = JSON.parse(userData)
-    if (userObj.role !== 'ADMIN') {
-      router.push('/admin')
+    if (!auth) return
+    if (auth.loading) return
+
+    const role = String(auth.user?.role || '').toUpperCase()
+    if (!auth.user || (role !== 'ADMIN' && role !== 'TEAM_MEMBER')) {
+      router.replace('/login')
       return
     }
 
     setLoading(false)
     fetchTeamMembers()
-  }, [router])
+  }, [auth?.loading, auth?.user, router])
 
   const fetchTeamMembers = async () => {
     try {
@@ -267,7 +266,7 @@ export default function TeamManagement({ user }: AdminProps) {
         <title>Team Management - Admin Dashboard</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-100">
+      <div className="min-h-screen bg-superhuman text-text-base">
         <Header />
 
         {/* Hero */}
@@ -729,83 +728,90 @@ export default function TeamManagement({ user }: AdminProps) {
 
         {/* Invite Team Member Modal */}
         {showInviteModal && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
-              <div className="p-8">
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-3xl font-bold text-gray-900">Send Team Invitation</h2>
-                  <button
-                    onClick={() => setShowInviteModal(false)}
-                    className="text-gray-400 hover:text-gray-600 text-2xl"
-                  >
-                    ✕
-                  </button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="w-full max-w-2xl overflow-hidden rounded-3xl border border-white/10 bg-black/90 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-white/10 px-8 py-6 text-white">
+              <div>
+                <p className="text-xs uppercase tracking-[0.3em] text-white/40">Invite teammate</p>
+                <h2 className="text-2xl font-semibold">Send Team Invitation</h2>
+              </div>
+              <button
+                onClick={() => setShowInviteModal(false)}
+                className="rounded-full border border-white/10 p-2 text-white/60 transition hover:border-white/40 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleInvite} className="space-y-6 px-8 py-6 text-white/80">
+              <div className="space-y-6">
+                <div>
+                  <label className="text-xs font-semibold uppercase tracking-[0.2em] text-white/50">
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    value={inviteData.email}
+                    onChange={(e) => setInviteData({ ...inviteData, email: e.target.value })}
+                    className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-white/50 focus:border-indigo-400/70 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
+                    placeholder="team.member@company.com"
+                    required
+                  />
                 </div>
 
-                <form onSubmit={handleInvite} className="space-y-6">
-                  <div className="space-y-6">
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-2">Email Address</label>
-                      <input
-                        type="email"
-                        value={inviteData.email}
-                        onChange={(e) => setInviteData({ ...inviteData, email: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        placeholder="team.member@company.com"
-                        required
-                      />
-                    </div>
+                <div>
+                  <label className="text-xs font-semibold uppercase tracking-[0.2em] text-white/50">
+                    Role
+                  </label>
+                  <select
+                    value={inviteData.role}
+                    onChange={(e) => setInviteData({ ...inviteData, role: e.target.value })}
+                    className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white focus:border-indigo-400/70 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
+                  >
+                    <option className="bg-black text-white" value="TEAM_MEMBER">Team Member</option>
+                    <option className="bg-black text-white" value="ADMIN">Admin</option>
+                  </select>
+                </div>
 
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-2">Role</label>
-                      <select
-                        value={inviteData.role}
-                        onChange={(e) => setInviteData({ ...inviteData, role: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      >
-                        <option value="TEAM_MEMBER">Team Member</option>
-                        <option value="ADMIN">Admin</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-2">Personal Message (Optional)</label>
-                      <textarea
-                        value={inviteData.message}
-                        onChange={(e) => setInviteData({ ...inviteData, message: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        rows={4}
-                        placeholder="Welcome to our team! We're excited to have you join us..."
-                      />
-                    </div>
-                  </div>
-
-                  {errors.submit && (
-                    <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl">
-                      {errors.submit}
-                    </div>
-                  )}
-
-                  <div className="flex justify-end space-x-4">
-                    <button
-                      type="button"
-                      onClick={() => setShowInviteModal(false)}
-                      className="px-6 py-3 border-2 border-gray-300 rounded-xl hover:bg-gray-50 font-bold"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={loadingAction}
-                      className="px-6 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 font-bold disabled:opacity-50"
-                    >
-                      {loadingAction ? 'Sending...' : 'Send Invitation'}
-                    </button>
-                  </div>
-                </form>
+                <div>
+                  <label className="text-xs font-semibold uppercase tracking-[0.2em] text-white/50">
+                    Personal Message (Optional)
+                  </label>
+                  <textarea
+                    value={inviteData.message}
+                    onChange={(e) => setInviteData({ ...inviteData, message: e.target.value })}
+                    className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-white/50 focus:border-indigo-400/70 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
+                    rows={4}
+                    placeholder="Welcome to our team! We're excited to have you join us..."
+                  />
+                </div>
               </div>
-            </div>
+
+              {errors.submit && (
+                <div className="rounded-xl border border-rose-400/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+                  {errors.submit}
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowInviteModal(false)}
+                  className="rounded-xl border border-white/10 px-5 py-2.5 text-sm font-semibold text-white/80 transition hover:border-white/40 hover:text-white"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={loadingAction}
+                  className="rounded-xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:shadow-indigo-500/50 disabled:opacity-50"
+                >
+                  {loadingAction ? 'Sending…' : 'Send Invitation'}
+                </button>
+              </div>
+            </form>
           </div>
+        </div>
         )}
       </div>
     </>

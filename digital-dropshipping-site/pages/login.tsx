@@ -10,7 +10,7 @@ type AuthMode = 'login' | 'signup';
 
 export default function AuthPage() {
   const router = useRouter();
-  const { login, loading, error } = useAuth();
+  const { login, loading, error, user } = useAuth();
 
   const [mode, setMode] = useState<AuthMode>('login');
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
@@ -32,6 +32,13 @@ export default function AuthPage() {
     const queryMode = router.query.mode === 'signup' ? 'signup' : 'login';
     setMode(queryMode);
   }, [router.isReady, router.query.mode]);
+
+  // If already authenticated, never show login - redirect to role router
+  useEffect(() => {
+    if (user) {
+      router.replace('/dashboard');
+    }
+  }, [user, router]);
 
   const switchMode = (nextMode: AuthMode) => {
     setMode(nextMode);
@@ -115,8 +122,9 @@ export default function AuthPage() {
           setSignupErrors({ submit: loginResult.error || signupCopy.alerts.generic });
         }
       } else {
-        const message: string = data.error || signupCopy.alerts.generic;
-        let resolved = signupCopy.alerts.generic;
+        const rawMessage: string = data.error || data.message || '';
+        const message: string = rawMessage || signupCopy.alerts.generic;
+        let resolved = 'We couldn’t create your account. Please review the details and try again.';
 
         if (/exists/i.test(message)) {
           resolved = signupCopy.alerts.emailTaken;
@@ -126,7 +134,22 @@ export default function AuthPage() {
           resolved = signupCopy.alerts.shortPassword;
         }
 
-        setSignupErrors({ submit: resolved });
+        // Include server-provided detail if present to aid the user
+        const detailParts: string[] = [];
+        if (rawMessage && resolved !== rawMessage) {
+          detailParts.push(rawMessage);
+        }
+        if (Array.isArray(data.errors)) {
+          detailParts.push(...data.errors.map((e: any) => (typeof e === 'string' ? e : JSON.stringify(e))));
+        } else if (data.errors && typeof data.errors === 'object') {
+          detailParts.push(
+            ...Object.entries(data.errors).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : String(v)}`),
+          );
+        }
+
+        setSignupErrors({
+          submit: resolved + (detailParts.length ? `\n${detailParts.join('\n')}` : ''),
+        });
       }
     } catch (signupError) {
       console.error('Signup error:', signupError);
@@ -460,7 +483,8 @@ export default function AuthPage() {
                 ) : (
                   signupErrors.submit && (
                     <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-4 text-sm text-red-200">
-                      {signupErrors.submit}
+                      <p className="font-semibold text-red-100">We couldn’t create your account</p>
+                      <p className="mt-1 whitespace-pre-line">{signupErrors.submit}</p>
                     </div>
                   )
                 )}

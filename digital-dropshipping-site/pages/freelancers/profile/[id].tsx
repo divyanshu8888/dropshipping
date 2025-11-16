@@ -3,7 +3,7 @@ import { GetServerSideProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import Header from '../../../src/components/Header';
-import QuoteRequestForm from '../../../src/components/QuoteRequestForm';
+import { buildQuoteHref } from '../../../src/lib/quoteLink';
 import { query, queryOne } from '../../../src/lib/mysql';
 
 interface FreelancerService {
@@ -69,7 +69,6 @@ interface FreelancerProfileProps {
 }
 
 export default function FreelancerProfile({ freelancer, reviews, portfolio }: FreelancerProfileProps) {
-  const [showQuoteForm, setShowQuoteForm] = useState(false);
   const [activeTab, setActiveTab] = useState<'about' | 'portfolio' | 'reviews'>('about');
   const [selectedPortfolio, setSelectedPortfolio] = useState<PortfolioItem | null>(null);
   const [selectedGalleryImage, setSelectedGalleryImage] = useState<{ url: string; index: number; allUrls: string[] } | null>(null);
@@ -168,13 +167,6 @@ export default function FreelancerProfile({ freelancer, reviews, portfolio }: Fr
               </div>
             </div>
             
-            {/* CTA Button */}
-            <button
-              onClick={() => setShowQuoteForm(true)}
-              className="px-6 py-3 bg-gradient-to-r from-[#00C6FF] via-[#5F57FF] to-[#7D2AE8] text-white rounded-xl font-bold text-sm hover:shadow-[0_0_20px_rgba(125,42,232,0.5)] transition-all shadow-lg hover:scale-[1.02] whitespace-nowrap"
-            >
-              Request Quote
-            </button>
           </div>
         </div>
       </section>
@@ -265,17 +257,9 @@ export default function FreelancerProfile({ freelancer, reviews, portfolio }: Fr
                               </div>
                             </div>
                             <p className="text-white/70 mb-3 text-xs">{service.description}</p>
-                            <div className="flex items-center justify-between">
-                              <span className="px-2.5 py-1 bg-white/10 text-white/90 text-[10px] font-medium rounded-full border border-white/10">
-                                {service.category}
-                              </span>
-                              <button 
-                                onClick={() => setShowQuoteForm(true)}
-                                className="px-3 py-1.5 bg-gradient-to-r from-[#00C6FF] to-[#7D2AE8] text-white rounded-lg font-medium text-xs hover:shadow-[0_0_15px_rgba(125,42,232,0.4)] transition-all"
-                              >
-                                Get Quote
-                              </button>
-                            </div>
+                            <span className="inline-flex px-2.5 py-1 bg-white/10 text-white/90 text-[10px] font-medium rounded-full border border-white/10">
+                              {service.category}
+                            </span>
                           </div>
                         ))}
                       </div>
@@ -414,12 +398,21 @@ export default function FreelancerProfile({ freelancer, reviews, portfolio }: Fr
                 )}
               </div>
 
-              <button
-                onClick={() => setShowQuoteForm(true)}
-                className="w-full py-3 bg-gradient-to-r from-[#00C6FF] via-[#5F57FF] to-[#7D2AE8] text-white rounded-xl font-bold text-sm hover:shadow-[0_0_20px_rgba(125,42,232,0.5)] transition-all shadow-lg hover:scale-[1.02] mb-5"
+              <Link
+                href={buildQuoteHref({
+                  source: 'freelancer',
+                  intent: 'proposal',
+                  title: `Proposal with ${freelancer.display_name}`,
+                  subtitle: freelancer.headline || freelancer.title || undefined,
+                  badge: freelancer.country || undefined,
+                  meta: `${Number(freelancer.rating).toFixed(1)} • ${freelancer.completed_projects} projects`,
+                  freelancerId: freelancer.id,
+                  freelancerName: freelancer.display_name
+                })}
+                className="block w-full text-center py-3 bg-gradient-to-r from-[#00C6FF] via-[#5F57FF] to-[#7D2AE8] text-white rounded-xl font-bold text-sm hover:shadow-[0_0_20px_rgba(125,42,232,0.5)] transition-all shadow-lg hover:scale-[1.02] mb-5"
               >
                 Request Quote
-              </button>
+              </Link>
 
               <div className="space-y-3 pt-4 border-t border-white/10">
                 <div className="flex items-center text-white/80">
@@ -642,16 +635,6 @@ export default function FreelancerProfile({ freelancer, reviews, portfolio }: Fr
         </div>
       )}
 
-      {/* Quote Request Form Modal */}
-      {showQuoteForm && (
-        <QuoteRequestForm
-          onClose={() => setShowQuoteForm(false)}
-          onSuccess={() => {
-            setShowQuoteForm(false);
-            // You can add a success notification here
-          }}
-        />
-      )}
     </div>
   );
 }

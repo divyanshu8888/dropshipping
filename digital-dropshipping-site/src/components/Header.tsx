@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { canAccessAdminDashboard } from '../lib/permissions';
 import { useAuth } from '../contexts/AuthContext';
+import { useRouter } from 'next/router';
 
 // Clean Uniti Logo Component
 const UnitiLogo = () => {
@@ -20,10 +21,12 @@ const UnitiLogo = () => {
 
 const Header: React.FC = () => {
     const { user, logout } = useAuth();
+    const router = useRouter();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false);
     const adminMenuRef = useRef<HTMLDivElement | null>(null);
     const isAdminUser = canAccessAdminDashboard(user?.role || '');
+    const displayName = user?.name || (user?.email ? user.email.split('@')[0] : undefined) || 'Account';
 
     const handleLogout = () => {
         setIsAdminMenuOpen(false);
@@ -76,12 +79,7 @@ const Header: React.FC = () => {
                             Admin Command
                         </Link>
                     )}
-                    {user?.role === 'FREELANCER' && (
-                        <Link href="/freelancers/dashboard" className="text-text-soft hover:text-accent-blue hover:bg-white/5 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 hover:scale-105 flex items-center">
-                            <span className="mr-2">💼</span>
-                            My Dashboard
-                        </Link>
-                    )}
+                    {/* Freelancer dashboard is available from the profile menu */}
                     {user?.role === 'CLIENT' && (
                         <Link href="/client-dashboard" className="text-text-soft hover:text-accent-cyan hover:bg-white/5 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 hover:scale-105 flex items-center">
                             <span className="mr-2">📋</span>
@@ -108,10 +106,10 @@ const Header: React.FC = () => {
                                             : 'bg-gradient-to-br from-slate-500 to-slate-600'
                                     }`}
                                 >
-                                        {user.name?.charAt(0).toUpperCase()}
+                                        {displayName.charAt(0).toUpperCase()}
                                 </div>
                                 <div className="flex flex-col items-start">
-                                    <span className="text-xs font-semibold text-white/90">{user.name}</span>
+                                    <span className="text-xs font-semibold text-white/90">{displayName}</span>
                                     <span className="text-[10px] uppercase tracking-[0.18em] text-white/50">
                                         {user.role?.replace('_', ' ')}
                                     </span>
@@ -142,35 +140,49 @@ const Header: React.FC = () => {
                                                     : 'bg-gradient-to-br from-slate-500 to-slate-600'
                                             }`}
                                         >
-                                            {user.name?.charAt(0).toUpperCase()}
+                                            {displayName.charAt(0).toUpperCase()}
                                         </div>
                                         <div>
-                                            <p className="text-sm font-semibold text-white/90">{user.name}</p>
+                                            <p className="text-sm font-semibold text-white/90">{displayName}</p>
                                             <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">
                                                 {user.role?.replace('_', ' ')}
                                             </p>
                                 </div>
                             </div>
-                                    <div className="mt-3 space-y-1">
-                                        <Link
-                                            href="/admin"
-                                            className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-white/80 transition hover:bg-white/10"
-                                        >
-                                            🧭 Admin Dashboard
-                                        </Link>
-                                        <Link
-                                            href="/admin/team"
-                                            className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-white/80 transition hover:bg-white/10"
-                                        >
-                                            👥 Manage Team
-                                        </Link>
-                                        <Link
-                                            href="/admin/setup"
-                                            className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-white/80 transition hover:bg-white/10"
-                                        >
-                                            ⚙️ Admin Settings
-                                        </Link>
-                                    </div>
+                                    {/* Freelancer My Dashboard inside profile menu */}
+                                    {user?.role === 'FREELANCER' && (
+                                        <div className="mt-3 space-y-1">
+                                            <button
+                                                onClick={() => { setIsAdminMenuOpen(false); router.push('/freelancers/dashboard'); }}
+                                                className="w-full text-left flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-white/80 transition hover:bg-white/10"
+                                            >
+                                                💼 My Dashboard
+                                            </button>
+                                        </div>
+                                    )}
+                                    {/* Admin links */}
+                                    {isAdminUser && (
+                                        <div className="mt-3 space-y-1">
+                                            <button
+                                                onClick={() => { setIsAdminMenuOpen(false); router.push('/admin'); }}
+                                                className="w-full text-left flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-white/80 transition hover:bg-white/10"
+                                            >
+                                                🧭 Admin Dashboard
+                                            </button>
+                                            <button
+                                                onClick={() => { setIsAdminMenuOpen(false); router.push('/admin/team'); }}
+                                                className="w-full text-left flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-white/80 transition hover:bg-white/10"
+                                            >
+                                                👥 Manage Team
+                                            </button>
+                                            <button
+                                                onClick={() => { setIsAdminMenuOpen(false); router.push('/admin/setup'); }}
+                                                className="w-full text-left flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-white/80 transition hover:bg-white/10"
+                                            >
+                                                ⚙️ Admin Settings
+                                            </button>
+                                        </div>
+                                    )}
                                     <div className="mt-3 border-t border-white/10 pt-3">
                             <button
                                 onClick={handleLogout}
@@ -256,11 +268,11 @@ const Header: React.FC = () => {
                                         'bg-gradient-to-br from-accent-blue to-accent-cyan'
                                     }`}>
                                         <span className="text-white text-sm font-bold">
-                                            {user.name?.charAt(0).toUpperCase()}
+                                            {displayName.charAt(0).toUpperCase()}
                                         </span>
                                     </div>
                                     <div className="flex flex-col">
-                                        <span className="text-sm font-medium text-text-base">{user.name}</span>
+                                        <span className="text-sm font-medium text-text-base">{displayName}</span>
                                         <span className="text-xs text-text-mute capitalize">{user.role?.toLowerCase().replace('_', ' ')}</span>
                                     </div>
                                 </div>

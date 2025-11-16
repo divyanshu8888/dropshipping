@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { supabase } from '../../../src/lib/supabase';
+import { query, queryOne } from 'lib/mysql';
 
 export default async function handler(
   req: NextApiRequest,
@@ -16,30 +16,74 @@ export default async function handler(
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Update freelancer availability
-    const { data: freelancer, error } = await supabase
-      .from('freelancers')
-      .update({
-        is_available: availability.isAvailable,
-        working_hours: availability.workingHours,
-        timezone: availability.timezone,
-        updated_at: new Date().toISOString()
-      })
-      .eq('user_id', freelancerId)
-      .select()
-      .single();
+    const userId = Number(freelancerId);
+    const isAvailable = Boolean(availability.isAvailable);
+    const workingHours = availability.workingHours ?? null;
+    const timezone = availability.timezone ?? null;
+    const nextAvailableDate = availability.nextAvailableDate ?? null;
+    const workingHoursFrom = availability.workingHoursFrom ?? null;
+    const workingHoursTo = availability.workingHoursTo ?? null;
 
-    if (error) {
-      console.error('Database error:', error);
-      throw error;
+    // First try updating explicit columns (if they exist in your schema)
+    let updated = false;
+    try {
+      await query(
+        `UPDATE freelancers
+           SET is_available = ?, working_hours = ?, timezone = ?,
+               ${nextAvailableDate !== null ? 'next_available_date = ?,' : ''}
+               ${workingHoursFrom !== null ? 'working_hours_start = ?,' : ''}
+               ${workingHoursTo !== null ? 'working_hours_end = ?,' : ''}
+               updated_at = NOW()
+         WHERE user_id = ?`,
+        [
+          isAvailable ? 'TRUE' : 'FALSE',
+          workingHours ?? (workingHoursFrom && workingHoursTo ? `${workingHoursFrom}-${workingHoursTo}` : null),
+          timezone,
+          ...(nextAvailableDate !== null ? [nextAvailableDate] : []),
+          ...(workingHoursFrom !== null ? [workingHoursFrom] : []),
+          ...(workingHoursTo !== null ? [workingHoursTo] : []),
+          userId
+        ]
+      );
+      updated = true;
+    } catch (err: any) {
+      // If some columns don't exist, fall back to generic availability
+      if (err?.code !== 'ER_BAD_FIELD_ERROR' && err?.code !== 'ER_NO_SUCH_FIELD') {
+        throw err;
+      }
     }
+
+    if (!updated) {
+      const parts: string[] = [isAvailable ? 'available' : 'unavailable'];
+      if (nextAvailableDate) parts.push(`date=${nextAvailableDate}`);
+      if (workingHoursFrom && workingHoursTo) parts.push(`hours=${workingHoursFrom}-${workingHoursTo}`);
+      else if (workingHours) parts.push(`hours=${workingHours}`);
+      await query(
+        `UPDATE freelancers
+           SET availability = ?, updated_at = NOW()
+         WHERE user_id = ?`,
+        [parts.join('|'), userId]
+      );
+    }
+
+    const freelancer = await queryOne<any>(
+      `SELECT id, user_id,
+              COALESCE(availability, CASE WHEN is_available='TRUE' THEN 'available' ELSE 'unavailable' END) AS availability
+       FROM freelancers
+       WHERE user_id = ?
+       LIMIT 1`,
+      [userId]
+    );
 
     return res.status(200).json({
       success: true,
       availability: {
-        isAvailable: freelancer.is_available,
-        workingHours: freelancer.working_hours,
-        timezone: freelancer.timezone
+        isAvailable: (freelancer?.availability || 'unavailable') === 'available',
+        workingHours,
+        timezone,
+        nextAvailableDate,
+        workingHoursFrom,
+        workingHoursTo
       }
     });
 

@@ -6,6 +6,7 @@ type DbUser = {
   id: number;
   email: string;
   password_hash: string;
+  display_name: string | null;
   role: 'admin' | 'freelancer' | 'client' | 'team_member';
   is_active: 'TRUE' | 'FALSE';
   email_verified: 'TRUE' | 'FALSE';
@@ -33,7 +34,7 @@ export default async function handler(
 
     const user = await queryOne<DbUser>(
       `
-        SELECT id, email, password_hash, role, is_active, email_verified, created_at
+        SELECT id, email, password_hash, display_name, role, is_active, email_verified, created_at
         FROM users
         WHERE email = ?
         LIMIT 1
@@ -70,7 +71,7 @@ export default async function handler(
       user: {
         id: user.id,
         email: user.email,
-        name: user.email.split('@')[0],
+        name: user.display_name || user.email.split('@')[0],
         role: user.role.toUpperCase(),
         isActive: user.is_active === 'TRUE',
         emailVerified: user.email_verified === 'TRUE',

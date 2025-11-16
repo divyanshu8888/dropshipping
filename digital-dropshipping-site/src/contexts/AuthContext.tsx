@@ -14,6 +14,7 @@ export interface User {
 export interface AuthContextType {
   user: User | null;
   loading: boolean;
+  verified: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
@@ -206,6 +207,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const value = {
     user,
     loading,
+    verified,
     error,
     login,
     logout,

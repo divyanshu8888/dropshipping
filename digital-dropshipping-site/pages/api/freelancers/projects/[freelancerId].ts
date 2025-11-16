@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { supabase } from '../../../src/lib/supabase';
+import { query } from 'lib/mysql';
 
 export default async function handler(
   req: NextApiRequest,
@@ -16,61 +16,52 @@ export default async function handler(
       return res.status(400).json({ error: 'Freelancer ID is required' });
     }
 
-    // Fetch projects assigned to this freelancer
-    const { data: projects, error: projectsError } = await supabase
-      .from('projects')
-      .select(`
-        id,
-        title,
-        description,
-        budget,
-        deadline,
-        status,
-        progress,
-        created_at,
-        clients:client_id (
-          contact_name,
-          email
-        ),
-        messages (
-          id,
-          sender,
-          content,
-          timestamp,
-          attachments
-        ),
-        deliverables (
-          id,
-          name,
-          type,
-          url,
-          uploaded_at,
-          description
-        )
-      `)
-      .eq('freelancer_id', freelancerId)
-      .order('created_at', { ascending: false });
-
-    if (projectsError) {
-      console.error('Database error:', projectsError);
-      throw projectsError;
+    // Attempt MySQL fallback (no Supabase)
+    let rows: any[] = [];
+    try {
+      rows = await query<any>(
+        `
+          SELECT
+            p.id,
+            p.title,
+            p.description,
+            COALESCE(p.budget_cents, p.budget) AS budget,
+            p.deadline,
+            p.status,
+            p.created_at,
+            c.display_name AS client_name,
+            c.contact_email AS client_email
+          FROM projects p
+          LEFT JOIN clients c ON c.id = p.client_id
+          WHERE p.freelancer_id = ?
+          ORDER BY p.created_at DESC
+          LIMIT 50
+        `,
+        [Number(freelancerId)]
+      );
+    } catch (dbErr: any) {
+      // If table doesn't exist in dev, return empty list rather than 500
+      if (dbErr?.code === 'ER_NO_SUCH_TABLE') {
+        rows = [];
+      } else {
+        throw dbErr;
+      }
     }
 
-    // Transform the data to match the expected format
-    const transformedProjects = projects?.map(project => ({
-      id: project.id,
-      title: project.title,
-      client: project.clients?.contact_name || 'Unknown Client',
-      clientEmail: project.clients?.email || '',
-      status: project.status,
-      budget: project.budget,
-      deadline: project.deadline,
-      description: project.description,
-      createdAt: project.created_at,
-      progress: project.progress || 0,
-      messages: project.messages || [],
-      deliverables: project.deliverables || []
-    })) || [];
+    const transformedProjects = rows.map((p) => ({
+      id: p.id,
+      title: p.title,
+      client: p.client_name || 'Unknown Client',
+      clientEmail: p.client_email || '',
+      status: p.status,
+      budget: p.budget ?? null,
+      deadline: p.deadline ?? null,
+      description: p.description ?? null,
+      createdAt: p.created_at,
+      progress: 0,
+      messages: [],
+      deliverables: []
+    }));
 
     return res.status(200).json({
       success: true,

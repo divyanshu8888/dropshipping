@@ -5,6 +5,7 @@ interface FreelancerRow {
   id: number;
   display_name: string;
   status: string;
+  verification_state?: string | null;
   rating: number | null;
   created_at: string | Date;
   updated_at: string | Date;
@@ -30,8 +31,8 @@ export default async function handler(
 async function handleGet(req: NextApiRequest, res: NextApiResponse) {
   try {
     const { status, limit = '50', offset = '0' } = req.query;
-    const limitNum = Math.min(parseInt(limit as string, 10) || 50, 100);
-    const offsetNum = parseInt(offset as string, 10) || 0;
+    const limitNum = Math.min(Number.parseInt(String(limit), 10) || 50, 100);
+    const offsetNum = Math.max(Number.parseInt(String(offset), 10) || 0, 0);
 
     const filters: string[] = [];
     const params: any[] = [];
@@ -43,15 +44,15 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
 
     const whereClause = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
 
-    const freelancers = await safeQuery<FreelancerRow>(
-      `SELECT *
-         FROM freelancers
-         ${whereClause}
-         ORDER BY created_at DESC
-         LIMIT ? OFFSET ?`,
-      [...params, limitNum, offsetNum],
-      'freelancers-list'
-    );
+    // MySQL has quirks with placeholders in LIMIT/OFFSET on some versions.
+    // We validate numeric inputs and inline them to avoid ER_WRONG_ARGUMENTS.
+    const sql = `SELECT *
+                   FROM freelancers
+                   ${whereClause}
+                   ORDER BY created_at DESC
+                   LIMIT ${limitNum} OFFSET ${offsetNum}`;
+
+    const freelancers = await safeQuery<FreelancerRow>(sql, params, 'freelancers-list');
 
     return res.status(200).json({
       freelancers,

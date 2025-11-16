@@ -3,15 +3,15 @@ import { GetServerSideProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import Header from '../src/components/Header';
-import {
-  EntityDrawer,
-  CommandBar,
-  DataGrid,
-  EditableCard,
-  KanbanPipeline,
-  EventStream,
-} from '../src/components/admin';
+import { useAuth } from '../src/contexts/AuthContext';
+import dynamic from 'next/dynamic';
+const Header = dynamic(() => import('../src/components/Header'));
+const EntityDrawer = dynamic(() => import('../src/components/admin').then(m => m.EntityDrawer));
+const CommandBar = dynamic(() => import('../src/components/admin').then(m => m.CommandBar));
+const DataGrid = dynamic(() => import('../src/components/admin').then(m => m.DataGrid));
+const EditableCard = dynamic(() => import('../src/components/admin').then(m => m.EditableCard));
+const KanbanPipeline = dynamic(() => import('../src/components/admin').then(m => m.KanbanPipeline), { ssr: false });
+const EventStream = dynamic(() => import('../src/components/admin').then(m => m.EventStream), { ssr: false });
 import { useToast } from '../src/components/Toast';
 import { query } from '../src/lib/mysql';
 
@@ -251,6 +251,7 @@ export default function AdminDashboard({
 }: AdminProps) {
   const router = useRouter();
   const { addToast } = useToast();
+  const auth = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [metricsLoading, setMetricsLoading] = useState(true);
@@ -279,33 +280,33 @@ export default function AdminDashboard({
 
   const [kanbanColumns, setKanbanColumns] = useState<any[]>([]);
   const [eventStream, setEventStream] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<
+    'overview' | 'work' | 'events' | 'pipeline' | 'freelancers' | 'clients' | 'orders' | 'products' | 'team' | 'settings'
+  >('overview');
 
+  // Freelancers tab state
+  const [freelancerStatus, setFreelancerStatus] = useState<string>(''); // '' means All
+  const [freelancerRows, setFreelancerRows] = useState<any[]>(freelancers || []);
+  const displayedFreelancerRows = useMemo(() => {
+    if (!freelancerStatus) return freelancerRows;
+    return (freelancerRows || []).filter((r: any) => String(r.status).toLowerCase() === freelancerStatus);
+  }, [freelancerRows, freelancerStatus]);
+
+  // Use AuthContext as the source of truth; avoid relying on localStorage timing
   useEffect(() => {
-    const bootstrap = () => {
-      const userData = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+    if (!auth) return;
+    // Wait until auth has verified the session to avoid brief redirects
+    if (auth.loading || !auth.verified) return;
 
-      if (!userData) {
-        router.push('/login');
+    const normalizedRole = String(auth.user?.role || '').toUpperCase();
+    if (!auth.user || (normalizedRole !== 'ADMIN' && normalizedRole !== 'TEAM_MEMBER')) {
+      router.replace('/login');
         return;
       }
 
-      try {
-        const parsed = JSON.parse(userData);
-        if (parsed.role !== 'ADMIN' && parsed.role !== 'TEAM_MEMBER') {
-          router.push('/login');
-          return;
-        }
-
-        setUser(parsed);
+    setUser({ name: auth.user.name, role: normalizedRole });
         setLoading(false);
-      } catch (error) {
-        console.error('Failed to parse stored user:', error);
-        router.push('/login');
-      }
-    };
-
-    bootstrap();
-  }, [router]);
+  }, [auth?.loading, auth?.verified, auth?.user, router]);
 
   const fetchDashboardData = async () => {
     try {
@@ -362,6 +363,50 @@ export default function AdminDashboard({
     }
   };
 
+  const fetchFreelancers = async (status = freelancerStatus) => {
+    try {
+      const qs = status ? `?status=${encodeURIComponent(status)}` : '';
+      const res = await fetch(`/api/admin/freelancers${qs}`);
+      const payload = await res.json();
+      if (res.ok) {
+        const list = Array.isArray(payload.freelancers) ? payload.freelancers : [];
+        // Always trust API result for current filter (can be empty by design)
+        setFreelancerRows(list);
+      }
+    } catch (e) {
+      console.error('Error fetching freelancers list:', e);
+      // Keep current rows on error; do not fallback to stale SSR snapshot
+    }
+  };
+
+  const updateFreelancerStatus = async (id: string | number, status: 'approved' | 'rejected' | 'pending') => {
+    // Optimistic update for real-time feel
+    setFreelancerRows(prev =>
+      (prev || []).map((r: any) => (String(r.id) === String(id) ? { ...r, status } : r))
+    );
+    try {
+      const res = await fetch('/api/admin/freelancers', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status }),
+      });
+      if (!res.ok) {
+        // Re-sync on error
+        await fetchFreelancers();
+        return false;
+      }
+      // Refresh counts and list after server confirms
+      fetchDashboardData();
+      fetchFreelancers();
+      return true;
+    } catch (e) {
+      console.error('Error updating freelancer status:', e);
+      // Re-sync in case of network failure
+      await fetchFreelancers();
+      return false;
+    }
+  };
+
   const fetchActivityData = async (tabValue: typeof activityTab = activityTab) => {
     try {
       setActivityLoading(true);
@@ -379,6 +424,23 @@ export default function AdminDashboard({
 
   useEffect(() => {
     if (loading) return;
+
+    // Prefetch common admin routes for snappier nav
+    router.prefetch('/admin/quotes');
+    router.prefetch('/admin/products-enhanced');
+    router.prefetch('/admin/team');
+    router.prefetch('/admin/moderation');
+
+    // Restore last selected activity tab (persist between visits)
+    const lastTab = typeof window !== 'undefined' ? localStorage.getItem('admin_activity_tab') : null;
+    if (lastTab === 'all' || lastTab === 'users' || lastTab === 'clients' || lastTab === 'services') {
+      setActivityTab(lastTab as any);
+    }
+
+    // Gentle welcome toast
+    try {
+      addToast(`Welcome back${user ? `, ${user.name.split(' ')[0]}` : ''}`, 'success', 1500);
+    } catch {}
 
     const loadMetrics = async (initial: boolean) => {
       if (initial) {
@@ -404,6 +466,10 @@ export default function AdminDashboard({
   useEffect(() => {
     if (!loading) {
       fetchActivityData(activityTab);
+      // Persist selection
+      try {
+        localStorage.setItem('admin_activity_tab', activityTab);
+      } catch {}
     }
   }, [activityTab, loading]);
 
@@ -412,8 +478,11 @@ export default function AdminDashboard({
       fetchWorkQueueData();
       fetchKanbanData();
       fetchEventStream();
+      if (activeTab === 'freelancers') {
+        fetchFreelancers();
     }
-  }, [loading]);
+    }
+  }, [loading, activeTab]);
 
   const handleEntitySelect = (entityType: string, entityId: string) => {
     setSelectedEntityType(entityType as any);
@@ -522,7 +591,8 @@ export default function AdminDashboard({
   const metricsReady = Boolean(metrics) && !metricsLoading;
   const displayMetrics = metrics ?? EMPTY_METRICS;
 
-  const heroGreeting = user ? `Welcome back, ${user.name.split(' ')[0]}` : 'Admin Command Center';
+  const firstName = user?.name ? String(user.name).split(' ')[0] : null;
+  const heroGreeting = firstName ? `Welcome back, ${firstName}` : 'Admin Command Center';
   const lastUpdatedLabel = lastUpdated ? formatTimestamp(lastUpdated) : 'Sync pending';
 
   const primaryHighlights = useMemo(
@@ -726,6 +796,33 @@ export default function AdminDashboard({
                     </span>
                   )}
                 </div>
+                <div className="mt-6 flex flex-wrap gap-2">
+                  {[
+                    { id: 'overview', label: 'Snapshot' },
+                    { id: 'work', label: 'Work Queue' },
+                    { id: 'events', label: 'Events & Activity' },
+                    { id: 'pipeline', label: 'Delivery Pipeline' },
+                    { id: 'freelancers', label: 'Freelancers' },
+                    { id: 'clients', label: 'Clients' },
+                    { id: 'orders', label: 'Orders' },
+                    { id: 'products', label: 'Products' },
+                    { id: 'team', label: 'Team' },
+                    { id: 'settings', label: 'Settings' },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id as typeof activeTab)}
+                      className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition border ${
+                        activeTab === (tab.id as any)
+                          ? 'border-brand-b/60 bg-brand-b/15 text-brand-b'
+                          : 'border-white/10 bg-white/5 text-text-mute hover:border-white/20 hover:text-text-base'
+                      }`}
+                      aria-pressed={activeTab === (tab.id as any)}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
               </div>
               <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
                 <button
@@ -748,7 +845,157 @@ export default function AdminDashboard({
             </div>
           </section>
 
-          <section className="space-y-4">
+          {/* Work Queue tab */}
+          <section className={`rounded-3xl border border-white/10 bg-white/5 p-6 shadow-card ${activeTab === 'work' ? 'block' : 'hidden'}`}>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-semibold text-text-base">Work queue</h3>
+                <p className="text-xs text-text-mute">Escalations that require a human decision</p>
+              </div>
+              <button
+                onClick={handleManualRefresh}
+                className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold text-text-soft transition hover:text-brand-b"
+              >
+                Refresh queue
+              </button>
+            </div>
+            <div className="mt-5 grid gap-6 lg:grid-cols-2">
+              <DataGrid
+                title="Pending KYC"
+                rows={pendingKYCRows}
+                columns={[
+                  { field: 'email', headerName: 'Email' },
+                  { field: 'role', headerName: 'Role' },
+                  { field: 'created_at', headerName: 'Submitted', renderCell: (row) => formatDate(row.created_at) },
+                  {
+                    field: 'status',
+                    headerName: 'Status',
+                    renderCell: (row) => (
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs ${
+                          row.status === 'pending' ? 'bg-amber-500/15 text-amber-400' : 'bg-white/10 text-text-soft'
+                        }`}
+                      >
+                        {row.status}
+                      </span>
+                    ),
+                  },
+                ]}
+                onRowClick={(row) => handleEntitySelect('kyc', row.id)}
+                bulkActions={[
+                  { label: 'Approve All', action: 'approve_kyc', icon: '✅' },
+                  { label: 'Reject All', action: 'reject_kyc', icon: '❌', variant: 'destructive' },
+                ]}
+                onBulkAction={handleWorkQueueBulkAction}
+              />
+              <DataGrid
+                title="Refund Requests"
+                rows={refundRows}
+                columns={[
+                  { field: 'id', headerName: 'Order ID' },
+                  { field: 'total_amount', headerName: 'Amount', renderCell: (row) => formatCurrency(row.total_amount || 0) },
+                  { field: 'status', headerName: 'Status' },
+                  { field: 'created_at', headerName: 'Requested', renderCell: (row) => formatDate(row.created_at) },
+                ]}
+                onRowClick={(row) => handleEntitySelect('order', row.id)}
+                bulkActions={[
+                  { label: 'Approve Refunds', action: 'approve_refunds', icon: '✅' },
+                  { label: 'Reject Refunds', action: 'reject_refunds', icon: '❌', variant: 'destructive' },
+                ]}
+                onBulkAction={handleWorkQueueBulkAction}
+              />
+            </div>
+          </section>
+
+          {/* Clients tab */}
+          <section className={`rounded-3xl border border-white/10 bg-white/5 p-6 shadow-card ${activeTab === 'clients' ? 'block' : 'hidden'}`}>
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-text-base">Clients</h3>
+              <span className="text-xs text-text-mute">Manage client accounts and briefs</span>
+            </div>
+            <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <Link href="/client-dashboard" className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm hover:border-brand-b/40 transition">
+                <p className="font-semibold text-text-base">Client Dashboard</p>
+                <p className="text-xs text-text-mute mt-1">View client-side experience</p>
+              </Link>
+              <Link href="/admin/quotes" className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm hover:border-brand-b/40 transition">
+                <p className="font-semibold text-text-base">Quote Requests</p>
+                <p className="text-xs text-text-mute mt-1">Review and respond to briefs</p>
+              </Link>
+              <div className="rounded-2xl border border-dashed border-white/10 bg-white/5 p-4 text-sm text-text-mute">
+                Coming soon: Client directory and segments
+              </div>
+            </div>
+          </section>
+
+          {/* Orders tab */}
+          <section className={`rounded-3xl border border-white/10 bg-white/5 p-6 shadow-card ${activeTab === 'orders' ? 'block' : 'hidden'}`}>
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-text-base">Orders</h3>
+              <span className="text-xs text-text-mute">Track orders and fulfillment</span>
+            </div>
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              <Link href="/admin/orders" className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm hover:border-brand-b/40 transition">
+                <p className="font-semibold text-text-base">Orders Table</p>
+                <p className="text-xs text-text-mute mt-1">View and manage orders</p>
+              </Link>
+              <div className="rounded-2xl border border-dashed border-white/10 bg-white/5 p-4 text-sm text-text-mute">
+                Coming soon: Order detail and refunds workflow
+              </div>
+            </div>
+          </section>
+
+          {/* Products tab */}
+          <section className={`rounded-3xl border border-white/10 bg-white/5 p-6 shadow-card ${activeTab === 'products' ? 'block' : 'hidden'}`}>
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-text-base">Products & Services</h3>
+              <span className="text-xs text-text-mute">Catalog and pricing</span>
+            </div>
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              <Link href="/admin/products-enhanced" className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm hover:border-brand-b/40 transition">
+                <p className="font-semibold text-text-base">Manage Products</p>
+                <p className="text-xs text-text-mute mt-1">Inventory, pricing & bundles</p>
+              </Link>
+              <div className="rounded-2xl border border-dashed border-white/10 bg-white/5 p-4 text-sm text-text-mute">
+                Coming soon: Promotions and bundles
+              </div>
+            </div>
+          </section>
+
+          {/* Team tab */}
+          <section className={`rounded-3xl border border-white/10 bg-white/5 p-6 shadow-card ${activeTab === 'team' ? 'block' : 'hidden'}`}>
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-text-base">Team</h3>
+              <span className="text-xs text-text-mute">Invite and manage teammates</span>
+            </div>
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              <Link href="/admin/team" className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm hover:border-brand-b/40 transition">
+                <p className="font-semibold text-text-base">Team Directory</p>
+                <p className="text-xs text-text-mute mt-1">Invites, roles, access</p>
+              </Link>
+              <div className="rounded-2xl border border-dashed border-white/10 bg-white/5 p-4 text-sm text-text-mute">
+                Coming soon: Role policies and audit logs
+              </div>
+            </div>
+          </section>
+
+          {/* Settings tab */}
+          <section className={`rounded-3xl border border-white/10 bg-white/5 p-6 shadow-card ${activeTab === 'settings' ? 'block' : 'hidden'}`}>
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-text-base">Settings</h3>
+              <span className="text-xs text-text-mute">Platform configuration</span>
+            </div>
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              <Link href="/admin/setup" className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm hover:border-brand-b/40 transition">
+                <p className="font-semibold text-text-base">Admin Setup</p>
+                <p className="text-xs text-text-mute mt-1">Database, environment, migrations</p>
+              </Link>
+              <div className="rounded-2xl border border-dashed border-white/10 bg-white/5 p-4 text-sm text-text-mute">
+                Coming soon: Brand, email, payments
+              </div>
+            </div>
+          </section>
+          <section className={`space-y-4 ${activeTab === 'overview' ? 'block' : 'hidden'}`}>
             <div className="flex items-baseline justify-between">
               <h2 className="text-sm uppercase tracking-[0.3em] text-text-mute">Snapshot</h2>
               <span className="text-xs text-text-mute">
@@ -783,9 +1030,9 @@ export default function AdminDashboard({
             </div>
           </section>
 
-          <section className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+          <section className={`grid gap-6 lg:grid-cols-[2fr_1fr] ${activeTab === 'overview' ? 'grid' : 'hidden'}`}>
             <div className="space-y-6">
-              <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-card">
+              <div className={`rounded-3xl border border-white/10 bg-white/5 p-6 shadow-card ${activeTab === 'work' ? 'block' : ''}`}>
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-text-base">Pipeline health</h3>
                   <span className="text-xs text-text-mute">
@@ -954,7 +1201,7 @@ export default function AdminDashboard({
               </div>
             </div>
 
-            <aside className="space-y-6">
+            <aside className={`space-y-6 ${activeTab === 'overview' ? 'block' : 'hidden'}`}>
               <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-card">
                 <h3 className="text-sm font-semibold text-text-base">Urgent tasks</h3>
                 <div className="mt-4 space-y-3">
@@ -1028,7 +1275,7 @@ export default function AdminDashboard({
             </aside>
           </section>
 
-          <section className="grid gap-6 lg:grid-cols-[3fr_2fr]">
+          <section className={`grid gap-6 lg:grid-cols-[3fr_2fr] ${activeTab === 'events' ? 'grid' : 'hidden'}`}>
             <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-card">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-text-base">Live event stream</h3>
@@ -1123,7 +1370,7 @@ export default function AdminDashboard({
             </div>
           </section>
 
-          <section className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-card">
+          <section className={`rounded-3xl border border-white/10 bg-white/5 p-6 shadow-card ${activeTab === 'pipeline' ? 'block' : 'hidden'}`}>
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-text-base">Delivery pipeline</h3>
               <span className="text-xs text-text-mute">
@@ -1140,49 +1387,58 @@ export default function AdminDashboard({
             </div>
           </section>
 
-          <section className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-card">
-                <div className="flex flex-wrap items-center justify-between gap-3">
+          <section className={`rounded-3xl border border-white/10 bg-white/5 p-6 shadow-card ${activeTab === 'freelancers' ? 'block' : 'hidden'}`}>
+              <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <h3 className="text-lg font-semibold text-text-base">Freelancer snapshot</h3>
-                    <p className="text-xs text-text-mute">
-                      {pendingCount} pending · {approvedCount} approved
-                    </p>
+                <h3 className="text-lg font-semibold text-text-base">Freelancers</h3>
+                <p className="text-xs text-text-mute">{pendingCount} pending · {approvedCount} approved</p>
                   </div>
-                  <Link
-                    href="/admin/freelancers"
-                    className="rounded-xl border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold text-text-base transition hover:border-brand-b/40 hover:text-brand-b"
-                  >
-                    Review applications
-                  </Link>
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-text-mute">Status</label>
+                <select
+                  value={freelancerStatus}
+                  onChange={(e) => { setFreelancerStatus(e.target.value); fetchFreelancers(e.target.value); }}
+                  className="rounded-xl border border-white/10 bg-white/10 px-3 py-1 text-xs text-text-base"
+                >
+                  <option value="">All</option>
+                  <option value="pending">Pending</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                </select>
                 </div>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {topFreelancers.length === 0 ? (
-                <p className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-text-mute">
-                  No freelancer applications yet. Invite talent to kickstart the marketplace.
-                </p>
-              ) : (
-                topFreelancers.map((freelancer) => (
-                  <div
-                    key={freelancer.id}
-                    className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-text-soft transition hover:border-brand-b/40"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-semibold text-text-base">
-                          {freelancer.display_name || 'Freelancer'}
-                        </p>
-                        <p className="text-xs text-text-mute capitalize">{freelancer.status}</p>
                       </div>
-                      <span className="rounded-full bg-white/5 px-3 py-1 text-xs font-semibold text-text-base">
-                        ⭐ {Number(freelancer.rating ?? 0).toFixed(1)}
-                      </span>
-                    </div>
-                    <p className="mt-4 text-xs text-text-mute">
-                      Joined {freelancer.created_at ? formatDate(freelancer.created_at) : '—'}
-                    </p>
-                  </div>
-                ))
-              )}
+              <div className="mt-4">
+              <DataGrid
+                title="Freelancers"
+                rows={displayedFreelancerRows}
+                columns={[
+                  { field: 'id', headerName: 'ID' },
+                  { field: 'display_name', headerName: 'Name' },
+                  { field: 'status', headerName: 'Status' },
+                  { field: 'verification_state', headerName: 'Verification', renderCell: (row: any) => {
+                    const v = String(row.verification_state || '').toLowerCase();
+                    if (v === 'verified') return 'Verified';
+                    if (v === 'pending') return 'Pending';
+                    if (v === 'rejected') return 'Rejected';
+                    return v || '—';
+                  } },
+                  { field: 'rating', headerName: 'Rating' },
+                  { field: 'created_at', headerName: 'Joined', renderCell: (row: any) => formatDate(row.created_at) },
+                ]}
+                bulkActions={[
+                  { label: 'Approve', action: 'approve' },
+                  { label: 'Reject', action: 'reject', variant: 'destructive' },
+                ]}
+                onBulkAction={async (action, rows) => {
+                  if (action === 'approve') {
+                    await Promise.all(rows.map((r: any) => updateFreelancerStatus(r.id, 'approved')));
+                  } else if (action === 'reject') {
+                    await Promise.all(rows.map((r: any) => updateFreelancerStatus(r.id, 'rejected')));
+                  }
+                  // Ensure list reflects all changes
+                  fetchFreelancers();
+                }}
+              />
             </div>
           </section>
         </main>
@@ -1199,7 +1455,7 @@ export const getServerSideProps: GetServerSideProps = async () => {
     try {
       freelancers = await query(
         `
-          SELECT id, display_name, status, rating, created_at, updated_at
+          SELECT id, display_name, status, verification_state, rating, created_at, updated_at
           FROM freelancers
           ORDER BY created_at DESC
           LIMIT 50

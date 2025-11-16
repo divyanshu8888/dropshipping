@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import Header from '../../src/components/Header';
+import dynamic from 'next/dynamic';
+const Header = dynamic(() => import('../../src/components/Header'));
 
 export default function FreelancerProfileSetup() {
   const router = useRouter();
@@ -36,18 +37,18 @@ export default function FreelancerProfileSetup() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const skillOptions = [
+  const skillOptions = useMemo(() => [
     'Web Development', 'Mobile Development', 'UI/UX Design', 'Graphic Design',
     'Content Writing', 'Digital Marketing', 'SEO', 'Video Editing',
     'Photography', 'Branding', 'Consulting', 'Data Analysis', 'DevOps',
     'Backend Development', 'Frontend Development', 'Full Stack Development'
-  ];
+  ], []);
 
-  const serviceCategories = [
+  const serviceCategories = useMemo(() => [
     'Web Development', 'Mobile Development', 'UI/UX Design', 'Graphic Design',
     'Content Writing', 'Digital Marketing', 'SEO', 'Video Editing',
     'Photography', 'Branding', 'Consulting', 'Other'
-  ];
+  ], []);
 
   useEffect(() => {
     // Check if user is logged in and is a freelancer
@@ -71,37 +72,37 @@ export default function FreelancerProfileSetup() {
     }));
   }, [router]);
 
-  const handleSkillToggle = (skill: string) => {
+  const handleSkillToggle = useCallback((skill: string) => {
     setFormData(prev => ({
       ...prev,
       skills: prev.skills.includes(skill)
         ? prev.skills.filter(s => s !== skill)
         : [...prev.skills, skill]
     }));
-  };
+  }, []);
 
-  const addPortfolioLink = () => {
+  const addPortfolioLink = useCallback(() => {
     setFormData(prev => ({
       ...prev,
       portfolio_links: [...prev.portfolio_links, '']
     }));
-  };
+  }, []);
 
-  const updatePortfolioLink = (index: number, value: string) => {
+  const updatePortfolioLink = useCallback((index: number, value: string) => {
     setFormData(prev => ({
       ...prev,
       portfolio_links: prev.portfolio_links.map((link, i) => i === index ? value : link)
     }));
-  };
+  }, []);
 
-  const removePortfolioLink = (index: number) => {
+  const removePortfolioLink = useCallback((index: number) => {
     setFormData(prev => ({
       ...prev,
       portfolio_links: prev.portfolio_links.filter((_, i) => i !== index)
     }));
-  };
+  }, []);
 
-  const addService = () => {
+  const addService = useCallback(() => {
     setFormData(prev => ({
       ...prev,
       services: [...prev.services, {
@@ -112,23 +113,23 @@ export default function FreelancerProfileSetup() {
         delivery_time: 1
       }]
     }));
-  };
+  }, []);
 
-  const updateService = (index: number, field: string, value: any) => {
+  const updateService = useCallback((index: number, field: string, value: any) => {
     setFormData(prev => ({
       ...prev,
       services: prev.services.map((service, i) => 
         i === index ? { ...service, [field]: value } : service
       )
     }));
-  };
+  }, []);
 
-  const removeService = (index: number) => {
+  const removeService = useCallback((index: number) => {
     setFormData(prev => ({
       ...prev,
       services: prev.services.filter((_, i) => i !== index)
     }));
-  };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

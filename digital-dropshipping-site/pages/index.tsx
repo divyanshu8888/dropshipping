@@ -1,9 +1,9 @@
-import { GetServerSideProps } from 'next';
+import { GetStaticProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
 import Header from '../src/components/Header';
-import QuoteRequestForm from '../src/components/QuoteRequestForm';
+import { buildQuoteHref } from '../src/lib/quoteLink';
 import { query } from '../src/lib/mysql';
 
 
@@ -464,7 +464,6 @@ $ uniti status
 const HomePage = ({ testimonials, stats }: HomePageProps) => {
   const [currentTestimonialIndex, setCurrentTestimonialIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
-  const [showQuoteForm, setShowQuoteForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchSuggestions, setSearchSuggestions] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
@@ -700,24 +699,28 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
               </div>
 
               {/* CTAS */}
-              <div className="mt-6 cta-buttons-container animate-fade-in-up animate-delay-400">
-              <button
-              onClick={() => setShowQuoteForm(true)}
-                  type="button"
-                  className="cta-btn-primary"
-                >
-                  Request a Quote
-                  <svg className="inline-block ml-2 w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-            <Link
-              href="/freelancers"
-                  aria-label="Browse freelancers"
-                  className="cta-btn-secondary"
-            >
-              Browse Freelancers
-            </Link>
+            <div className="mt-6 cta-buttons-container animate-fade-in-up animate-delay-400">
+              <Link
+                href={buildQuoteHref({
+                  source: 'general',
+                  intent: 'proposal',
+                  title: 'Request a quote',
+                  subtitle: 'Tell us about your project and we’ll match you with a verified operator.'
+                })}
+                className="cta-btn-primary"
+              >
+                Request a Quote
+                <svg className="inline-block ml-2 w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </Link>
+              <Link
+                href="/freelancers"
+                aria-label="Browse freelancers"
+                className="cta-btn-secondary"
+              >
+                Browse Freelancers
+              </Link>
             </div>
           
               {/* TRUST INDICATORS - Matching Freelancer Page Style */}
@@ -1044,7 +1047,7 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
               heading="Products"
               items={[
                 { label: "Browse Freelancers", href: "/freelancers" },
-                { label: "Request a Quote", href: "/products", onClick: (e: React.MouseEvent) => { e.preventDefault(); setShowQuoteForm(true); } },
+                { label: "Request a Quote", href: "/request-quote" },
                 { label: "Verified Portfolios", href: "/verified" },
                 { label: "Categories", href: "/categories" },
               ]}
@@ -1100,16 +1103,6 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
         </a>
       </footer>
 
-      {/* Quote Request Form Modal */}
-      {showQuoteForm && (
-        <QuoteRequestForm
-          onClose={() => setShowQuoteForm(false)}
-          onSuccess={() => {
-            setShowQuoteForm(false);
-            // You can add a success notification here
-          }}
-        />
-      )}
     </div>
   );
 };
@@ -1120,7 +1113,7 @@ function FooterCol({
   items,
 }: {
   heading: string;
-  items: { label: string; href: string; onClick?: (e: React.MouseEvent) => void }[];
+  items: { label: string; href: string }[];
 }) {
   return (
     <nav aria-label={heading}>
@@ -1131,7 +1124,6 @@ function FooterCol({
             <Link 
               href={i.href} 
               className="text-white/75 hover:text-white hover:underline underline-offset-4 text-[10px]"
-              onClick={i.onClick}
             >
               {i.label}
             </Link>
@@ -1142,7 +1134,7 @@ function FooterCol({
   );
 }
 
-export const getServerSideProps: GetServerSideProps = async () => {
+export const getStaticProps: GetStaticProps = async () => {
   try {
     // Fetch data directly from MySQL database
     // Using Promise.allSettled to handle errors gracefully for each query
@@ -1233,10 +1225,11 @@ export const getServerSideProps: GetServerSideProps = async () => {
       props: {
         testimonials: serializedTestimonials,
         stats
-      }
+      },
+      revalidate: 60
     };
   } catch (error) {
-    console.error('Error in getServerSideProps:', error);
+    console.error('Error in getStaticProps:', error);
     
     // Return empty data when there's an error - NO hardcoded testimonials
     // All data must come from database
@@ -1251,7 +1244,8 @@ export const getServerSideProps: GetServerSideProps = async () => {
           averageRating: '0.0',
           projectsLast90Days: 0
         },
-      }
+      },
+      revalidate: 60
     };
   }
 };

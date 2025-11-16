@@ -32,6 +32,15 @@ export default async function handler(
   }
 
   try {
+    // Fast-fail when DB envs are not configured to avoid hanging in dev
+    if (!process.env.MYSQL_USER || !process.env.MYSQL_PASSWORD || !process.env.MYSQL_DATABASE) {
+      return res.status(503).json({
+        error: 'Database temporarily unavailable',
+        details: 'Missing database configuration. Please complete setup and try again.',
+        code: 'DB_CONFIG_MISSING'
+      });
+    }
+
     const { name, email, password, userType } = req.body ?? {};
 
     if (!name || !email || !password || !userType) {
@@ -69,15 +78,28 @@ export default async function handler(
 
     const normalizedEmail = String(email).toLowerCase();
 
-    const existingUser = await queryOne<{ id: number }>(
-      `
-        SELECT id
-        FROM users
-        WHERE email = ?
-        LIMIT 1
-      `,
-      [normalizedEmail]
-    );
+    let existingUser: { id: number } | null = null;
+    try {
+      existingUser = await queryOne<{ id: number }>(
+        `
+          SELECT id
+          FROM users
+          WHERE email = ?
+          LIMIT 1
+        `,
+        [normalizedEmail]
+      );
+    } catch (dbCheckError: any) {
+      // If users table doesn't exist yet, surface helpful message
+      if (dbCheckError?.code === 'ER_NO_SUCH_TABLE') {
+        return res.status(503).json({
+          error: 'Database not initialized',
+          details: "The 'users' table is missing. Run migrations and try again.",
+          code: 'DB_NOT_INITIALIZED'
+        });
+      }
+      throw dbCheckError;
+    }
 
     if (existingUser) {
       return res.status(400).json({
@@ -103,30 +125,45 @@ export default async function handler(
         throw new Error('Failed to create user account');
       }
 
+      // Best-effort creation of related records; skip if table not present
       if (normalizedUserType === 'FREELANCER') {
-        await connection.execute(
-          `
-            INSERT INTO freelancers (user_id, display_name)
-            VALUES (?, ?)
-          `,
-          [insertId, name]
-        );
+        try {
+          await connection.execute(
+            `
+              INSERT INTO freelancers (user_id, display_name)
+              VALUES (?, ?)
+            `,
+            [insertId, name]
+          );
+        } catch (relErr: any) {
+          if (relErr?.code !== 'ER_NO_SUCH_TABLE') {
+            throw relErr;
+          }
+          // Table missing in dev; continue with user only
+        }
       } else if (normalizedUserType === 'CLIENT') {
-        await connection.execute(
-          `
-            INSERT INTO clients (
-              owner_id,
-              user_id,
-              client_type,
-              company_name,
-              display_name,
-              contact_name,
-              contact_email
-            )
-            VALUES (?, ?, 'individual', ?, ?, ?, ?)
-          `,
-          [insertId, insertId, name, name, name, normalizedEmail]
-        );
+        try {
+          await connection.execute(
+            `
+              INSERT INTO clients (
+                owner_id,
+                user_id,
+                client_type,
+                company_name,
+                display_name,
+                contact_name,
+                contact_email
+              )
+              VALUES (?, ?, 'individual', ?, ?, ?, ?)
+            `,
+            [insertId, insertId, name, name, name, normalizedEmail]
+          );
+        } catch (relErr: any) {
+          if (relErr?.code !== 'ER_NO_SUCH_TABLE') {
+            throw relErr;
+          }
+          // Table missing in dev; continue with user only
+        }
       }
 
       return insertId;
@@ -156,8 +193,25 @@ export default async function handler(
         role: normalizedUserType
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Unexpected error during signup:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+
+    // Normalize common DB errors to helpful messages
+    const code = error?.code as string | undefined;
+    if (code === 'ER_NO_SUCH_TABLE') {
+      return res.status(503).json({
+        error: 'Database not initialized',
+        details: 'Required tables are missing. Please run database migrations.',
+        code
+      });
+    }
+    if (code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({
+        error: 'User with this email already exists',
+        code
+      });
+    }
+
+    return res.status(500).json({ error: 'Internal server error', code: code || 'UNKNOWN' });
   }
 }
