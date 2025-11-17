@@ -4,6 +4,8 @@ import Head from 'next/head';
 import Link from 'next/link';
 import Header from '../../../src/components/Header';
 import { buildQuoteHref } from '../../../src/lib/quoteLink';
+import { parseAvailability } from '../../../src/lib/availability';
+import { formatAvailabilityDisplay } from '../../../src/lib/availabilityDisplay';
 import { query, queryOne } from '../../../src/lib/mysql';
 
 interface FreelancerService {
@@ -154,15 +156,25 @@ export default function FreelancerProfile({ freelancer, reviews, portfolio }: Fr
                       <span className="text-white/70">{freelancer.country}</span>
                     </>
                   )}
-                  {freelancer.availability === 'available' && (
-                    <>
-                      <span className="text-white/30">•</span>
-                      <span className="flex items-center text-emerald-400">
-                        <span className="w-2 h-2 bg-emerald-400 rounded-full mr-1.5 animate-pulse"></span>
-                        Available Now
-                      </span>
-                    </>
-                  )}
+                  {(() => {
+                    const parsed = parseAvailability(freelancer.availability)
+                    const display = formatAvailabilityDisplay(parsed)
+                    if (parsed.status !== 'unknown') {
+                      return (
+                        <>
+                          <span className="text-white/30">•</span>
+                          <span className={`flex items-center ${display.tone}`}>
+                            <span className={`w-2 h-2 ${parsed.status === 'available' ? 'bg-emerald-400' : 'bg-amber-400'} rounded-full mr-1.5 ${parsed.status === 'available' ? 'animate-pulse' : ''}`}></span>
+                            {display.label}
+                            {display.subtitle && (
+                              <span className="ml-1.5 text-xs text-white/60">({display.subtitle})</span>
+                            )}
+                          </span>
+                        </>
+                      )
+                    }
+                    return null
+                  })()}
                 </div>
               </div>
             </div>

@@ -281,8 +281,13 @@ export default function AdminDashboard({
   const [kanbanColumns, setKanbanColumns] = useState<any[]>([]);
   const [eventStream, setEventStream] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'work' | 'events' | 'pipeline' | 'freelancers' | 'clients' | 'orders' | 'products' | 'team' | 'settings'
+    'overview' | 'work' | 'events' | 'pipeline' | 'freelancers' | 'clients' | 'orders' | 'products' | 'team' | 'settings' | 'moderation'
   >('overview');
+
+  // Moderation alerts state
+  const [moderationAlerts, setModerationAlerts] = useState<any[]>([]);
+  const [moderationLoading, setModerationLoading] = useState(false);
+  const [unreadModerationCount, setUnreadModerationCount] = useState(0);
 
   // Freelancers tab state
   const [freelancerStatus, setFreelancerStatus] = useState<string>(''); // '' means All
@@ -422,6 +427,41 @@ export default function AdminDashboard({
     }
   };
 
+  const fetchModerationAlerts = async () => {
+    try {
+      setModerationLoading(true);
+      const response = await fetch('/api/admin/moderation-alerts?limit=100');
+      if (response.ok) {
+        const payload = await response.json();
+        if (payload.success) {
+          setModerationAlerts(payload.notifications || []);
+          // Count unread
+          const unread = (payload.notifications || []).filter((n: any) => !n.is_read || n.is_read === 'FALSE').length;
+          setUnreadModerationCount(unread);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching moderation alerts:', error);
+    } finally {
+      setModerationLoading(false);
+    }
+  };
+
+  const markNotificationRead = async (notificationId: number) => {
+    try {
+      const response = await fetch('/api/admin/mark-notification-read', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notificationId })
+      });
+      if (response.ok) {
+        fetchModerationAlerts();
+      }
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
+
   useEffect(() => {
     if (loading) return;
 
@@ -478,9 +518,13 @@ export default function AdminDashboard({
       fetchWorkQueueData();
       fetchKanbanData();
       fetchEventStream();
+      fetchModerationAlerts(); // Always fetch moderation alerts
       if (activeTab === 'freelancers') {
         fetchFreelancers();
-    }
+      }
+      if (activeTab === 'moderation') {
+        fetchModerationAlerts();
+      }
     }
   }, [loading, activeTab]);
 
@@ -807,6 +851,7 @@ export default function AdminDashboard({
                     { id: 'orders', label: 'Orders' },
                     { id: 'products', label: 'Products' },
                     { id: 'team', label: 'Team' },
+                    { id: 'moderation', label: `Moderation${unreadModerationCount > 0 ? ` (${unreadModerationCount})` : ''}` },
                     { id: 'settings', label: 'Settings' },
                   ].map((tab) => (
                     <button
@@ -1439,6 +1484,132 @@ export default function AdminDashboard({
                   fetchFreelancers();
                 }}
               />
+            </div>
+          </section>
+
+          {/* Moderation tab */}
+          <section className={`rounded-3xl border border-white/10 bg-white/5 p-6 shadow-card ${activeTab === 'moderation' ? 'block' : 'hidden'}`}>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-semibold text-text-base">Moderation Alerts</h3>
+                <p className="text-xs text-text-mute">Blocked messages and security violations</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={fetchModerationAlerts}
+                  className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold text-text-soft transition hover:text-brand-b"
+                >
+                  Refresh
+                </button>
+                <button
+                  onClick={async () => {
+                    const response = await fetch('/api/admin/mark-notification-read', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ markAllRead: true })
+                    });
+                    if (response.ok) {
+                      fetchModerationAlerts();
+                      addToast('All notifications marked as read', 'success');
+                    }
+                  }}
+                  className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold text-text-soft transition hover:text-emerald-400"
+                >
+                  Mark All Read
+                </button>
+              </div>
+            </div>
+            <div className="mt-5">
+              {moderationLoading ? (
+                <div className="flex items-center justify-center py-20 text-sm text-text-mute">
+                  Loading moderation alerts...
+                </div>
+              ) : moderationAlerts.length === 0 ? (
+                <div className="flex items-center justify-center py-20 text-sm text-text-mute">
+                  No moderation alerts yet
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-[600px] overflow-y-auto">
+                  {moderationAlerts.map((alert: any) => {
+                    const metadata = typeof alert.metadata === 'string' ? JSON.parse(alert.metadata) : alert.metadata || {};
+                    const isRead = alert.is_read === 'TRUE' || alert.is_read === true;
+                    return (
+                      <div
+                        key={alert.id}
+                        className={`rounded-2xl border p-4 transition ${
+                          isRead
+                            ? 'border-white/10 bg-white/5'
+                            : 'border-rose-500/30 bg-rose-500/10'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-lg">🛡️</span>
+                              <h4 className="font-semibold text-text-base">{alert.title}</h4>
+                              {!isRead && (
+                                <span className="rounded-full bg-rose-500/20 text-rose-300 px-2 py-0.5 text-xs font-semibold">
+                                  New
+                                </span>
+                              )}
+                              <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                                alert.severity === 'critical' ? 'bg-red-500/20 text-red-300' :
+                                alert.severity === 'high' ? 'bg-rose-500/20 text-rose-300' :
+                                alert.severity === 'medium' ? 'bg-amber-500/20 text-amber-300' :
+                                'bg-blue-500/20 text-blue-300'
+                              }`}>
+                                {alert.severity || 'medium'}
+                              </span>
+                            </div>
+                            <p className="text-sm text-text-soft mb-3">{alert.message}</p>
+                            <div className="grid gap-2 text-xs text-text-mute">
+                              {metadata.senderName && (
+                                <div>
+                                  <span className="font-semibold">User:</span> {metadata.senderName} ({metadata.senderEmail})
+                                </div>
+                              )}
+                              {metadata.projectTitle && (
+                                <div>
+                                  <span className="font-semibold">Project:</span> {metadata.projectTitle} (ID: {metadata.projectId})
+                                </div>
+                              )}
+                              {metadata.detectedContent && (
+                                <div>
+                                  <span className="font-semibold">Detected:</span> <span className="text-rose-300">{metadata.detectedContent}</span>
+                                </div>
+                              )}
+                              {metadata.blockedContent && (
+                                <div className="mt-2 p-2 rounded-lg bg-black/20 border border-white/10">
+                                  <span className="font-semibold">Blocked Message:</span>
+                                  <p className="mt-1 text-text-soft font-mono text-xs break-all">{metadata.blockedContent}</p>
+                                </div>
+                              )}
+                              {metadata.reasons && Array.isArray(metadata.reasons) && (
+                                <div>
+                                  <span className="font-semibold">Reasons:</span> {metadata.reasons.join(', ')}
+                                </div>
+                              )}
+                            </div>
+                            <div className="mt-3 text-xs text-text-mute">
+                              {formatDate(alert.created_at)}
+                            </div>
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            {!isRead && (
+                              <button
+                                onClick={() => markNotificationRead(alert.id)}
+                                className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-text-base hover:bg-white/10 transition"
+                              >
+                                Mark Read
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </section>
         </main>

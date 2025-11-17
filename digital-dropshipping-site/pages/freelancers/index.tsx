@@ -13,6 +13,8 @@ const FreelancersGrid = dynamic(() => import('../../src/components/FreelancersGr
   loading: () => <div className="max-w-7xl mx-auto px-6 py-8 text-white/70">Loading freelancers…</div>
 })
 import { query } from '../../src/lib/mysql'
+import { parseAvailability } from '../../src/lib/availability'
+import { formatAvailabilityDisplay } from '../../src/lib/availabilityDisplay'
 import styles from '../../src/styles/freelancers.module.css'
 
 interface Freelancer {
@@ -118,49 +120,8 @@ const joinClasses = (...classes: Array<string | false | null | undefined>) =>
   classes.filter(Boolean).join(' ')
 
 const availabilityMeta = (availability: string | undefined) => {
-  const raw = (availability || '').trim()
-  const normalized = raw.toLowerCase()
-  const label = raw.length > 0 ? raw.replace(/_/g, ' ') : 'Unknown'
-
-  if (['available', 'available now', 'open', 'ready'].includes(normalized)) {
-    return {
-      label,
-      tone: 'text-emerald-200',
-      bg: 'bg-emerald-500/15',
-      border: 'border-emerald-300/30',
-      icon: (
-        <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-          <path fillRule="evenodd" d="M16.704 5.296a1 1 0 010 1.414l-7.004 7.005a1 1 0 01-1.414 0L4.296 9.725a1 1 0 011.414-1.414l3.004 3.004 6.297-6.297a1 1 0 011.414 0z" clipRule="evenodd" />
-        </svg>
-      )
-    }
-  }
-
-  if (['booked', 'busy', 'unavailable', 'not available', 'engaged'].includes(normalized)) {
-    return {
-      label,
-      tone: 'text-amber-200',
-      bg: 'bg-amber-500/15',
-      border: 'border-amber-300/30',
-      icon: (
-        <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      )
-    }
-  }
-
-  return {
-    label: label || 'Availability unknown',
-    tone: 'text-white/70',
-    bg: 'bg-white/8',
-    border: 'border-white/15',
-    icon: (
-      <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    )
-  }
+  const parsed = parseAvailability(availability)
+  return formatAvailabilityDisplay(parsed)
 }
 
 const FreelancerSkills = ({ skills }: { skills: string[] }) => {
@@ -996,17 +957,24 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
                       <div className="flex items-center gap-1 text-[11px] text-white/55 sm:text-xs">
                         <span>Availability</span>
                       </div>
-                      <span
-                        className={joinClasses(
-                          'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.22em]',
-                          availabilityInfo.bg,
-                          availabilityInfo.border,
-                          availabilityInfo.tone
+                      <div className="flex flex-col items-end gap-0.5">
+                        <span
+                          className={joinClasses(
+                            'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.22em]',
+                            availabilityInfo.bg,
+                            availabilityInfo.border,
+                            availabilityInfo.tone
+                          )}
+                        >
+                          {availabilityInfo.icon}
+                          <span className="whitespace-nowrap">{availabilityInfo.label}</span>
+                        </span>
+                        {availabilityInfo.subtitle && (
+                          <span className="text-[9px] text-white/50 whitespace-nowrap">
+                            {availabilityInfo.subtitle}
+                          </span>
                         )}
-                      >
-                        {availabilityInfo.icon}
-                        <span className="whitespace-nowrap">{availabilityInfo.label}</span>
-                      </span>
+                      </div>
                     </div>
 
                     {/* Portfolio Thumbnails - Optional, only if available */}
