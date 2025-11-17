@@ -4,6 +4,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useAuth } from '../src/contexts/AuthContext';
+import { Eye, CheckCircle, X, FileText, ExternalLink, User, Hash, Shield, Star, Calendar, Mail, FileCheck, Download, Eye as EyeIcon, Lock, Award, Clock } from 'lucide-react';
 import dynamic from 'next/dynamic';
 const Header = dynamic(() => import('../src/components/Header'));
 const EntityDrawer = dynamic(() => import('../src/components/admin').then(m => m.EntityDrawer));
@@ -112,6 +113,7 @@ interface AdminProps {
   freelancers: any[];
   pendingCount: number;
   approvedCount: number;
+  unverifiedCount: number;
   quoteRequests: number;
 }
 
@@ -247,6 +249,7 @@ export default function AdminDashboard({
   freelancers,
   pendingCount,
   approvedCount,
+  unverifiedCount,
   quoteRequests,
 }: AdminProps) {
   const router = useRouter();
@@ -291,11 +294,48 @@ export default function AdminDashboard({
 
   // Freelancers tab state
   const [freelancerStatus, setFreelancerStatus] = useState<string>(''); // '' means All
+  const [freelancerVerification, setFreelancerVerification] = useState<string>(''); // '' means All
+  const [freelancerKycFilter, setFreelancerKycFilter] = useState<string>(''); // '' means All, 'has_docs', 'no_docs'
   const [freelancerRows, setFreelancerRows] = useState<any[]>(freelancers || []);
+  const [selectedFreelancer, setSelectedFreelancer] = useState<any | null>(null);
+  const [showFreelancerDetail, setShowFreelancerDetail] = useState(false);
+  const [freelancerSearchQuery, setFreelancerSearchQuery] = useState('');
   const displayedFreelancerRows = useMemo(() => {
-    if (!freelancerStatus) return freelancerRows;
-    return (freelancerRows || []).filter((r: any) => String(r.status).toLowerCase() === freelancerStatus);
-  }, [freelancerRows, freelancerStatus]);
+    let filtered = freelancerRows || [];
+    if (freelancerStatus) {
+      filtered = filtered.filter((r: any) => String(r.status).toLowerCase() === freelancerStatus);
+    }
+    if (freelancerVerification) {
+      filtered = filtered.filter((r: any) => String(r.verification_state || 'unverified').toLowerCase() === freelancerVerification);
+    }
+    if (freelancerKycFilter) {
+      if (freelancerKycFilter === 'has_docs') {
+        filtered = filtered.filter((r: any) => (Number(r.kyc_document_count) || 0) > 0);
+      } else if (freelancerKycFilter === 'no_docs') {
+        filtered = filtered.filter((r: any) => (Number(r.kyc_document_count) || 0) === 0);
+      }
+    }
+    if (freelancerSearchQuery) {
+      const query = freelancerSearchQuery.toLowerCase();
+      filtered = filtered.filter((r: any) => 
+        String(r.display_name || '').toLowerCase().includes(query) ||
+        String(r.id || '').includes(query) ||
+        String(r.verification_state || '').toLowerCase().includes(query)
+      );
+    }
+    return filtered;
+  }, [freelancerRows, freelancerStatus, freelancerVerification, freelancerKycFilter, freelancerSearchQuery]);
+
+  // Calculate stats from current freelancerRows
+  const freelancerStats = useMemo(() => {
+    const rows = freelancerRows || [];
+    return {
+      pending: rows.filter((r: any) => String(r.status).toLowerCase() === 'pending').length,
+      approved: rows.filter((r: any) => String(r.status).toLowerCase() === 'approved').length,
+      rejected: rows.filter((r: any) => String(r.status).toLowerCase() === 'rejected').length,
+      unverified: rows.filter((r: any) => String(r.verification_state || 'unverified').toLowerCase() !== 'verified').length,
+    };
+  }, [freelancerRows]);
 
   // Use AuthContext as the source of truth; avoid relying on localStorage timing
   useEffect(() => {
@@ -306,8 +346,8 @@ export default function AdminDashboard({
     const normalizedRole = String(auth.user?.role || '').toUpperCase();
     if (!auth.user || (normalizedRole !== 'ADMIN' && normalizedRole !== 'TEAM_MEMBER')) {
       router.replace('/login');
-        return;
-      }
+          return;
+        }
 
     setUser({ name: auth.user.name, role: normalizedRole });
         setLoading(false);
@@ -1433,52 +1473,312 @@ export default function AdminDashboard({
           </section>
 
           <section className={`rounded-3xl border border-white/10 bg-white/5 p-6 shadow-card ${activeTab === 'freelancers' ? 'block' : 'hidden'}`}>
-              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                 <h3 className="text-lg font-semibold text-text-base">Freelancers</h3>
-                <p className="text-xs text-text-mute">{pendingCount} pending · {approvedCount} approved</p>
+                <p className="text-xs text-text-mute">{freelancerStats.pending} pending · {freelancerStats.approved} approved · {freelancerStats.rejected} rejected · {freelancerStats.unverified} unverified</p>
                   </div>
-              <div className="flex items-center gap-2">
-                <label className="text-xs text-text-mute">Status</label>
-                <select
-                  value={freelancerStatus}
-                  onChange={(e) => { setFreelancerStatus(e.target.value); fetchFreelancers(e.target.value); }}
-                  className="rounded-xl border border-white/10 bg-white/10 px-3 py-1 text-xs text-text-base"
-                >
-                  <option value="">All</option>
-                  <option value="pending">Pending</option>
-                  <option value="approved">Approved</option>
-                  <option value="rejected">Rejected</option>
-                </select>
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <label className="text-xs font-medium text-white">Status</label>
+                  <select
+                    value={freelancerStatus}
+                    onChange={(e) => { setFreelancerStatus(e.target.value); fetchFreelancers(e.target.value); }}
+                    className="rounded-lg border border-white/10 bg-white/5 backdrop-blur-sm px-3 py-1.5 text-xs font-medium text-white hover:bg-white/10 hover:border-white/20 transition-all focus:outline-none focus:ring-2 focus:ring-brand-b/50 focus:border-brand-b/30"
+                    style={{ colorScheme: 'dark' }}
+                  >
+                    <option value="" className="bg-[#0B0D12] text-white">All</option>
+                    <option value="pending" className="bg-[#0B0D12] text-white">Pending</option>
+                    <option value="approved" className="bg-[#0B0D12] text-white">Approved</option>
+                    <option value="rejected" className="bg-[#0B0D12] text-white">Rejected</option>
+                  </select>
                 </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-xs font-medium text-white">Verification</label>
+                  <select
+                    value={freelancerVerification}
+                    onChange={(e) => setFreelancerVerification(e.target.value)}
+                    className="rounded-lg border border-white/10 bg-white/5 backdrop-blur-sm px-3 py-1.5 text-xs font-medium text-white hover:bg-white/10 hover:border-white/20 transition-all focus:outline-none focus:ring-2 focus:ring-brand-b/50 focus:border-brand-b/30"
+                    style={{ colorScheme: 'dark' }}
+                  >
+                    <option value="" className="bg-[#0B0D12] text-white">All</option>
+                    <option value="verified" className="bg-[#0B0D12] text-white">Verified</option>
+                    <option value="unverified" className="bg-[#0B0D12] text-white">Unverified</option>
+                    <option value="pending" className="bg-[#0B0D12] text-white">Pending</option>
+                  </select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-xs font-medium text-white">KYC Documents</label>
+                  <select
+                    value={freelancerKycFilter}
+                    onChange={(e) => setFreelancerKycFilter(e.target.value)}
+                    className="rounded-lg border border-white/10 bg-white/5 backdrop-blur-sm px-3 py-1.5 text-xs font-medium text-white hover:bg-white/10 hover:border-white/20 transition-all focus:outline-none focus:ring-2 focus:ring-brand-b/50 focus:border-brand-b/30"
+                    style={{ colorScheme: 'dark' }}
+                  >
+                    <option value="" className="bg-[#0B0D12] text-white">All</option>
+                    <option value="has_docs" className="bg-[#0B0D12] text-white">Has Documents</option>
+                    <option value="no_docs" className="bg-[#0B0D12] text-white">No Documents</option>
+                  </select>
+                </div>
+              </div>
                       </div>
               <div className="mt-4">
               <DataGrid
-                title="Freelancers"
+                title=""
                 rows={displayedFreelancerRows}
+                searchable={true}
+                onSearch={(query) => setFreelancerSearchQuery(query)}
+                onExport={() => {
+                  const csv = [
+                    ['ID', 'Name', 'Status', 'Verification', 'Rating', 'KYC Documents', 'Joined'].join(','),
+                    ...displayedFreelancerRows.map((r: any) => [
+                      r.id,
+                      `"${r.display_name || ''}"`,
+                      r.status,
+                      r.verification_state || 'unverified',
+                      r.rating || 0,
+                      r.kyc_document_count || 0,
+                      r.created_at ? new Date(r.created_at).toLocaleDateString() : ''
+                    ].join(','))
+                  ].join('\n');
+                  const blob = new Blob([csv], { type: 'text/csv' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `freelancers-${new Date().toISOString().split('T')[0]}.csv`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                  addToast('Freelancers exported successfully', 'success');
+                }}
+                onRowClick={async (row) => {
+                  try {
+                    const res = await fetch(`/api/admin/freelancers/${row.id}`);
+                    if (res.ok) {
+                      const data = await res.json();
+                      setSelectedFreelancer(data.freelancer);
+                      setShowFreelancerDetail(true);
+                    } else {
+                      addToast('Failed to load freelancer details', 'error');
+                    }
+                  } catch (e) {
+                    addToast('Error loading freelancer details', 'error');
+                  }
+                }}
+                rowActions={(row: any) => {
+                  const actions: Array<{ label: string; action: string; icon?: React.ReactNode; variant?: 'default' | 'destructive' | 'warning' }> = [
+                    { label: 'View Details', action: 'view', icon: <Eye className="w-4 h-4" /> },
+                    { label: 'View Profile', action: 'profile', icon: <ExternalLink className="w-4 h-4" /> },
+                  ];
+                  if (row.status !== 'approved') {
+                    actions.push({ label: 'Approve', action: 'approve', icon: <CheckCircle className="w-4 h-4" /> });
+                  }
+                  if (row.status !== 'rejected') {
+                    actions.push({ label: 'Reject', action: 'reject', variant: 'destructive', icon: <X className="w-4 h-4" /> });
+                  }
+                  if (row.status === 'rejected') {
+                    actions.push({ label: 'Reopen', action: 'reopen', icon: <FileText className="w-4 h-4" /> });
+                  }
+                  if (row.status !== 'pending') {
+                    actions.push({ label: 'Set Status to Pending', action: 'set-status-pending', icon: <Clock className="w-4 h-4" />, variant: 'warning' });
+                  }
+                  const verificationState = String(row.verification_state || '').toLowerCase();
+                  if (verificationState !== 'verified') {
+                    actions.push({ label: 'Verify', action: 'verify', icon: <CheckCircle className="w-4 h-4" /> });
+                  }
+                  if (verificationState !== 'pending') {
+                    actions.push({ label: 'Set to Pending', action: 'set-pending', icon: <Clock className="w-4 h-4" /> });
+                  }
+                  return actions;
+                }}
+                onRowAction={async (action, row) => {
+                  if (action === 'view') {
+                    try {
+                      const res = await fetch(`/api/admin/freelancers/${row.id}`);
+                      if (res.ok) {
+                        const data = await res.json();
+                        setSelectedFreelancer(data.freelancer);
+                        setShowFreelancerDetail(true);
+                      } else {
+                        addToast('Failed to load freelancer details', 'error');
+                      }
+                    } catch (e) {
+                      addToast('Error loading freelancer details', 'error');
+                    }
+                  } else if (action === 'profile') {
+                    window.open(`/freelancers/profile/${row.id}`, '_blank');
+                  } else if (action === 'approve') {
+                    const success = await updateFreelancerStatus(row.id, 'approved');
+                    if (success) addToast('Freelancer approved', 'success');
+                  } else if (action === 'reject') {
+                    if (confirm(`Are you sure you want to reject ${row.display_name}?`)) {
+                      const success = await updateFreelancerStatus(row.id, 'rejected');
+                      if (success) addToast('Freelancer rejected', 'success');
+                    }
+                  } else if (action === 'reopen') {
+                    const success = await updateFreelancerStatus(row.id, 'pending');
+                    if (success) addToast('Application reopened', 'success');
+                  } else if (action === 'set-status-pending') {
+                    const success = await updateFreelancerStatus(row.id, 'pending');
+                    if (success) addToast('Status set to pending', 'success');
+                  } else if (action === 'verify') {
+                    try {
+                      const res = await fetch(`/api/admin/freelancers/${row.id}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ verification_state: 'verified' })
+                      });
+                      if (res.ok) {
+                        addToast('Freelancer verified', 'success');
+                        fetchFreelancers();
+                      } else {
+                        addToast('Failed to verify freelancer', 'error');
+                      }
+                    } catch (e) {
+                      addToast('Error verifying freelancer', 'error');
+                    }
+                  } else if (action === 'set-pending') {
+                    try {
+                      const res = await fetch(`/api/admin/freelancers/${row.id}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ verification_state: 'pending' })
+                      });
+                      if (res.ok) {
+                        addToast('Verification set to pending', 'success');
+                        fetchFreelancers();
+                      } else {
+                        addToast('Failed to update verification status', 'error');
+                      }
+                    } catch (e) {
+                      addToast('Error updating verification status', 'error');
+                    }
+                  }
+                }}
                 columns={[
-                  { field: 'id', headerName: 'ID' },
-                  { field: 'display_name', headerName: 'Name' },
-                  { field: 'status', headerName: 'Status' },
-                  { field: 'verification_state', headerName: 'Verification', renderCell: (row: any) => {
-                    const v = String(row.verification_state || '').toLowerCase();
-                    if (v === 'verified') return 'Verified';
-                    if (v === 'pending') return 'Pending';
-                    if (v === 'rejected') return 'Rejected';
-                    return v || '—';
-                  } },
-                  { field: 'rating', headerName: 'Rating' },
+                  { 
+                    field: 'id', 
+                    headerName: 'ID',
+                    renderCell: (row: any) => (
+                      <span className="font-mono text-xs text-white/70">#{row.id}</span>
+                    )
+                  },
+                  { 
+                    field: 'display_name', 
+                    headerName: 'Name',
+                    renderCell: (row: any) => (
+                      <span className="font-semibold text-text-base">{row.display_name || '—'}</span>
+                    )
+                  },
+                  { 
+                    field: 'status', 
+                    headerName: 'Status',
+                    renderCell: (row: any) => {
+                      const status = String(row.status || '').toLowerCase();
+                      const statusConfig: Record<string, { label: string; bg: string; text: string; border: string }> = {
+                        'approved': { label: 'Approved', bg: 'bg-emerald-500/20', text: 'text-emerald-300', border: 'border-emerald-400/30' },
+                        'pending': { label: 'Pending', bg: 'bg-amber-500/20', text: 'text-amber-300', border: 'border-amber-400/30' },
+                        'rejected': { label: 'Rejected', bg: 'bg-rose-500/20', text: 'text-rose-300', border: 'border-rose-400/30' },
+                      };
+                      const config = statusConfig[status] || { label: status || '—', bg: 'bg-gray-500/20', text: 'text-gray-300', border: 'border-gray-400/30' };
+                      return (
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${config.bg} ${config.text} ${config.border}`}>
+                          {config.label}
+                        </span>
+                      );
+                    }
+                  },
+                  { 
+                    field: 'verification_state', 
+                    headerName: 'Verification',
+                    renderCell: (row: any) => {
+                      const v = String(row.verification_state || '').toLowerCase();
+                      const verificationConfig: Record<string, { label: string; bg: string; text: string; border: string; icon: string }> = {
+                        'verified': { label: 'Verified', bg: 'bg-emerald-500/20', text: 'text-emerald-300', border: 'border-emerald-400/30', icon: '✓' },
+                        'pending': { label: 'Pending', bg: 'bg-amber-500/20', text: 'text-amber-300', border: 'border-amber-400/30', icon: '⏳' },
+                        'rejected': { label: 'Rejected', bg: 'bg-rose-500/20', text: 'text-rose-300', border: 'border-rose-400/30', icon: '✗' },
+                        'unverified': { label: 'Unverified', bg: 'bg-gray-500/20', text: 'text-gray-400', border: 'border-gray-400/20', icon: '○' },
+                      };
+                      const config = verificationConfig[v] || { label: 'Unverified', bg: 'bg-gray-500/20', text: 'text-gray-400', border: 'border-gray-400/20', icon: '○' };
+                      return (
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${config.bg} ${config.text} ${config.border}`}>
+                          <span>{config.icon}</span>
+                          <span>{config.label}</span>
+                        </span>
+                      );
+                    }
+                  },
+                  { 
+                    field: 'rating', 
+                    headerName: 'Rating',
+                    renderCell: (row: any) => {
+                      const rating = parseFloat(row.rating) || 0;
+                      return (
+                        <span className="font-semibold text-text-base">
+                          {rating > 0 ? rating.toFixed(1) : '—'}
+                        </span>
+                      );
+                    }
+                  },
+                  { 
+                    field: 'kyc_document_count', 
+                    headerName: 'KYC Documents',
+                    renderCell: (row: any) => {
+                      const count = Number(row.kyc_document_count) || 0;
+                      return (
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                          count > 0 
+                            ? 'bg-blue-500/20 text-blue-300 border-blue-400/30' 
+                            : 'bg-gray-500/20 text-gray-400 border-gray-400/20'
+                        }`}>
+                          <span>{count}</span>
+                          <span className="text-[10px]">doc{count !== 1 ? 's' : ''}</span>
+                        </span>
+                      );
+                    }
+                  },
                   { field: 'created_at', headerName: 'Joined', renderCell: (row: any) => formatDate(row.created_at) },
                 ]}
                 bulkActions={[
                   { label: 'Approve', action: 'approve' },
+                  { label: 'Set to Pending', action: 'set-pending-status', variant: 'warning' },
                   { label: 'Reject', action: 'reject', variant: 'destructive' },
+                  { label: 'Verify', action: 'verify-bulk' },
+                  { label: 'Set Verification Pending', action: 'set-verification-pending', variant: 'warning' },
                 ]}
                 onBulkAction={async (action, rows) => {
                   if (action === 'approve') {
                     await Promise.all(rows.map((r: any) => updateFreelancerStatus(r.id, 'approved')));
+                    addToast(`${rows.length} freelancer(s) approved`, 'success');
                   } else if (action === 'reject') {
                     await Promise.all(rows.map((r: any) => updateFreelancerStatus(r.id, 'rejected')));
+                    addToast(`${rows.length} freelancer(s) rejected`, 'success');
+                  } else if (action === 'set-pending-status') {
+                    await Promise.all(rows.map((r: any) => updateFreelancerStatus(r.id, 'pending')));
+                    addToast(`${rows.length} freelancer(s) set to pending`, 'success');
+                  } else if (action === 'verify-bulk') {
+                    const results = await Promise.allSettled(
+                      rows.map((r: any) =>
+                        fetch(`/api/admin/freelancers/${r.id}`, {
+                          method: 'PATCH',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ verification_state: 'verified' })
+                        })
+                      )
+                    );
+                    const successCount = results.filter(r => r.status === 'fulfilled').length;
+                    addToast(`${successCount} freelancer(s) verified`, 'success');
+                  } else if (action === 'set-verification-pending') {
+                    const results = await Promise.allSettled(
+                      rows.map((r: any) =>
+                        fetch(`/api/admin/freelancers/${r.id}`, {
+                          method: 'PATCH',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ verification_state: 'pending' })
+                        })
+                      )
+                    );
+                    const successCount = results.filter(r => r.status === 'fulfilled').length;
+                    addToast(`${successCount} freelancer(s) verification set to pending`, 'success');
                   }
                   // Ensure list reflects all changes
                   fetchFreelancers();
@@ -1564,7 +1864,7 @@ export default function AdminDashboard({
                             <p className="text-sm text-text-soft mb-3">{alert.message}</p>
                             <div className="grid gap-2 text-xs text-text-mute">
                               {metadata.senderName && (
-                                <div>
+                      <div>
                                   <span className="font-semibold">User:</span> {metadata.senderName} ({metadata.senderEmail})
                                 </div>
                               )}
@@ -1614,6 +1914,491 @@ export default function AdminDashboard({
           </section>
         </main>
       </div>
+
+      {/* Freelancer Detail Modal */}
+      {showFreelancerDetail && selectedFreelancer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
+          <div className="relative w-full max-w-5xl max-h-[90vh] overflow-y-auto rounded-3xl border border-white/20 bg-gradient-to-br from-[#0B0D12] via-[#0F1419] to-[#0B0D12] backdrop-blur-xl shadow-2xl">
+            {/* Header */}
+            <div className="sticky top-0 z-10 flex items-center justify-between p-6 border-b border-white/20 bg-gradient-to-r from-white/10 via-white/5 to-transparent backdrop-blur-xl">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-400/30 flex items-center justify-center">
+                  <User className="w-5 h-5 text-cyan-300" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-text-base">Freelancer Details</h2>
+                  <p className="text-xs text-white/50 mt-0.5">ID: #{selectedFreelancer.id}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowFreelancerDetail(false);
+                  setSelectedFreelancer(null);
+                }}
+                className="p-2 rounded-xl hover:bg-white/10 transition-all duration-200 hover:scale-105"
+              >
+                <X className="w-5 h-5 text-white/70 hover:text-white transition-colors" />
+              </button>
+            </div>
+            
+            <div className="p-8 space-y-8">
+              {/* Profile Overview Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="rounded-xl border border-white/10 bg-white/5 p-5 hover:bg-white/10 transition-all duration-200 hover:border-white/20">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-400/30 flex items-center justify-center">
+                      <User className="w-4 h-4 text-cyan-300" />
+                    </div>
+                    <label className="text-xs font-semibold text-white/60 uppercase tracking-wide">Name</label>
+                  </div>
+                  <p className="text-lg font-bold text-text-base">{selectedFreelancer.display_name || '—'}</p>
+                </div>
+
+                <div className="rounded-xl border border-white/10 bg-white/5 p-5 hover:bg-white/10 transition-all duration-200 hover:border-white/20">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className={`w-9 h-9 rounded-lg border flex items-center justify-center ${
+                      selectedFreelancer.status === 'approved' ? 'bg-emerald-500/20 border-emerald-400/30' :
+                      selectedFreelancer.status === 'pending' ? 'bg-amber-500/20 border-amber-400/30' :
+                      'bg-rose-500/20 border-rose-400/30'
+                    }`}>
+                      {selectedFreelancer.status === 'approved' ? (
+                        <CheckCircle className="w-4 h-4 text-emerald-300" />
+                      ) : selectedFreelancer.status === 'pending' ? (
+                        <Clock className="w-4 h-4 text-amber-300" />
+                      ) : (
+                        <X className="w-4 h-4 text-rose-300" />
+                      )}
+                    </div>
+                    <label className="text-xs font-semibold text-white/60 uppercase tracking-wide">Status</label>
+                  </div>
+                  <span className={`inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-bold border ${
+                    selectedFreelancer.status === 'approved' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/30' :
+                    selectedFreelancer.status === 'pending' ? 'bg-amber-500/20 text-amber-300 border-amber-400/30' :
+                    'bg-rose-500/20 text-rose-300 border-rose-400/30'
+                  }`}>
+                    {selectedFreelancer.status || '—'}
+                  </span>
+                </div>
+
+                <div className="rounded-xl border border-white/10 bg-white/5 p-5 hover:bg-white/10 transition-all duration-200 hover:border-white/20">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className={`w-9 h-9 rounded-lg border flex items-center justify-center ${
+                      selectedFreelancer.verification_state === 'verified' ? 'bg-emerald-500/20 border-emerald-400/30' :
+                      selectedFreelancer.verification_state === 'pending' ? 'bg-amber-500/20 border-amber-400/30' :
+                      'bg-gray-500/20 border-gray-400/20'
+                    }`}>
+                      <Shield className={`w-4 h-4 ${
+                        selectedFreelancer.verification_state === 'verified' ? 'text-emerald-300' :
+                        selectedFreelancer.verification_state === 'pending' ? 'text-amber-300' :
+                        'text-gray-400'
+                      }`} />
+                    </div>
+                    <label className="text-xs font-semibold text-white/60 uppercase tracking-wide">Verification</label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold border ${
+                      selectedFreelancer.verification_state === 'verified' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/30' :
+                      selectedFreelancer.verification_state === 'pending' ? 'bg-amber-500/20 text-amber-300 border-amber-400/30' :
+                      'bg-gray-500/20 text-gray-400 border-gray-400/20'
+                    }`}>
+                      {selectedFreelancer.verification_state === 'verified' ? (
+                        <>
+                          <CheckCircle className="w-3.5 h-3.5" />
+                          <span>Verified</span>
+                        </>
+                      ) : selectedFreelancer.verification_state === 'pending' ? (
+                        <>
+                          <Clock className="w-3.5 h-3.5" />
+                          <span>Pending</span>
+                        </>
+                      ) : (
+                        <>
+                          <Shield className="w-3.5 h-3.5" />
+                          <span>Unverified</span>
+                        </>
+                      )}
+                    </span>
+                    {selectedFreelancer.kyc_documents && selectedFreelancer.kyc_documents.length > 0 && (
+                      <span className="text-xs text-white/50 font-medium">
+                        ({selectedFreelancer.kyc_documents.filter((d: any) => d.status === 'approved').length}/{selectedFreelancer.kyc_documents.length})
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-white/10 bg-white/5 p-5 hover:bg-white/10 transition-all duration-200 hover:border-white/20">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-500/20 to-yellow-500/20 border border-amber-400/30 flex items-center justify-center">
+                      <Star className="w-4 h-4 text-amber-300" />
+                    </div>
+                    <label className="text-xs font-semibold text-white/60 uppercase tracking-wide">Rating</label>
+                  </div>
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-2xl font-bold text-text-base">
+                      {selectedFreelancer.rating ? Number(selectedFreelancer.rating).toFixed(1) : '—'}
+                    </p>
+                    {selectedFreelancer.rating && (
+                      <Star className="w-4 h-4 text-amber-400 fill-amber-400/30" />
+                    )}
+                      </div>
+                </div>
+
+                <div className="rounded-xl border border-white/10 bg-white/5 p-5 hover:bg-white/10 transition-all duration-200 hover:border-white/20">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-400/30 flex items-center justify-center">
+                      <Calendar className="w-4 h-4 text-purple-300" />
+                    </div>
+                    <label className="text-xs font-semibold text-white/60 uppercase tracking-wide">Joined</label>
+                  </div>
+                  <p className="text-base font-semibold text-text-base">{formatDate(selectedFreelancer.created_at)}</p>
+                </div>
+
+                {selectedFreelancer.email && (
+                  <div className="rounded-xl border border-white/10 bg-white/5 p-5 hover:bg-white/10 transition-all duration-200 hover:border-white/20">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border border-blue-400/30 flex items-center justify-center">
+                        <Mail className="w-4 h-4 text-blue-300" />
+                      </div>
+                      <label className="text-xs font-semibold text-white/60 uppercase tracking-wide">Email</label>
+                    </div>
+                    <p className="text-base font-semibold text-text-base break-all">{selectedFreelancer.email}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* KYC Documents Section */}
+              <div className="pt-6 border-t border-white/20">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-brand-b/20 to-cyan-500/20 border border-brand-b/30 flex items-center justify-center">
+                      <FileCheck className="w-6 h-6 text-brand-b" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-text-base flex items-center gap-2">
+                        KYC Documents
+                        <span className={`text-xs px-2.5 py-1 rounded-lg font-semibold ${
+                          selectedFreelancer.kyc_documents?.length > 0
+                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30'
+                            : 'bg-gray-500/20 text-gray-400 border border-gray-400/20'
+                        }`}>
+                          {selectedFreelancer.kyc_documents?.length || 0} document{(selectedFreelancer.kyc_documents?.length || 0) !== 1 ? 's' : ''}
+                      </span>
+                      </h3>
+                      {selectedFreelancer.kyc_documents && selectedFreelancer.kyc_documents.length > 0 && (
+                        <p className="text-xs text-white/60 mt-1 flex items-center gap-1.5">
+                          <Award className="w-3.5 h-3.5" />
+                          Auto-verification enabled
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                {selectedFreelancer.kyc_documents && selectedFreelancer.kyc_documents.length > 0 && (
+                  <div className="mb-6 p-5 rounded-xl border border-brand-b/30 bg-gradient-to-br from-brand-b/10 via-brand-b/5 to-transparent backdrop-blur-sm">
+                    <div className="flex items-start gap-3 mb-4">
+                      <div className="w-8 h-8 rounded-lg bg-brand-b/20 border border-brand-b/30 flex items-center justify-center flex-shrink-0">
+                        <Award className="w-4 h-4 text-brand-b" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-bold text-brand-b mb-1">Auto-Verification Enabled</p>
+                        <p className="text-xs text-white/70 leading-relaxed">
+                          Freelancer will be automatically verified when all required documents are approved.
+                    </p>
+                  </div>
+                    </div>
+                    <div className="ml-11 space-y-3">
+                      <div>
+                        <p className="text-xs font-semibold text-white/80 mb-2">Required Documents:</p>
+                        <ul className="text-xs text-white/60 space-y-1.5 ml-1">
+                          <li className="flex items-center gap-2">
+                            <div className="w-1.5 h-1.5 rounded-full bg-brand-b/50"></div>
+                            At least one ID document (ID Card, Passport, or Driver's License)
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <div className="w-1.5 h-1.5 rounded-full bg-brand-b/50"></div>
+                            Proof of Address
+                          </li>
+                        </ul>
+                      </div>
+                      {(() => {
+                        const idDocs = selectedFreelancer.kyc_documents.filter((d: any) => 
+                          ['id_card', 'passport', 'drivers_license'].includes(d.document_type) && d.status === 'approved'
+                        );
+                        const addressDoc = selectedFreelancer.kyc_documents.find((d: any) => 
+                          d.document_type === 'proof_of_address' && d.status === 'approved'
+                        );
+                        const canAutoVerify = idDocs.length > 0 && addressDoc;
+                        return (
+                          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${
+                            canAutoVerify 
+                              ? 'bg-emerald-500/10 border-emerald-400/30' 
+                              : 'bg-amber-500/10 border-amber-400/30'
+                          }`}>
+                            {canAutoVerify ? (
+                              <CheckCircle className="w-4 h-4 text-emerald-300 flex-shrink-0" />
+                            ) : (
+                              <Clock className="w-4 h-4 text-amber-300 flex-shrink-0" />
+                            )}
+                            <p className={`text-xs font-semibold ${canAutoVerify ? 'text-emerald-300' : 'text-amber-300'}`}>
+                              {canAutoVerify ? 'Ready for auto-verification' : 'Waiting for required documents'}
+                            </p>
+            </div>
+                        );
+                      })()}
+      </div>
+                  </div>
+                )}
+                {selectedFreelancer.kyc_documents && selectedFreelancer.kyc_documents.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {selectedFreelancer.kyc_documents.map((doc: any) => {
+                      const docTypeLabels: Record<string, string> = {
+                        'id_card': 'ID Card',
+                        'passport': 'Passport',
+                        'drivers_license': "Driver's License",
+                        'proof_of_address': 'Proof of Address',
+                        'tax_id': 'Tax ID',
+                        'other': 'Other'
+                      };
+                      const statusColors: Record<string, { bg: string; text: string; border: string; icon: any }> = {
+                        'pending': { bg: 'bg-amber-500/20', text: 'text-amber-300', border: 'border-amber-400/30', icon: Clock },
+                        'approved': { bg: 'bg-emerald-500/20', text: 'text-emerald-300', border: 'border-emerald-400/30', icon: CheckCircle },
+                        'rejected': { bg: 'bg-rose-500/20', text: 'text-rose-300', border: 'border-rose-400/30', icon: X },
+                      };
+                      const statusConfig = statusColors[doc.status] || statusColors.pending;
+                      const StatusIcon = statusConfig.icon;
+                      const fileUrl = doc.file_path.startsWith('http') ? doc.file_path : `/${doc.file_path.replace(/^\/+/, '')}`;
+                      const isRequired = ['id_card', 'passport', 'drivers_license', 'proof_of_address'].includes(doc.document_type);
+                      
+                      return (
+                        <div
+                          key={doc.id}
+                          className="group rounded-xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-5 hover:bg-white/10 hover:border-white/20 transition-all duration-200 hover:shadow-lg"
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-3 flex-wrap">
+                                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border border-blue-400/30 flex items-center justify-center">
+                                  <FileText className="w-4 h-4 text-blue-300" />
+                                </div>
+                                <span className="text-sm font-bold text-text-base">
+                                  {docTypeLabels[doc.document_type] || doc.document_type}
+                                </span>
+                                {isRequired && (
+                                  <span className="text-xs px-2 py-0.5 rounded-md bg-brand-b/20 text-brand-b border border-brand-b/30 font-semibold">
+                                    Required
+                                  </span>
+                                )}
+                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold border ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border}`}>
+                                  <StatusIcon className="w-3 h-3" />
+                                  <span className="capitalize">{doc.status}</span>
+                                </span>
+                              </div>
+                              <p className="text-sm text-white/80 font-medium mb-2 truncate">{doc.document_name}</p>
+                              {doc.file_size && (
+                                <div className="flex items-center gap-1.5 text-xs text-white/50 mb-2">
+                                  <FileText className="w-3 h-3" />
+                                  <span>{(doc.file_size / 1024).toFixed(1)} KB</span>
+                                </div>
+                              )}
+                              {doc.rejection_reason && (
+                                <div className="mt-3 p-2.5 rounded-lg bg-rose-500/10 border border-rose-400/20">
+                                  <p className="text-xs text-rose-300 font-medium">
+                                    <span className="font-bold">Rejected:</span> {doc.rejection_reason}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex flex-col gap-2 flex-shrink-0">
+                              <a
+                                href={fileUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-white/10 bg-white/10 text-text-base hover:bg-white/20 hover:border-white/20 transition-all duration-200 text-xs font-semibold whitespace-nowrap"
+                              >
+                                <EyeIcon className="w-3.5 h-3.5" />
+                                View
+                              </a>
+                              <a
+                                href={fileUrl}
+                                download
+                                className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-white/10 bg-white/10 text-text-base hover:bg-white/20 hover:border-white/20 transition-all duration-200 text-xs font-semibold whitespace-nowrap"
+                              >
+                                <Download className="w-3.5 h-3.5" />
+                                Download
+                              </a>
+                              {doc.status === 'pending' && (
+                                <>
+                                  <button
+                                    onClick={async () => {
+                                      try {
+                                        const res = await fetch(`/api/admin/kyc-documents/${doc.id}`, {
+                                          method: 'PATCH',
+                                          headers: { 'Content-Type': 'application/json' },
+                                          body: JSON.stringify({ status: 'approved' })
+                                        });
+                                        if (res.ok) {
+                                          const result = await res.json();
+                                          // Refresh freelancer data
+                                          const freelancerRes = await fetch(`/api/admin/freelancers/${selectedFreelancer.id}`);
+                                          if (freelancerRes.ok) {
+                                            const data = await freelancerRes.json();
+                                            setSelectedFreelancer(data.freelancer);
+                                            if (data.freelancer.verification_state === 'verified' && selectedFreelancer.verification_state !== 'verified') {
+                                              addToast('KYC document approved - Freelancer auto-verified!', 'success');
+                                            } else {
+                                              addToast('KYC document approved', 'success');
+                                            }
+                                            fetchFreelancers(); // Refresh the list
+                                          }
+                                        } else {
+                                          addToast('Failed to approve document', 'error');
+                                        }
+                                      } catch (e) {
+                                        addToast('Error approving document', 'error');
+                                      }
+                                    }}
+                                    className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 hover:bg-emerald-500/30 hover:border-emerald-400/50 transition-all duration-200 text-xs font-bold whitespace-nowrap"
+                                  >
+                                    <CheckCircle className="w-3.5 h-3.5" />
+                                    Approve
+                                  </button>
+                                  <button
+                                    onClick={async () => {
+                                      const reason = prompt('Enter rejection reason:');
+                                      if (reason) {
+                                        try {
+                                          const res = await fetch(`/api/admin/kyc-documents/${doc.id}`, {
+                                            method: 'PATCH',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ status: 'rejected', rejection_reason: reason })
+                                          });
+                                          if (res.ok) {
+                                            const freelancerRes = await fetch(`/api/admin/freelancers/${selectedFreelancer.id}`);
+                                            if (freelancerRes.ok) {
+                                              const data = await freelancerRes.json();
+                                              setSelectedFreelancer(data.freelancer);
+                                              addToast('KYC document rejected', 'success');
+                                            }
+                                          } else {
+                                            addToast('Failed to reject document', 'error');
+                                          }
+                                        } catch (e) {
+                                          addToast('Error rejecting document', 'error');
+                                        }
+                                      }
+                                    }}
+                                    className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-rose-500/20 text-rose-300 border border-rose-400/30 hover:bg-rose-500/30 hover:border-rose-400/50 transition-all duration-200 text-xs font-bold whitespace-nowrap"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                    Reject
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-12 border border-white/10 rounded-xl bg-white/5">
+                    <div className="w-16 h-16 rounded-full bg-gray-500/20 border border-gray-400/20 flex items-center justify-center mx-auto mb-4">
+                      <FileText className="w-8 h-8 text-gray-400" />
+                    </div>
+                    <p className="text-sm font-medium text-white/60">No KYC documents uploaded yet</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center gap-3 pt-6 border-t border-white/20">
+                <button
+                  onClick={() => window.open(`/freelancers/profile/${selectedFreelancer.id}`, '_blank')}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-white/10 bg-white/10 text-text-base hover:bg-white/20 hover:border-white/20 transition-all duration-200 font-semibold"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  View Public Profile
+                </button>
+                {selectedFreelancer.status !== 'approved' && (
+                  <button
+                    onClick={async () => {
+                      const success = await updateFreelancerStatus(selectedFreelancer.id, 'approved');
+                      if (success) {
+                        setShowFreelancerDetail(false);
+                        addToast('Freelancer approved', 'success');
+                      }
+                    }}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 text-emerald-300 border border-emerald-400/30 hover:from-emerald-500/30 hover:to-emerald-600/30 hover:border-emerald-400/50 transition-all duration-200 font-bold shadow-lg shadow-emerald-500/10"
+                  >
+                    <CheckCircle className="w-4 h-4" />
+                    Approve
+                  </button>
+                )}
+                {(() => {
+                  const verificationState = String(selectedFreelancer.verification_state || '').toLowerCase();
+                  return (
+                    <>
+                      {verificationState !== 'verified' && (
+                        <button
+                          onClick={async () => {
+                            try {
+                              const res = await fetch(`/api/admin/freelancers/${selectedFreelancer.id}`, {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ verification_state: 'verified' })
+                              });
+                              if (res.ok) {
+                                const data = await res.json();
+                                setSelectedFreelancer(data.freelancer);
+                                addToast('Freelancer verified', 'success');
+                                fetchFreelancers();
+                              } else {
+                                addToast('Failed to verify freelancer', 'error');
+                              }
+                            } catch (e) {
+                              addToast('Error verifying freelancer', 'error');
+                            }
+                          }}
+                          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand-b/20 to-cyan-500/20 text-brand-b border border-brand-b/30 hover:from-brand-b/30 hover:to-cyan-500/30 hover:border-brand-b/50 transition-all duration-200 font-bold shadow-lg shadow-brand-b/10"
+                        >
+                          <Shield className="w-4 h-4" />
+                          Verify
+                        </button>
+                      )}
+                      {verificationState !== 'pending' && (
+                        <button
+                          onClick={async () => {
+                            try {
+                              const res = await fetch(`/api/admin/freelancers/${selectedFreelancer.id}`, {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ verification_state: 'pending' })
+                              });
+                              if (res.ok) {
+                                const data = await res.json();
+                                setSelectedFreelancer(data.freelancer);
+                                addToast('Verification set to pending', 'success');
+                                fetchFreelancers();
+                              } else {
+                                addToast('Failed to update verification status', 'error');
+                              }
+                            } catch (e) {
+                              addToast('Error updating verification status', 'error');
+                            }
+                          }}
+                          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500/20 to-yellow-500/20 text-amber-300 border border-amber-400/30 hover:from-amber-500/30 hover:to-yellow-500/30 hover:border-amber-400/50 transition-all duration-200 font-bold shadow-lg shadow-amber-500/10"
+                        >
+                          <Clock className="w-4 h-4" />
+                          Set to Pending
+                        </button>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
@@ -1652,6 +2437,7 @@ export const getServerSideProps: GetServerSideProps = async () => {
 
     let pendingCount = serializedFreelancers.filter((f) => f.status === 'pending').length;
     let approvedCount = serializedFreelancers.filter((f) => f.status === 'approved').length;
+    let unverifiedCount = serializedFreelancers.filter((f) => String(f.verification_state || 'unverified').toLowerCase() !== 'verified').length;
 
     try {
       const [row] = await query<{ count: number }>(
@@ -1669,6 +2455,7 @@ export const getServerSideProps: GetServerSideProps = async () => {
         freelancers: serializedFreelancers,
         pendingCount,
         approvedCount,
+        unverifiedCount,
         quoteRequests,
       },
     };
@@ -1679,6 +2466,7 @@ export const getServerSideProps: GetServerSideProps = async () => {
         freelancers: [],
         pendingCount: 0,
         approvedCount: 0,
+        unverifiedCount: 0,
         quoteRequests: 0,
       },
     };

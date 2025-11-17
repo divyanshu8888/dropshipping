@@ -22,7 +22,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         response_time, 
         availability
       FROM freelancers
-      WHERE status = 'approved'
+      WHERE status = 'approved' AND verification_state = 'verified'
       ORDER BY rating DESC
     `);
 

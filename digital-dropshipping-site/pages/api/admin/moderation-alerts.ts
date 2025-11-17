@@ -34,6 +34,10 @@ export default async function handler(
       ? `WHERE ${whereConditions.join(' AND ')}`
       : '';
 
+    // MySQL doesn't support placeholders for LIMIT/OFFSET in some versions, so inline them
+    const limitNum = Math.min(Number.parseInt(String(limit), 10) || 50, 100);
+    const offsetNum = Math.max(Number.parseInt(String(offset), 10) || 0, 0);
+
     const notifications = await query(
       `SELECT 
         id,
@@ -50,8 +54,8 @@ export default async function handler(
       FROM admin_notifications
       ${whereClause}
       ORDER BY created_at DESC
-      LIMIT ? OFFSET ?`,
-      [...params, Number(limit), Number(offset)]
+      LIMIT ${limitNum} OFFSET ${offsetNum}`,
+      params
     );
 
     const total = await query(

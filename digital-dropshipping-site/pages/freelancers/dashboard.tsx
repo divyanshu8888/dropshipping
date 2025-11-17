@@ -177,6 +177,13 @@ export default function FreelancerDashboard() {
     profileStrength: { percentage: number };
     winRate: { percentage: number; total: number; won: number };
   } | null>(null);
+  const [kycDocuments, setKycDocuments] = useState<any[]>([]);
+  const [uploadingKyc, setUploadingKyc] = useState(false);
+  const [kycUploadForm, setKycUploadForm] = useState({
+    documentType: '',
+    documentName: '',
+    file: null as File | null
+  });
   
   // Refs to trigger native pickers
   const nextDateRef = useRef<HTMLInputElement | null>(null);
@@ -268,7 +275,8 @@ export default function FreelancerDashboard() {
       const results = await Promise.allSettled([
         fetch(`/api/freelancers/projects/${user?.id}`, { signal }),
         fetch(`/api/freelancers/me?userId=${user?.id}`, { signal }),
-        fetch(`/api/freelancers/dashboard-metrics?freelancerId=${user?.id}`, { signal })
+        fetch(`/api/freelancers/dashboard-metrics?freelancerId=${user?.id}`, { signal }),
+        fetch(`/api/freelancers/kyc-documents?userId=${user?.id}`, { signal })
       ]);
 
       // Projects
@@ -343,6 +351,15 @@ export default function FreelancerDashboard() {
       } catch (e) {
         // Availability fetch is optional, don't fail if it errors
         console.warn('Could not fetch availability:', e);
+      }
+
+      // Fetch KYC documents
+      const kycRes = results[3].status === 'fulfilled' ? results[3].value : null;
+      if (kycRes && kycRes.ok) {
+        const data = await kycRes.json();
+        if (data?.documents) {
+          setKycDocuments(Array.isArray(data.documents) ? data.documents : []);
+        }
       }
     } catch (e: any) {
       if (e?.name === 'AbortError') return;
@@ -668,6 +685,41 @@ export default function FreelancerDashboard() {
       addToast('Failed to upload file', 'error');
     } finally {
       setUploadingFile(false);
+    }
+  };
+
+  const uploadKycDocument = async () => {
+    if (!kycUploadForm.documentType || !kycUploadForm.file) {
+      addToast('Please select document type and file', 'error');
+      return;
+    }
+
+    setUploadingKyc(true);
+    const formData = new FormData();
+    formData.append('file', kycUploadForm.file);
+    formData.append('documentType', kycUploadForm.documentType);
+    formData.append('documentName', kycUploadForm.documentName || kycUploadForm.file.name);
+    formData.append('userId', user?.id || '');
+
+    try {
+      const response = await fetch('/api/freelancers/upload-kyc-document', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (response.ok) {
+        addToast('KYC document uploaded successfully', 'success');
+        setKycUploadForm({ documentType: '', documentName: '', file: null });
+        await fetchFreelancerData();
+      } else {
+        const error = await response.json();
+        addToast(error?.error || 'Failed to upload KYC document', 'error');
+      }
+    } catch (error) {
+      console.error('Error uploading KYC document:', error);
+      addToast('Failed to upload KYC document', 'error');
+    } finally {
+      setUploadingKyc(false);
     }
   };
 
@@ -2124,6 +2176,155 @@ export default function FreelancerDashboard() {
                   </button>
                 </div>
               </form>
+
+              {/* KYC Documents Section */}
+              <div className="mt-8 pt-8 border-t border-white/10">
+                <h3 className="text-lg font-semibold mb-4 flex items-center space-x-2">
+                  <Lock className="w-5 h-5 text-cyan-400" />
+                  <span>KYC Documents & Verification</span>
+                </h3>
+                <p className="text-sm text-white/70 mb-6">
+                  Upload your identity documents for verification. Required documents: ID Card/Passport/Driver's License + Proof of Address.
+                </p>
+
+                {/* Upload Form */}
+                <div className="bg-black/30 rounded-lg border border-white/10 p-4 mb-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-medium text-white mb-2">Document Type *</label>
+                      <select
+                        value={kycUploadForm.documentType}
+                        onChange={(e) => setKycUploadForm({ ...kycUploadForm, documentType: e.target.value })}
+                        className="w-full px-4 py-2.5 border border-white/10 bg-black/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-white"
+                      >
+                        <option value="">Select type</option>
+                        <option value="id_card">ID Card</option>
+                        <option value="passport">Passport</option>
+                        <option value="drivers_license">Driver's License</option>
+                        <option value="proof_of_address">Proof of Address</option>
+                        <option value="tax_id">Tax ID</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-white mb-2">Document Name</label>
+                      <input
+                        type="text"
+                        value={kycUploadForm.documentName}
+                        onChange={(e) => setKycUploadForm({ ...kycUploadForm, documentName: e.target.value })}
+                        className="w-full px-4 py-2.5 border border-white/10 bg-black/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-white placeholder:text-white/40"
+                        placeholder="Optional: Document name"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-white mb-2">File *</label>
+                      <input
+                        type="file"
+                        accept="image/*,.pdf"
+                        onChange={(e) => setKycUploadForm({ ...kycUploadForm, file: e.target.files?.[0] || null })}
+                        className="w-full px-4 py-2.5 border border-white/10 bg-black/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-white text-sm file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-cyan-500/20 file:text-cyan-300 hover:file:bg-cyan-500/30"
+                      />
+                    </div>
+                  </div>
+                  <button
+                    onClick={uploadKycDocument}
+                    disabled={uploadingKyc || !kycUploadForm.documentType || !kycUploadForm.file}
+                    className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-lg hover:from-cyan-400 hover:to-blue-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center space-x-2"
+                  >
+                    {uploadingKyc ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                        <span>Uploading...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4" />
+                        <span>Upload Document</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Existing Documents */}
+                {kycDocuments.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {kycDocuments.map((doc: any) => {
+                      const docTypeLabels: Record<string, string> = {
+                        'id_card': 'ID Card',
+                        'passport': 'Passport',
+                        'drivers_license': "Driver's License",
+                        'proof_of_address': 'Proof of Address',
+                        'tax_id': 'Tax ID',
+                        'other': 'Other'
+                      };
+                      const statusColors: Record<string, { bg: string; text: string; border: string }> = {
+                        'pending': { bg: 'bg-amber-500/20', text: 'text-amber-300', border: 'border-amber-400/30' },
+                        'approved': { bg: 'bg-emerald-500/20', text: 'text-emerald-300', border: 'border-emerald-400/30' },
+                        'rejected': { bg: 'bg-rose-500/20', text: 'text-rose-300', border: 'border-rose-400/30' },
+                      };
+                      const statusConfig = statusColors[doc.status] || statusColors.pending;
+                      const fileUrl = doc.file_path.startsWith('http') ? doc.file_path : `/${doc.file_path.replace(/^\/+/, '')}`;
+                      
+                      return (
+                        <div
+                          key={doc.id}
+                          className="rounded-lg border border-white/10 bg-white/5 p-4 hover:bg-white/10 transition"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="text-sm font-semibold text-text-base">
+                                  {docTypeLabels[doc.document_type] || doc.document_type}
+                                </span>
+                                {(['id_card', 'passport', 'drivers_license', 'proof_of_address'].includes(doc.document_type)) && (
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-400/30">
+                                    Required
+                                  </span>
+                                )}
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border}`}>
+                                  {doc.status}
+                                </span>
+                              </div>
+                              <p className="text-xs text-white/70 truncate mb-1">{doc.document_name}</p>
+                              {doc.file_size && (
+                                <p className="text-xs text-white/50">
+                                  {(doc.file_size / 1024).toFixed(1)} KB
+                                </p>
+                              )}
+                              {doc.rejection_reason && (
+                                <p className="text-xs text-rose-300 mt-2 italic">
+                                  Rejected: {doc.rejection_reason}
+                                </p>
+                              )}
+                            </div>
+                            <div className="flex flex-col gap-2">
+                              <a
+                                href={fileUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-3 py-1.5 rounded-lg border border-white/10 bg-white/10 text-text-base hover:bg-white/15 transition text-xs font-semibold whitespace-nowrap"
+                              >
+                                View
+                              </a>
+                              <a
+                                href={fileUrl}
+                                download
+                                className="px-3 py-1.5 rounded-lg border border-white/10 bg-white/10 text-text-base hover:bg-white/15 transition text-xs font-semibold whitespace-nowrap"
+                              >
+                                Download
+                              </a>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-white/50">
+                    <p className="text-sm">No KYC documents uploaded yet</p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

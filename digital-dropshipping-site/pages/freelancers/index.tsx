@@ -1219,7 +1219,8 @@ export const getStaticProps: GetStaticProps = async () => {
           LIMIT 3
         ) as portfolio_thumbnails
       FROM freelancers f
-      WHERE f.status = 'approved'
+      WHERE f.status = 'approved' 
+        AND f.verification_state = 'verified'
       ORDER BY f.rating DESC
       LIMIT 60
     `)

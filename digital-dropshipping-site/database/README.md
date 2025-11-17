@@ -23,6 +23,7 @@ This document explains all the main tables in the Uniti database and what inform
 17. [Messages](#messages)
 18. [Portfolios](#portfolios)
 19. [Testimonials](#testimonials)
+20. [KYC Documents](#kyc-documents)
 
 ---
 
@@ -416,6 +417,33 @@ Indexes cover `freelancer_id`, `is_public`, and `created_at` to efficiently fetc
 | `client_image_url` | VARCHAR(512) | URL to client's photo/avatar (nullable) |
 | `created_at` | DATETIME | Testimonial creation timestamp |
 | `updated_at` | DATETIME | Last update timestamp (auto-updated) |
+
+---
+
+## KYC Documents
+
+**Purpose**: Know Your Customer (KYC) and verification documents uploaded by freelancers for identity verification and compliance.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | INT UNSIGNED | Primary key, auto-incrementing unique identifier |
+| `freelancer_id` | INT UNSIGNED | Foreign key to `freelancers.id` - freelancer who uploaded the document |
+| `document_type` | ENUM | Document type: `'id_card'`, `'passport'`, `'drivers_license'`, `'proof_of_address'`, `'tax_id'`, `'other'` |
+| `document_name` | VARCHAR(255) | Original name of the uploaded document file |
+| `file_path` | VARCHAR(500) | Storage path/URL to the document file |
+| `file_size` | INT UNSIGNED | File size in bytes (nullable) |
+| `mime_type` | VARCHAR(100) | MIME type of the file (e.g., 'application/pdf', 'image/jpeg') (nullable) |
+| `status` | ENUM | Review status: `'pending'`, `'approved'`, `'rejected'` (default: 'pending') |
+| `reviewed_by` | INT UNSIGNED | Foreign key to `users.id` - admin user who reviewed the document (nullable) |
+| `reviewed_at` | DATETIME | Timestamp when document was reviewed (nullable) |
+| `rejection_reason` | TEXT | Reason for rejection if status is 'rejected' (nullable) |
+| `created_at` | DATETIME | Document upload timestamp |
+| `updated_at` | DATETIME | Last update timestamp (auto-updated) |
+
+**Notes**:
+- Required documents for auto-verification: At least one ID document (ID Card, Passport, or Driver's License) + Proof of Address
+- When all required documents are approved, the freelancer's `verification_state` can be automatically set to 'verified'
+- Documents are stored securely and only accessible to admins and the uploading freelancer
 
 ---
 

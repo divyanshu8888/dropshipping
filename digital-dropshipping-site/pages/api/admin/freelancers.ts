@@ -38,7 +38,7 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
     const params: any[] = [];
 
     if (status && typeof status === 'string' && VALID_STATUSES.includes(status)) {
-      filters.push('status = ?');
+      filters.push('f.status = ?');
       params.push(status);
     }
 
@@ -46,13 +46,17 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
 
     // MySQL has quirks with placeholders in LIMIT/OFFSET on some versions.
     // We validate numeric inputs and inline them to avoid ER_WRONG_ARGUMENTS.
-    const sql = `SELECT *
-                   FROM freelancers
-                   ${whereClause}
-                   ORDER BY created_at DESC
-                   LIMIT ${limitNum} OFFSET ${offsetNum}`;
+    const sql = `SELECT 
+                   f.*,
+                   COUNT(kd.id) as kyc_document_count
+                 FROM freelancers f
+                 LEFT JOIN kyc_documents kd ON f.id = kd.freelancer_id
+                 ${whereClause}
+                 GROUP BY f.id
+                 ORDER BY f.created_at DESC
+                 LIMIT ${limitNum} OFFSET ${offsetNum}`;
 
-    const freelancers = await safeQuery<FreelancerRow>(sql, params, 'freelancers-list');
+    const freelancers = await safeQuery<FreelancerRow & { kyc_document_count: number }>(sql, params, 'freelancers-list');
 
     return res.status(200).json({
       freelancers,

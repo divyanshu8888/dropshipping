@@ -1,5 +1,4 @@
-import mysql from 'mysql2/promise';
-import type { PoolConnection } from 'mysql2/promise';
+import mysql, { Pool, PoolConnection } from 'mysql2/promise';
 
 /**
  * ============================================================================
@@ -7,6 +6,7 @@ import type { PoolConnection } from 'mysql2/promise';
  * ============================================================================
  * 
  * Secure database connection handler for MySQL.
+ * Uses globalThis to persist pool across Next.js hot-reloads.
  * 
  * SECURITY NOTES:
  * - All credentials MUST come from environment variables
@@ -20,22 +20,21 @@ import type { PoolConnection } from 'mysql2/promise';
  * - MYSQL_USER: Database username (REQUIRED)
  * - MYSQL_PASSWORD: Database password (REQUIRED)
  * - MYSQL_DATABASE: Database name (REQUIRED)
+ * - MYSQL_POOL_LIMIT: Connection pool limit (default: 15)
  * - MYSQL_SSL: Enable SSL (optional, default: false)
  * 
  * ============================================================================
  */
 
 // ============================================================================
-// Configuration
+// Global Pool (Next.js hot-reload safe)
 // ============================================================================
 
-/**
- * Get MySQL configuration from environment variables
- * 
- * @throws Error if required environment variables are missing
- * @returns MySQL pool configuration options
- */
-function getMySQLConfig(): mysql.PoolOptions {
+type GlobalPools = typeof globalThis & { __uniti_mysql_pool?: Pool };
+
+const g = globalThis as GlobalPools;
+
+if (!g.__uniti_mysql_pool) {
   const host = process.env.MYSQL_HOST || 'localhost';
   const port = parseInt(process.env.MYSQL_PORT || '3306', 10);
   const user = process.env.MYSQL_USER;
@@ -64,21 +63,17 @@ function getMySQLConfig(): mysql.PoolOptions {
     );
   }
 
-  const connectionLimit = parseInt(process.env.MYSQL_POOL_LIMIT || '5', 10);
-  const connectTimeout = parseInt(process.env.MYSQL_CONNECT_TIMEOUT || '2000', 10);
+  const connectionLimit = Number(process.env.MYSQL_POOL_LIMIT ?? 15);
 
-  return {
+  g.__uniti_mysql_pool = mysql.createPool({
     host,
     port,
     user,
     password, // Never log or expose this
     database,
-    waitForConnections: true,
-    connectionLimit: Number.isFinite(connectionLimit) && connectionLimit > 0 ? connectionLimit : 5,
-    maxIdle: 5,
-    idleTimeout: 60000,
-    queueLimit: 0,
-    connectTimeout: Number.isFinite(connectTimeout) ? connectTimeout : 2000,
+    waitForConnections: true, // queue instead of throwing
+    connectionLimit: connectionLimit > 0 ? connectionLimit : 15,
+    queueLimit: 0, // unlimited queue
     enableKeepAlive: true,
     keepAliveInitialDelay: 0,
     // SSL configuration (optional, for production)
@@ -87,99 +82,27 @@ function getMySQLConfig(): mysql.PoolOptions {
         rejectUnauthorized: false
       }
     })
-  };
+  });
 }
 
-// ============================================================================
-// Connection Pool Management
-// ============================================================================
-
-/**
- * Connection pool instance
- * Lazy-initialized singleton pattern
- */
-let pool: mysql.Pool | null = null;
-
-/**
- * Get MySQL connection pool
- * Creates a new pool if it doesn't exist (singleton pattern)
- * 
- * @throws Error if required environment variables are missing
- * @returns MySQL connection pool
- */
-export function getPool(): mysql.Pool {
-  if (!pool) {
-    const config = getMySQLConfig();
-    pool = mysql.createPool(config);
-  }
-  return pool;
-}
-
-/**
- * Get a connection from the pool
- * 
- * @returns Promise resolving to a MySQL pool connection
- */
-export async function getConnection(): Promise<mysql.PoolConnection> {
-  const pool = getPool();
-  return await pool.getConnection();
-}
+// Reused across hot reloads
+export const pool = g.__uniti_mysql_pool;
 
 // ============================================================================
-// Query Functions
+// Simple Query Helpers (use these in most places)
 // ============================================================================
 
 /**
- * Execute a query with automatic connection management
+ * Execute a query - automatically manages connection
+ * Use this for most queries (no transaction needed)
  * 
  * @template T - Type of the result rows
  * @param sql - SQL query string
  * @param params - Query parameters (optional)
  * @returns Promise resolving to array of result rows
  */
-const MYSQL_QUERY_TIMEOUT = parseInt(process.env.MYSQL_QUERY_TIMEOUT || '2000', 10);
-
-async function executeWithTimeout<T>(
-  connection: PoolConnection,
-  sql: string,
-  params?: any[]
-): Promise<T> {
-  let timeoutId: NodeJS.Timeout | null = null;
-  let timedOut = false;
-
-  const execution = connection.execute(sql, params) as Promise<T>;
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    timeoutId = setTimeout(() => {
-      timedOut = true;
-      reject(new Error(`Query timeout after ${MYSQL_QUERY_TIMEOUT}ms for: ${sql.slice(0, 60)}...`));
-    }, MYSQL_QUERY_TIMEOUT);
-  });
-
-  try {
-    const result = await Promise.race([execution, timeoutPromise]);
-    return result as T;
-  } catch (error) {
-    if (timedOut) {
-      connection.destroy();
-    }
-    throw error;
-  } finally {
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-    }
-    if (!timedOut) {
-      connection.release();
-    }
-  }
-}
-
-export async function query<T = any>(
-  sql: string,
-  params?: any[]
-): Promise<T[]> {
-  const connection = await getConnection();
-  const result = await executeWithTimeout<any>(connection, sql, params);
-  const [rows] = result;
+export async function query<T = any>(sql: string, params?: any[]): Promise<T[]> {
+  const [rows] = await pool.query(sql, params);
   return rows as T[];
 }
 
@@ -201,32 +124,60 @@ export async function queryOne<T = any>(
 }
 
 // ============================================================================
-// Transaction Support
+// Transaction Helper (guarantees release)
 // ============================================================================
 
 /**
  * Execute a database transaction
- * Automatically handles commit/rollback
+ * Automatically handles commit/rollback and connection release
  * 
  * @template T - Return type of the callback
- * @param callback - Function to execute within transaction
+ * @param fn - Function to execute within transaction
  * @returns Promise resolving to callback result
  * @throws Error if transaction fails (automatic rollback)
  */
 export async function transaction<T>(
-  callback: (connection: mysql.PoolConnection) => Promise<T>
+  fn: (conn: PoolConnection) => Promise<T>
 ): Promise<T> {
-  const connection = await getConnection();
+  const conn = await pool.getConnection();
   try {
-    await connection.beginTransaction();
-    const result = await callback(connection);
-    await connection.commit();
-    return result;
-  } catch (error) {
-    await connection.rollback();
-    throw error;
+    await conn.beginTransaction();
+    const out = await fn(conn);
+    await conn.commit();
+    return out;
+  } catch (e) {
+    try {
+      await conn.rollback();
+    } catch {
+      // Ignore rollback errors
+    }
+    throw e;
   } finally {
-    connection.release();
+    conn.release(); // <- critical: always release
+  }
+}
+
+// ============================================================================
+// Raw Connection Helper (rare use cases)
+// ============================================================================
+
+/**
+ * Get a raw connection - ALWAYS release in finally
+ * Only use if you need a connection for multiple operations
+ * Prefer query() or transaction() when possible
+ * 
+ * @template T - Return type of the callback
+ * @param fn - Function to execute with connection
+ * @returns Promise resolving to callback result
+ */
+export async function withConnection<T>(
+  fn: (conn: PoolConnection) => Promise<T>
+): Promise<T> {
+  const conn = await pool.getConnection();
+  try {
+    return await fn(conn);
+  } finally {
+    conn.release(); // <- critical: always release
   }
 }
 
@@ -237,13 +188,14 @@ export async function transaction<T>(
 /**
  * Close the connection pool
  * Useful for cleanup in tests or graceful shutdown
+ * Only call on process exit, never in request handlers
  * 
  * @returns Promise that resolves when pool is closed
  */
 export async function closePool(): Promise<void> {
-  if (pool) {
-    await pool.end();
-    pool = null;
+  if (g.__uniti_mysql_pool) {
+    await g.__uniti_mysql_pool.end();
+    g.__uniti_mysql_pool = undefined;
   }
 }
 
@@ -255,9 +207,7 @@ export async function closePool(): Promise<void> {
  */
 export async function testConnection(): Promise<boolean> {
   try {
-    const connection = await getConnection();
-    await connection.execute('SELECT 1');
-    connection.release();
+    await pool.query('SELECT 1');
     return true;
   } catch (error: any) {
     // Log error without exposing sensitive information
@@ -278,12 +228,21 @@ export async function testConnection(): Promise<boolean> {
 }
 
 // ============================================================================
-// Exports
+// Legacy exports (for backward compatibility)
 // ============================================================================
 
 /**
- * Export pool for direct access if needed (advanced use cases)
- * Prefer using getPool() instead
+ * @deprecated Use pool directly or query() instead
+ * Get MySQL connection pool
  */
-export { pool };
+export function getPool(): Pool {
+  return pool;
+}
 
+/**
+ * @deprecated Use query() or withConnection() instead
+ * Get a connection from the pool - MUST release in finally
+ */
+export async function getConnection(): Promise<PoolConnection> {
+  return await pool.getConnection();
+}

@@ -1148,7 +1148,7 @@ export const getStaticProps: GetStaticProps = async () => {
       `),
       
       // Count active freelancers
-      query<{ count: number | string }>('SELECT COUNT(*) as count FROM freelancers WHERE status = "approved"'),
+      query<{ count: number | string }>('SELECT COUNT(*) as count FROM freelancers WHERE status = "approved" AND verification_state = "verified"'),
       
       // Count completed projects
       query<{ count: number | string }>('SELECT COUNT(*) as count FROM projects WHERE status = "completed"'),
@@ -1157,7 +1157,7 @@ export const getStaticProps: GetStaticProps = async () => {
       query<{ count: number | string }>('SELECT COUNT(*) as count FROM testimonials WHERE is_active = "TRUE"'),
       
       // Get unique countries from freelancers
-      query<{ country: string }>('SELECT DISTINCT country FROM freelancers WHERE country IS NOT NULL AND status = "approved"'),
+      query<{ country: string }>('SELECT DISTINCT country FROM freelancers WHERE country IS NOT NULL AND status = "approved" AND verification_state = "verified"'),
       
       // Get projects from last 90 days
       query<{ count: number | string }>('SELECT COUNT(*) as count FROM projects WHERE status = "completed" AND created_at >= DATE_SUB(NOW(), INTERVAL 90 DAY)')

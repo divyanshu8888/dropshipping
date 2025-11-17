@@ -6,12 +6,21 @@ type ProjectRow = { created_at: string | Date; started_at?: string | Date | null
 
 const DAYS = 24 * 60 * 60 * 1000;
 
+// Cache for dashboard metrics (5 second TTL)
+let cache: { ts: number; data: any } | null = null;
+const TTL_MS = 5000;
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // Return cached data if still valid
+  if (cache && Date.now() - cache.ts < TTL_MS) {
+    return res.status(200).json(cache.data);
   }
 
   try {
@@ -228,11 +237,16 @@ export default async function handler(
       }
     };
 
-    return res.status(200).json({
+    const response = {
       success: true,
       metrics,
       lastUpdated: new Date().toISOString()
-    });
+    };
+
+    // Cache the response
+    cache = { ts: Date.now(), data: response };
+
+    return res.status(200).json(response);
   } catch (error) {
     console.error('Error fetching dashboard metrics:', error);
     return res.status(500).json({

@@ -684,7 +684,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
                created_at,
                updated_at
              FROM freelancers
-             WHERE id = ? AND status = 'approved'
+             WHERE id = ? AND status = 'approved' AND verification_state = 'verified'
            `, [freelancerId]);
 
     if (!freelancer) {
