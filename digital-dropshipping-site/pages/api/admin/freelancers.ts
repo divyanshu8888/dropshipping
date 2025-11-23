@@ -1,5 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { safeExecute, safeQuery } from '../../../src/lib/dbHelpers';
+import { promises as fs } from 'fs';
+import path from 'path';
 
 interface FreelancerRow {
   id: number;
@@ -12,6 +14,32 @@ interface FreelancerRow {
 }
 
 const VALID_STATUSES = ['pending', 'approved', 'rejected'];
+
+// Helper function to check if file exists
+async function fileExists(filePath: string): Promise<boolean> {
+  try {
+    // Handle both relative paths (starting with /uploads) and absolute paths
+    let fullPath: string;
+    if (filePath.startsWith('/uploads')) {
+      // Relative path from public folder
+      fullPath = path.join(process.cwd(), 'public', filePath);
+    } else if (filePath.startsWith('http')) {
+      // External URL, assume it exists
+      return true;
+    } else {
+      // Assume it's a relative path
+      fullPath = path.join(process.cwd(), 'public', filePath.startsWith('/') ? filePath.substring(1) : filePath);
+    }
+    
+    // Normalize path separators for Windows
+    fullPath = fullPath.replace(/\//g, path.sep).replace(/\\/g, path.sep);
+    
+    await fs.access(fullPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export default async function handler(
   req: NextApiRequest,
@@ -44,22 +72,64 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
 
     const whereClause = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
 
-    // MySQL has quirks with placeholders in LIMIT/OFFSET on some versions.
-    // We validate numeric inputs and inline them to avoid ER_WRONG_ARGUMENTS.
+    // First, fetch freelancers
     const sql = `SELECT 
-                   f.*,
-                   COUNT(kd.id) as kyc_document_count
+                   f.*
                  FROM freelancers f
-                 LEFT JOIN kyc_documents kd ON f.id = kd.freelancer_id
                  ${whereClause}
-                 GROUP BY f.id
                  ORDER BY f.created_at DESC
                  LIMIT ${limitNum} OFFSET ${offsetNum}`;
 
-    const freelancers = await safeQuery<FreelancerRow & { kyc_document_count: number }>(sql, params, 'freelancers-list');
+    const freelancers = await safeQuery<FreelancerRow>(sql, params, 'freelancers-list');
+
+    // Fetch all KYC documents for these freelancers
+    const freelancerIds = freelancers.map(f => f.id);
+    let kycDocumentsByFreelancer: Record<number, any[]> = {};
+    
+    if (freelancerIds.length > 0) {
+      try {
+        const placeholders = freelancerIds.map(() => '?').join(',');
+        const kycDocs = await safeQuery<any>(
+          `SELECT id, freelancer_id, file_path 
+           FROM kyc_documents 
+           WHERE freelancer_id IN (${placeholders})`,
+          freelancerIds,
+          'kyc-documents-for-freelancers'
+        );
+
+        // Check file existence for each document and group by freelancer_id
+        const documentsWithFileCheck = await Promise.all(
+          kycDocs.map(async (doc: any) => {
+            const exists = await fileExists(doc.file_path);
+            return { ...doc, file_exists: exists };
+          })
+        );
+
+        // Group by freelancer_id and count only existing files
+        documentsWithFileCheck.forEach((doc: any) => {
+          if (doc.file_exists) {
+            if (!kycDocumentsByFreelancer[doc.freelancer_id]) {
+              kycDocumentsByFreelancer[doc.freelancer_id] = [];
+            }
+            kycDocumentsByFreelancer[doc.freelancer_id].push(doc);
+          }
+        });
+      } catch (error: any) {
+        // If table doesn't exist, that's okay - just use empty counts
+        if (error?.code !== 'ER_NO_SUCH_TABLE') {
+          console.error('Error fetching KYC documents:', error);
+        }
+      }
+    }
+
+    // Add kyc_document_count to each freelancer
+    const freelancersWithCounts = freelancers.map(f => ({
+      ...f,
+      kyc_document_count: kycDocumentsByFreelancer[f.id]?.length || 0
+    }));
 
     return res.status(200).json({
-      freelancers,
+      freelancers: freelancersWithCounts,
       pagination: {
         limit: limitNum,
         offset: offsetNum,

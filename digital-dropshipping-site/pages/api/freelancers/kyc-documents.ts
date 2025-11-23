@@ -1,5 +1,33 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { query } from 'lib/mysql';
+import { promises as fs } from 'fs';
+import path from 'path';
+
+// Helper function to check if file exists
+async function fileExists(filePath: string): Promise<boolean> {
+  try {
+    // Handle both relative paths (starting with /uploads) and absolute paths
+    let fullPath: string;
+    if (filePath.startsWith('/uploads')) {
+      // Relative path from public folder
+      fullPath = path.join(process.cwd(), 'public', filePath);
+    } else if (filePath.startsWith('http')) {
+      // External URL, assume it exists
+      return true;
+    } else {
+      // Assume it's a relative path
+      fullPath = path.join(process.cwd(), 'public', filePath.startsWith('/') ? filePath.substring(1) : filePath);
+    }
+    
+    // Normalize path separators for Windows
+    fullPath = fullPath.replace(/\//g, path.sep).replace(/\\/g, path.sep);
+    
+    await fs.access(fullPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export default async function handler(
   req: NextApiRequest,
@@ -36,12 +64,26 @@ export default async function handler(
       [freelancerId]
     );
 
-    const serialized = documents.map((doc: any) => ({
-      ...doc,
-      created_at: doc.created_at ? new Date(doc.created_at).toISOString() : null,
-      updated_at: doc.updated_at ? new Date(doc.updated_at).toISOString() : null,
-      reviewed_at: doc.reviewed_at ? new Date(doc.reviewed_at).toISOString() : null,
-    }));
+    // Check file existence for each document and filter out missing files
+    const documentsWithFileCheck = await Promise.all(
+      documents.map(async (doc: any) => {
+        const exists = await fileExists(doc.file_path);
+        return { ...doc, file_exists: exists };
+      })
+    );
+    
+    // Filter out documents where file doesn't exist
+    const validDocuments = documentsWithFileCheck.filter((doc: any) => doc.file_exists);
+
+    const serialized = validDocuments.map((doc: any) => {
+      const { file_exists, ...docWithoutExists } = doc;
+      return {
+        ...docWithoutExists,
+        created_at: doc.created_at ? new Date(doc.created_at).toISOString() : null,
+        updated_at: doc.updated_at ? new Date(doc.updated_at).toISOString() : null,
+        reviewed_at: doc.reviewed_at ? new Date(doc.reviewed_at).toISOString() : null,
+      };
+    });
 
     return res.status(200).json({
       success: true,

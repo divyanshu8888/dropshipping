@@ -79,14 +79,6 @@ const Header: React.FC = () => {
                             Admin Command
                         </Link>
                     )}
-                    {/* Freelancer dashboard is available from the profile menu */}
-                    {user?.role === 'CLIENT' && (
-                        <Link href="/client-dashboard" className="text-text-soft hover:text-accent-cyan hover:bg-white/5 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 hover:scale-105 flex items-center">
-                            <span className="mr-2">📋</span>
-                            My Dashboard
-                        </Link>
-                    )}
-                    
                     {user ? (
                         <div className="relative ml-4" ref={adminMenuRef}>
                             <button
@@ -157,6 +149,17 @@ const Header: React.FC = () => {
                                                 className="w-full text-left flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-white/80 transition hover:bg-white/10"
                                             >
                                                 💼 My Dashboard
+                                            </button>
+                                        </div>
+                                    )}
+                                    {/* Client My Dashboard inside profile menu */}
+                                    {user?.role === 'CLIENT' && (
+                                        <div className="mt-3 space-y-1">
+                                            <button
+                                                onClick={() => { setIsAdminMenuOpen(false); router.push('/client-dashboard'); }}
+                                                className="w-full text-left flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-white/80 transition hover:bg-white/10"
+                                            >
+                                                📋 My Dashboard
                                             </button>
                                         </div>
                                     )}

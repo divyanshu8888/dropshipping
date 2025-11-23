@@ -568,6 +568,47 @@ export default function AdminDashboard({
     }
   }, [loading, activeTab]);
 
+  // Auto-refresh selected freelancer's KYC documents to check for deleted files
+  useEffect(() => {
+    if (!showFreelancerDetail || !selectedFreelancer?.id) return;
+
+    const refreshFreelancerDetails = async () => {
+      try {
+        const res = await fetch(`/api/admin/freelancers/${selectedFreelancer.id}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.freelancer) {
+            setSelectedFreelancer(data.freelancer);
+          }
+        }
+      } catch (error) {
+        console.error('Error refreshing freelancer details:', error);
+      }
+    };
+
+    // Refresh immediately when detail view opens
+    refreshFreelancerDetails();
+
+    // Set up interval to check every 5 seconds
+    const interval = setInterval(refreshFreelancerDetails, 5000);
+
+    return () => clearInterval(interval);
+  }, [showFreelancerDetail, selectedFreelancer?.id]);
+
+  // Auto-refresh freelancers list to update KYC document counts
+  useEffect(() => {
+    if (activeTab !== 'freelancers' || loading) return;
+
+    const refreshFreelancersList = async () => {
+      await fetchFreelancers();
+    };
+
+    // Set up interval to check every 10 seconds when on freelancers tab
+    const interval = setInterval(refreshFreelancersList, 10000);
+
+    return () => clearInterval(interval);
+  }, [activeTab, loading]);
+
   const handleEntitySelect = (entityType: string, entityId: string) => {
     setSelectedEntityType(entityType as any);
     setSelectedEntity({ id: entityId });

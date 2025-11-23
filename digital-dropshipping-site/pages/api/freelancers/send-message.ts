@@ -21,6 +21,15 @@ export default async function handler(
     const guardResult = guardMessage(content);
     
     if (!guardResult.allowed) {
+      // Check if this is a pricing/payment violation
+      const isPricingViolation = guardResult.reasons.some(reason => 
+        reason.toLowerCase().includes('payment') || 
+        reason.toLowerCase().includes('bank') ||
+        reason.toLowerCase().includes('price') ||
+        reason.toLowerCase().includes('cost') ||
+        reason.toLowerCase().includes('fee')
+      );
+
       // Log blocked message attempt to admin notifications
       try {
         // Get project and user info for the notification
@@ -30,12 +39,20 @@ export default async function handler(
         );
 
         const senderUserId = sender === 'freelancer' ? userId : req.body.clientUserId;
-        const userInfo = senderUserId ? await queryOne<{ id: number; email: string; display_name: string | null }>(
-          `SELECT id, email, display_name FROM users WHERE id = ? LIMIT 1`,
+        const userInfo = senderUserId ? await queryOne<{ id: number; email: string; display_name: string | null; name: string | null }>(
+          `SELECT id, email, display_name, name FROM users WHERE id = ? LIMIT 1`,
           [Number(senderUserId)]
         ) : null;
 
-        // Create admin notification record
+        // Create admin notification record with specific type for pricing violations
+        const notificationType = isPricingViolation ? 'moderation_pricing_violation' : 'moderation_blocked_message';
+        const notificationTitle = isPricingViolation
+          ? `Freelancer attempted to share pricing/payment information`
+          : `Blocked message attempt: ${sender === 'freelancer' ? 'Freelancer' : 'Client'} tried to share contact info`;
+        const notificationMessage = isPricingViolation
+          ? `Freelancer "${userInfo?.display_name || userInfo?.name || userInfo?.email || 'Unknown'}" attempted to send a message containing pricing or payment information in project "${project?.title || 'Unknown'}". This violates platform policy to keep all payments within Uniti.`
+          : `User attempted to send a message containing restricted content: ${guardResult.reasons.join(', ')}. Detected: ${guardResult.detectedContent || 'N/A'}`;
+
         await query(
           `INSERT INTO admin_notifications (
             type, 
@@ -49,19 +66,20 @@ export default async function handler(
             created_at
           ) VALUES (?, ?, ?, ?, ?, ?, ?, 'FALSE', NOW())`,
           [
-            'moderation_blocked_message',
-            `Blocked message attempt: ${sender === 'freelancer' ? 'Freelancer' : 'Client'} tried to share contact info`,
-            `User attempted to send a message containing restricted content: ${guardResult.reasons.join(', ')}. Detected: ${guardResult.detectedContent || 'N/A'}`,
+            notificationType,
+            notificationTitle,
+            notificationMessage,
             JSON.stringify({
               projectId: Number(projectId),
               projectTitle: project?.title || 'Unknown',
               sender: sender,
               senderUserId: senderUserId,
               senderEmail: userInfo?.email || 'Unknown',
-              senderName: userInfo?.display_name || userInfo?.email || 'Unknown',
+              senderName: userInfo?.display_name || userInfo?.name || userInfo?.email || 'Unknown',
               blockedContent: content.substring(0, 200), // First 200 chars
               detectedContent: guardResult.detectedContent,
-              reasons: guardResult.reasons
+              reasons: guardResult.reasons,
+              violationType: isPricingViolation ? 'pricing_payment' : 'contact_info'
             }),
             senderUserId || null,
             Number(projectId),
@@ -73,10 +91,19 @@ export default async function handler(
         console.error('Failed to create admin notification:', notifError);
       }
 
+      // Return user-friendly error message
+      const errorMessage = isPricingViolation
+        ? 'Payment information cannot be shared in messages. For your security and protection, all payments must be processed through Uniti\'s secure payment system. Please use the project\'s payment features instead.'
+        : 'For safety, keep contact & payments inside Uniti. Messages cannot contain phone numbers, email addresses, external links, or personal contact details.';
+
       return res.status(400).json({ 
-        error: 'For safety, keep contact & payments inside Uniti.',
+        error: errorMessage,
         reasons: guardResult.reasons,
-        details: 'Messages cannot contain phone numbers, email addresses, external links, pricing information, or personal contact details. Please use Uniti chat, calls, and payments instead.'
+        detectedContent: guardResult.detectedContent,
+        violationType: isPricingViolation ? 'pricing_payment' : 'contact_info',
+        details: isPricingViolation 
+          ? 'All payments must be processed through Uniti to ensure security and compliance. Please use the platform\'s payment system for all transactions.'
+          : 'Messages cannot contain phone numbers, email addresses, external links, pricing information, or personal contact details. Please use Uniti chat, calls, and payments instead.'
       });
     }
 

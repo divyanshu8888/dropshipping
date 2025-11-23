@@ -110,6 +110,44 @@ export function guardMessage(raw: string): GuardResult {
     reasons.push('Phone numbers are not allowed');
     const matches = raw.match(re.phoneLike);
     if (matches) detectedContent.push(...matches);
+  } else {
+    // Check for split number patterns (e.g., "2 2" or multiple small numbers)
+    // Count all digits in the original message
+    const allDigits = raw.replace(/\D/g, '');
+    const digitCount = allDigits.length;
+    
+    // Check for multiple small numbers (1-2 digits) separated by spaces
+    const smallNumberPattern = /\b\d{1,2}\b/g;
+    const smallNumbers = raw.match(smallNumberPattern);
+    
+    if (smallNumbers && smallNumbers.length >= 2) {
+      const totalDigitsFromSmallNumbers = smallNumbers.join('').replace(/\D/g, '').length;
+      // If we have 2+ small numbers that together form 8-15 digits (phone number range)
+      if (totalDigitsFromSmallNumbers >= 8 && totalDigitsFromSmallNumbers <= 15) {
+        // Check if it's not a payment context
+        const hasPaymentContext = /\b(pay|paying|paid|payment|price|cost|fee|charge|invoice|budget|rate|dollar|dollars|usd|eur|gbp|inr|rupee|rupees)\b/gi.test(raw);
+        // Check if it's not a date or time
+        const isDateOrTime = /\b\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}\b|\b\d{1,2}:\d{2}\b/gi.test(raw);
+        if (!hasPaymentContext && !isDateOrTime) {
+          reasons.push('Phone numbers are not allowed');
+          detectedContent.push(smallNumbers.join(' '));
+        }
+      }
+    }
+    
+    // Final check: if message has 8-15 digits total and digits are separated
+    if (digitCount >= 8 && digitCount <= 15) {
+      const hasPaymentContext = /\b(pay|paying|paid|payment|price|cost|fee|charge|invoice|budget|rate|dollar|dollars|usd|eur|gbp|inr|rupee|rupees)\b/gi.test(raw);
+      const isDateOrTime = /\b\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}\b|\b\d{1,2}:\d{2}\b/gi.test(raw);
+      if (!hasPaymentContext && !isDateOrTime) {
+        // Check if digits are separated into groups (potential bypass attempt)
+        const digitGroups = raw.match(/\b\d{1,4}\b/g);
+        if (digitGroups && digitGroups.length >= 2) {
+          reasons.push('Phone numbers are not allowed');
+          detectedContent.push(digitGroups.join(' '));
+        }
+      }
+    }
   }
 
   if (reasons.length) {

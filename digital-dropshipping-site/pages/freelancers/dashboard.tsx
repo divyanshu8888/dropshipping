@@ -42,7 +42,8 @@ import {
   MoreVertical,
   Globe,
   MapPin,
-  Lock
+  Lock,
+  Trash2
 } from 'lucide-react';
 
 interface Project {
@@ -116,7 +117,7 @@ const TIMEZONES = [
 
 export default function FreelancerDashboard() {
   const router = useRouter();
-  const { user, isFreelancer } = useAuth();
+  const { user, isFreelancer, loading: authLoading, verified: authVerified } = useAuth();
   const { addToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
@@ -179,8 +180,14 @@ export default function FreelancerDashboard() {
   } | null>(null);
   const [kycDocuments, setKycDocuments] = useState<any[]>([]);
   const [uploadingKyc, setUploadingKyc] = useState(false);
+  const [editingKycDoc, setEditingKycDoc] = useState<any | null>(null);
+  const [deletingKycDoc, setDeletingKycDoc] = useState<number | null>(null);
   const [kycUploadForm, setKycUploadForm] = useState({
     documentType: '',
+    documentName: '',
+    file: null as File | null
+  });
+  const [kycEditForm, setKycEditForm] = useState({
     documentName: '',
     file: null as File | null
   });
@@ -239,12 +246,18 @@ export default function FreelancerDashboard() {
   }, [projects, projectFilter, projectSearch]);
 
   useEffect(() => {
-    let active = true;
+    // Wait for auth to finish loading and verifying before checking user
+    if (authLoading || !authVerified) {
+      return;
+    }
+
+    // Only redirect if auth is verified and user is not a freelancer
     if (!user || !isFreelancer()) {
       router.push('/login');
       return;
     }
-    
+
+    let active = true;
     const controller = new AbortController();
     const run = async () => {
       setLoading(true);
@@ -260,7 +273,7 @@ export default function FreelancerDashboard() {
       active = false;
       controller.abort();
     };
-  }, [user, router, isFreelancer]);
+  }, [user, router, isFreelancer, authLoading, authVerified]);
 
   // Auto-scroll messages to bottom
   useEffect(() => {
@@ -268,6 +281,35 @@ export default function FreelancerDashboard() {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [selectedProject?.messages]);
+
+  // Auto-refresh all dashboard data every 5 seconds
+  useEffect(() => {
+    if (authLoading || !authVerified || !user?.id || !isFreelancer()) return;
+
+    const refreshAllData = async () => {
+      try {
+        await fetchFreelancerData();
+        // Update selected project if it exists
+        if (selectedProject) {
+          const freshProjects = await fetch(`/api/freelancers/projects/${user.id}`).then(r => r.json()).catch(() => ({ projects: [] }));
+          if (freshProjects?.projects) {
+            const updated = freshProjects.projects.find((p: Project) => p.id === selectedProject.id);
+            if (updated) {
+              setSelectedProject(updated);
+            }
+          }
+        }
+      } catch (error) {
+        // Silently fail on auto-refresh to avoid spamming errors
+        console.debug('Auto-refresh error (non-critical):', error);
+      }
+    };
+
+    // Refresh every 5 seconds
+    const interval = setInterval(refreshAllData, 5000);
+
+    return () => clearInterval(interval);
+  }, [user?.id, authLoading, authVerified, isFreelancer, selectedProject?.id]);
 
   const fetchFreelancerData = async (signal?: AbortSignal) => {
     setError(null);
@@ -371,6 +413,7 @@ export default function FreelancerDashboard() {
   // Import the guard function (we'll use it directly)
   const validateMessageContent = (content: string): { valid: boolean; error?: string; reasons?: string[] } => {
     const message = content.toLowerCase().trim();
+    const originalContent = content.trim();
     
     // Phone number patterns (various formats)
     const phonePatterns = [
@@ -406,52 +449,134 @@ export default function FreelancerDashboard() {
     // Suspicious number sequences (3-4 digit numbers that could be phone number parts)
     const suspiciousNumbers = /\b\d{3,4}\b/g;
 
+    // Helper function to extract detected content
+    const extractMatch = (pattern: RegExp, text: string): string | null => {
+      const match = text.match(pattern);
+      return match ? match[0] : null;
+    };
+
+    // Check for prices/costs FIRST (before phone numbers to avoid false positives)
+    for (const pattern of pricePatterns) {
+      const match = extractMatch(pattern, originalContent);
+      if (match) {
+        return { 
+          valid: false, 
+          error: `Payment information cannot be shared. Use Uniti's payment system instead.` 
+        };
+      }
+    }
+
+    // Block standalone currency words (also check before phone numbers)
+    const currencyMatch = extractMatch(currencyWords, originalContent);
+    if (currencyMatch && message.split(/\s+/).length <= 3) {
+      return { 
+        valid: false, 
+        error: `Payment information cannot be shared. Use Uniti's payment system instead.` 
+      };
+    }
+
     // Check for phone numbers
     for (const pattern of phonePatterns) {
-      if (pattern.test(message)) {
-        return { valid: false, error: 'Cannot share phone numbers or contact information in messages' };
+      const match = extractMatch(pattern, originalContent);
+      if (match) {
+        // Mask phone number for privacy
+        const masked = match.length > 4 ? match.slice(0, 2) + '***' + match.slice(-2) : '***';
+        return { 
+          valid: false, 
+          error: `Phone numbers cannot be shared. Keep communication within Uniti.` 
+        };
       }
     }
 
     // Check for email addresses
-    if (emailPattern.test(message)) {
-      return { valid: false, error: 'Cannot share email addresses in messages' };
-    }
-
-    // Check for prices/costs
-    for (const pattern of pricePatterns) {
-      if (pattern.test(message)) {
-        return { valid: false, error: 'Cannot share pricing or payment information in messages' };
-      }
+    const emailMatch = extractMatch(emailPattern, originalContent);
+    if (emailMatch) {
+      // Mask email for privacy
+      const [local, domain] = emailMatch.split('@');
+      const maskedEmail = local.length > 2 ? local.slice(0, 2) + '***@' + domain : '***@' + domain;
+      return { 
+        valid: false, 
+        error: `Email addresses cannot be shared. Keep communication within Uniti.` 
+      };
     }
 
     // Check for contact sharing attempts
     for (const pattern of contactPatterns) {
       if (pattern.test(message)) {
-        return { valid: false, error: 'Cannot share personal contact information in messages' };
+        return { 
+          valid: false, 
+          error: 'Contact information cannot be shared. Keep communication within Uniti.' 
+        };
       }
-    }
-
-    // Block standalone currency words
-    if (currencyWords.test(message) && message.split(/\s+/).length <= 3) {
-      return { valid: false, error: 'Cannot share pricing or payment information in messages' };
     }
 
     // Block messages that are primarily spelled-out numbers (likely phone number bypass attempt)
     const words = message.split(/\s+/);
     const spelledNumberMatches = words.filter(w => spelledNumbers.test(w));
     if (spelledNumberMatches.length >= 2 && words.length <= 5) {
-      return { valid: false, error: 'Cannot share contact information in messages' };
+      return { 
+        valid: false, 
+        error: 'Contact information cannot be shared. Keep communication within Uniti.' 
+      };
+    }
+
+    // Check for split number patterns (e.g., "2 2" or "1 2 3" that could be phone number parts)
+    // Count all digits in the message
+    const allDigits = originalContent.replace(/\D/g, '');
+    const digitCount = allDigits.length;
+    
+    // Check for multiple small numbers separated by spaces (potential phone number bypass)
+    const smallNumberPattern = /\b\d{1,2}\b/g;
+    const smallNumbers = originalContent.match(smallNumberPattern);
+    
+    if (smallNumbers && smallNumbers.length >= 2) {
+      const totalDigitsFromSmallNumbers = smallNumbers.join('').replace(/\D/g, '').length;
+      // If we have 2+ small numbers that together form 8-15 digits (phone number range)
+      if (totalDigitsFromSmallNumbers >= 8 && totalDigitsFromSmallNumbers <= 15) {
+        // Skip if message contains payment-related words (already checked above)
+        const hasPaymentContext = /\b(pay|paying|paid|payment|price|cost|fee|charge|invoice|budget|rate|dollar|dollars|usd|eur|gbp|inr|rupee|rupees)\b/gi.test(message);
+        if (!hasPaymentContext) {
+          return { 
+            valid: false, 
+            error: 'Phone numbers cannot be shared. Keep communication within Uniti.' 
+          };
+        }
+      }
     }
 
     // Block suspicious number sequences in short messages (likely phone number parts)
+    // But exclude if it's clearly a payment amount (has currency words nearby)
     const numberMatches = message.match(suspiciousNumbers);
     if (numberMatches && numberMatches.length >= 1 && words.length <= 3) {
-      // Check if message is mostly numbers
-      const numberChars = message.replace(/\D/g, '').length;
-      const totalChars = message.replace(/\s/g, '').length;
-      if (totalChars > 0 && numberChars / totalChars > 0.5) {
-        return { valid: false, error: 'Cannot share phone numbers or contact information in messages' };
+      // Skip if message contains payment-related words (already checked above)
+      const hasPaymentContext = /\b(pay|paying|paid|payment|price|cost|fee|charge|invoice|budget|rate|dollar|dollars|usd|eur|gbp|inr|rupee|rupees)\b/gi.test(message);
+      if (!hasPaymentContext) {
+        // Check if message is mostly numbers
+        const numberChars = message.replace(/\D/g, '').length;
+        const totalChars = message.replace(/\s/g, '').length;
+        if (totalChars > 0 && numberChars / totalChars > 0.5) {
+          return { 
+            valid: false, 
+            error: 'Phone numbers cannot be shared. Keep communication within Uniti.' 
+          };
+        }
+      }
+    }
+
+    // Final check: if message has 8-15 digits total (phone number range) and no payment context
+    if (digitCount >= 8 && digitCount <= 15) {
+      const hasPaymentContext = /\b(pay|paying|paid|payment|price|cost|fee|charge|invoice|budget|rate|dollar|dollars|usd|eur|gbp|inr|rupee|rupees)\b/gi.test(message);
+      // Also check if it's not a date or time pattern
+      const isDateOrTime = /\b\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}\b|\b\d{1,2}:\d{2}\b/gi.test(originalContent);
+      if (!hasPaymentContext && !isDateOrTime) {
+        // Check if digits are separated (potential bypass attempt)
+        const digitGroups = originalContent.match(/\b\d{1,4}\b/g);
+        if (digitGroups && digitGroups.length >= 2) {
+          return { 
+            valid: false, 
+            error: 'Phone numbers cannot be shared. Keep communication within Uniti.' 
+          };
+        }
       }
     }
 
@@ -718,6 +843,89 @@ export default function FreelancerDashboard() {
     } catch (error) {
       console.error('Error uploading KYC document:', error);
       addToast('Failed to upload KYC document', 'error');
+    } finally {
+      setUploadingKyc(false);
+    }
+  };
+
+  const deleteKycDocument = async (docId: number) => {
+    if (!confirm('Are you sure you want to delete this document? This action cannot be undone.')) {
+      return;
+    }
+
+    setDeletingKycDoc(docId);
+    try {
+      const response = await fetch(`/api/freelancers/kyc-documents/${docId}?userId=${user?.id}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        addToast('Document deleted successfully', 'success');
+        await fetchFreelancerData();
+      } else {
+        const error = await response.json();
+        addToast(error?.error || 'Failed to delete document', 'error');
+      }
+    } catch (error) {
+      console.error('Error deleting KYC document:', error);
+      addToast('Failed to delete document', 'error');
+    } finally {
+      setDeletingKycDoc(null);
+    }
+  };
+
+  const startEditKycDocument = (doc: any) => {
+    setEditingKycDoc(doc);
+    setKycEditForm({
+      documentName: doc.document_name || '',
+      file: null
+    });
+  };
+
+  const cancelEditKycDocument = () => {
+    setEditingKycDoc(null);
+    setKycEditForm({ documentName: '', file: null });
+  };
+
+  const updateKycDocument = async () => {
+    if (!editingKycDoc) return;
+
+    if (!kycEditForm.documentName && !kycEditForm.file) {
+      addToast('Please provide a document name or new file', 'error');
+      return;
+    }
+
+    setUploadingKyc(true);
+    const formData = new FormData();
+    
+    if (kycEditForm.documentName) {
+      formData.append('documentName', kycEditForm.documentName);
+    }
+    
+    if (kycEditForm.file) {
+      formData.append('file', kycEditForm.file);
+    }
+    
+    formData.append('userId', user?.id || '');
+
+    try {
+      const response = await fetch(`/api/freelancers/kyc-documents/${editingKycDoc.id}?userId=${user?.id}`, {
+        method: 'PATCH',
+        body: formData
+      });
+
+      if (response.ok) {
+        addToast('Document updated successfully', 'success');
+        setEditingKycDoc(null);
+        setKycEditForm({ documentName: '', file: null });
+        await fetchFreelancerData();
+      } else {
+        const error = await response.json();
+        addToast(error?.error || 'Failed to update document', 'error');
+      }
+    } catch (error) {
+      console.error('Error updating KYC document:', error);
+      addToast('Failed to update document', 'error');
     } finally {
       setUploadingKyc(false);
     }
@@ -1217,18 +1425,19 @@ export default function FreelancerDashboard() {
                     <select
                       value={projectFilter}
                       onChange={(e) => setProjectFilter(e.target.value)}
-                      className="pl-10 pr-8 py-2 border border-white/10 bg-black/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-white appearance-none"
+                      className="pl-10 pr-8 py-2 border border-white/10 bg-[#1a1d24] rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-white appearance-none cursor-pointer"
+                      style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3E%3Cpath stroke=\'%23ffffff\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M6 8l4 4 4-4\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.5rem center', backgroundSize: '1.5em 1.5em', paddingRight: '2.5rem' }}
                     >
-                      <option value="all">All Status</option>
-                      <option value="open">New</option>
-                      <option value="draft">Draft</option>
-                      <option value="in_review">In Review</option>
-                      <option value="contracted">Contracted</option>
-                      <option value="in_progress">In Progress</option>
-                      <option value="delivered">Delivered</option>
-                      <option value="completed">Completed</option>
-                      <option value="cancelled">Cancelled</option>
-                      <option value="disputed">Disputed</option>
+                      <option value="all" className="bg-[#1a1d24] text-white">All Status</option>
+                      <option value="open" className="bg-[#1a1d24] text-white">New</option>
+                      <option value="draft" className="bg-[#1a1d24] text-white">Draft</option>
+                      <option value="in_review" className="bg-[#1a1d24] text-white">In Review</option>
+                      <option value="contracted" className="bg-[#1a1d24] text-white">Contracted</option>
+                      <option value="in_progress" className="bg-[#1a1d24] text-white">In Progress</option>
+                      <option value="delivered" className="bg-[#1a1d24] text-white">Delivered</option>
+                      <option value="completed" className="bg-[#1a1d24] text-white">Completed</option>
+                      <option value="cancelled" className="bg-[#1a1d24] text-white">Cancelled</option>
+                      <option value="disputed" className="bg-[#1a1d24] text-white">Disputed</option>
                     </select>
                   </div>
                 </div>
@@ -2302,17 +2511,43 @@ export default function FreelancerDashboard() {
                                 href={fileUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="px-3 py-1.5 rounded-lg border border-white/10 bg-white/10 text-text-base hover:bg-white/15 transition text-xs font-semibold whitespace-nowrap"
+                                className="px-3 py-1.5 rounded-lg border border-white/10 bg-white/10 text-text-base hover:bg-white/15 transition text-xs font-semibold whitespace-nowrap flex items-center justify-center gap-1"
                               >
+                                <Eye className="w-3 h-3" />
                                 View
                               </a>
                               <a
                                 href={fileUrl}
                                 download
-                                className="px-3 py-1.5 rounded-lg border border-white/10 bg-white/10 text-text-base hover:bg-white/15 transition text-xs font-semibold whitespace-nowrap"
+                                className="px-3 py-1.5 rounded-lg border border-white/10 bg-white/10 text-text-base hover:bg-white/15 transition text-xs font-semibold whitespace-nowrap flex items-center justify-center gap-1"
                               >
+                                <Download className="w-3 h-3" />
                                 Download
                               </a>
+                              <button
+                                onClick={() => startEditKycDocument(doc)}
+                                className="px-3 py-1.5 rounded-lg border border-cyan-500/30 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20 transition text-xs font-semibold whitespace-nowrap flex items-center justify-center gap-1"
+                              >
+                                <Edit3 className="w-3 h-3" />
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => deleteKycDocument(doc.id)}
+                                disabled={deletingKycDoc === doc.id}
+                                className="px-3 py-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20 transition text-xs font-semibold whitespace-nowrap flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {deletingKycDoc === doc.id ? (
+                                  <>
+                                    <div className="w-3 h-3 border-2 border-rose-300/30 border-t-rose-300 rounded-full animate-spin"></div>
+                                    Deleting...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Trash2 className="w-3 h-3" />
+                                    Delete
+                                  </>
+                                )}
+                              </button>
                             </div>
                           </div>
                         </div>
@@ -2325,6 +2560,79 @@ export default function FreelancerDashboard() {
                   </div>
                 )}
               </div>
+
+              {/* Edit KYC Document Modal */}
+              {editingKycDoc && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
+                  <div className="relative w-full max-w-md rounded-2xl border border-white/20 bg-gradient-to-br from-[#0B0D12] via-[#0F1419] to-[#0B0D12] backdrop-blur-xl shadow-2xl p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-white">Edit Document</h3>
+                      <button
+                        onClick={cancelEditKycDocument}
+                        className="text-white/50 hover:text-white transition"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-white mb-2">
+                          Document Name
+                        </label>
+                        <input
+                          type="text"
+                          value={kycEditForm.documentName}
+                          onChange={(e) => setKycEditForm({ ...kycEditForm, documentName: e.target.value })}
+                          className="w-full px-4 py-2.5 border border-white/10 bg-black/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-white placeholder:text-white/40"
+                          placeholder="Document name"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-white mb-2">
+                          Replace File (Optional)
+                        </label>
+                        <input
+                          type="file"
+                          accept="image/*,.pdf"
+                          onChange={(e) => setKycEditForm({ ...kycEditForm, file: e.target.files?.[0] || null })}
+                          className="w-full px-4 py-2.5 border border-white/10 bg-black/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-white text-sm file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-cyan-500/20 file:text-cyan-300 hover:file:bg-cyan-500/30"
+                        />
+                        <p className="text-xs text-white/50 mt-1">
+                          Leave empty to keep current file. Uploading a new file will reset status to pending.
+                        </p>
+                      </div>
+                      
+                      <div className="flex gap-3 pt-2">
+                        <button
+                          onClick={cancelEditKycDocument}
+                          className="flex-1 px-4 py-2 border border-white/10 bg-white/5 text-white rounded-lg hover:bg-white/10 transition"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={updateKycDocument}
+                          disabled={uploadingKyc || (!kycEditForm.documentName && !kycEditForm.file)}
+                          className="flex-1 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-lg hover:from-cyan-400 hover:to-blue-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2"
+                        >
+                          {uploadingKyc ? (
+                            <>
+                              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                              <span>Updating...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Save className="w-4 h-4" />
+                              <span>Save Changes</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
