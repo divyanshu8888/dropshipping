@@ -7,7 +7,7 @@ const ADMIN_ROUTES = ['/admin', '/admin/setup', '/admin/products-enhanced', '/ad
 const FREELANCER_ROUTES = ['/freelancers/dashboard', '/freelancers/profile-setup'];
 
 // Define protected client routes
-const CLIENT_ROUTES = ['/client-dashboard'];
+const CLIENT_ROUTES = ['/clients/dashboard'];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -28,6 +28,6 @@ export const config = {
     '/admin/:path*',
     '/freelancers/dashboard',
     '/freelancers/profile-setup',
-    '/client-dashboard'
+    '/clients/dashboard'
   ],
 };

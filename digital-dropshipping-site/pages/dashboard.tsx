@@ -24,7 +24,7 @@ export default function DashboardRouter() {
       return;
     }
     if (user.role === 'CLIENT') {
-      router.replace('/client-dashboard');
+      router.replace('/clients/dashboard');
       return;
     }
     router.replace('/'); // fallback

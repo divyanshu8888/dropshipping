@@ -1,5 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { query, queryOne } from 'lib/mysql';
+import { template10k } from '../../../src/lib/milestoneTemplates';
+import { guardMessage } from '../../../src/lib/moderation/contactGuard';
 
 export default async function handler(
   req: NextApiRequest,
@@ -16,21 +18,30 @@ export default async function handler(
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Validate for personal info (server-side validation)
-    const personalInfoPatterns = [
-      /\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/g, // Phone numbers
-      /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, // Email
-      /\$\d+|\d+\s*(dollars?|usd|eur|gbp)/gi, // Price mentions
-      /\b(price|cost|fee|charge|payment|invoice)\s*:?\s*\$\d+/gi // Price context
-    ];
+    // Validate for confidential information using contact guard
+    const combinedText = `${title} ${description || ''}`;
+    const guardResult = guardMessage(combinedText);
+    
+    if (!guardResult.allowed) {
+      // Check if this is a pricing/payment violation
+      const isPricingViolation = guardResult.reasons.some(reason => 
+        reason.toLowerCase().includes('payment') || 
+        reason.toLowerCase().includes('bank') ||
+        reason.toLowerCase().includes('price') ||
+        reason.toLowerCase().includes('cost') ||
+        reason.toLowerCase().includes('fee')
+      );
 
-    const combinedText = `${title} ${description || ''}`.toLowerCase();
-    for (const pattern of personalInfoPatterns) {
-      if (pattern.test(combinedText)) {
-        return res.status(400).json({ 
-          error: 'Cannot include personal information (email, phone, price) in milestones' 
-        });
-      }
+      const errorMessage = isPricingViolation
+        ? 'Payment information cannot be included in milestones. For your security and protection, all payments must be processed through Uniti\'s secure payment system.'
+        : 'For safety, milestones cannot contain phone numbers, email addresses, external links, or personal contact details.';
+
+      return res.status(400).json({ 
+        error: errorMessage,
+        reasons: guardResult.reasons,
+        detectedContent: guardResult.detectedContent,
+        violationType: isPricingViolation ? 'pricing_payment' : 'contact_info'
+      });
     }
 
     // Verify the project belongs to this freelancer
@@ -99,16 +110,34 @@ export default async function handler(
       [contract.id]
     );
 
+    const nextSortOrder = (maxSort?.max_order || 0) + 1;
+    
+    // Use fixed milestone names and descriptions from template10k (only 5 milestones allowed)
+    const milestoneTemplate = template10k.milestones[nextSortOrder - 1];
+    let milestoneTitle = title;
+    let milestoneDescription = description;
+    
+    // If sort_order is 1-5, use fixed title and default description from template
+    if (nextSortOrder <= 5 && milestoneTemplate) {
+      milestoneTitle = milestoneTemplate.title;
+      // Use provided description if given, otherwise use template default
+      milestoneDescription = description || milestoneTemplate.description;
+    } else if (nextSortOrder > 5) {
+      return res.status(400).json({ 
+        error: 'Maximum 5 milestones allowed per project. Please use the standard milestone structure.' 
+      });
+    }
+
     // Create the milestone
     const result = await query(
       `INSERT INTO milestones (contract_id, title, description, amount_cents, due_date, status, sort_order)
        VALUES (?, ?, ?, 0, ?, 'pending', ?)`,
       [
         contract.id,
-        title,
-        description || null,
+        milestoneTitle,
+        milestoneDescription || null,
         dueDate || null,
-        (maxSort?.max_order || 0) + 1
+        nextSortOrder
       ]
     );
 

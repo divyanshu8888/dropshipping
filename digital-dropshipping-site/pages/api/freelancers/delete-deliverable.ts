@@ -37,13 +37,28 @@ export default async function handler(
       return res.status(404).json({ error: 'Freelancer not found' });
     }
 
-    const deliverable = await queryOne<{ project_id: number; file_path: string | null }>(
-      `SELECT project_id, file_path FROM deliverables WHERE id = ? LIMIT 1`,
+    const deliverable = await queryOne<{ project_id: number; milestone_id: number | null; file_path: string | null }>(
+      `SELECT project_id, milestone_id, file_path FROM deliverables WHERE id = ? LIMIT 1`,
       [Number(deliverableId)]
     );
 
     if (!deliverable) {
       return res.status(404).json({ error: 'Deliverable not found' });
+    }
+
+    // Check if deliverable is associated with a milestone that has payment released
+    if (deliverable.milestone_id) {
+      const milestone = await queryOne<{ status: string }>(
+        `SELECT status FROM milestones WHERE id = ? LIMIT 1`,
+        [deliverable.milestone_id]
+      );
+
+      if (milestone && (milestone.status === 'released' || milestone.status === 'approved')) {
+        return res.status(403).json({ 
+          error: 'Cannot delete document. Payment has been released for this milestone.',
+          details: 'Once payment is released for a milestone, documents cannot be deleted to maintain project integrity.'
+        });
+      }
     }
 
     const project = await queryOne<{ freelancer_id: number }>(

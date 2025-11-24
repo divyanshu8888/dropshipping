@@ -79,6 +79,7 @@ export default async function handler(
                 m.body AS content,
                 m.created_at AS timestamp,
                 m.is_read,
+                m.message_type,
                 u.id AS sender_user_id,
                 CASE WHEN u.id = ? THEN 'freelancer' ELSE 'client' END AS sender
               FROM messages m
@@ -161,7 +162,8 @@ export default async function handler(
             sender: m.sender,
             content: m.content || m.body || '',
             timestamp: new Date(m.timestamp).toISOString(),
-            read: m.is_read === 'TRUE'
+            read: m.is_read === 'TRUE',
+            messageType: m.message_type || 'text'
           })),
           deliverables: deliverables.map(d => ({
             id: String(d.id),

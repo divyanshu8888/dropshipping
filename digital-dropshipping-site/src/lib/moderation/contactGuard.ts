@@ -52,9 +52,33 @@ const re = {
   // generic international phone: we also check digit count
   phoneLike: /(?:\+?\d[\s-]?){8,}\d/i,
   // common social/payment keywords
-  social: /\b(whats?app|telegram|discord|signal|wechat|instagram|facebook|snapchat|skype)\b/i,
-  payment: /\b(upi|gpay|googlepay|phonepe|paytm|iban|swift|ifsc|routing|account\s?no|bank\s?account|venmo|cashapp|paypal)\b/i,
-  handle: /@[a-z0-9_.]{3,}/i
+  social: /\b(whats?app|telegram|discord|signal|wechat|instagram|facebook|snapchat|skype|linkedin|twitter|x\.com|tiktok|youtube|reddit)\b/i,
+  payment: /\b(upi|gpay|googlepay|phonepe|paytm|iban|swift|ifsc|routing|account\s?no|bank\s?account|venmo|cashapp|paypal|stripe|square|zelle|wise|revolut|monzo|n26)\b/i,
+  // Budget/pricing patterns (separate from payment to catch budget mentions)
+  budget: /\b(budget|amount|price|cost|fee|charge|invoice|rate|hourly|per hour|quotation|quote|estimate|pricing|payment|pay|paid|compensation|remuneration|salary|wage)\s*:?\s*(\$?\d+(\.\d{1,2})?)\b/i,
+  // Dollar sign detection - catch ANY dollar sign (standalone, with spaces, with text, etc.)
+  dollarSign: /\$/g, // Catch any dollar sign anywhere
+  // Obfuscated dollar amounts: "$ 5.7.8.9" or "$ 5 7 8 9" or "$5789" or "$ " or "$five"
+  obfuscatedDollar: /\$\s*[\d\s\.\-_,a-zA-Z]+|\$\s*$/i,
+  // Obfuscated numbers: "5.7.8.9" or "5 7 8 9" (4+ digits with separators)
+  obfuscatedNumber: /\b\d+[\s.\-_,]+\d+[\s.\-_,]+\d+[\s.\-_,]+\d+/i,
+  // Number words combined with dollar or budget terms: "$ five 2 3 4" or "budget five thousand"
+  numberWordsWithDollar: /\$\s*(zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion)[\s\d]*/i,
+  // Mixed number words and digits: "five 2 3 4" or "2 three 4"
+  mixedNumberWords: /\b(zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion)\s+[\d\s]+|\b[\d\s]+(zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion)\b/i,
+  // Budget terms with number words
+  budgetWithNumberWords: /\b(budget|amount|price|cost|fee|charge|invoice|rate|payment|pay|paid)\s+(zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion)\b/i,
+  // Roman numerals (common for amounts)
+  romanNumerals: /\b[IVXLCDM]{3,}\b/i,
+  // Unicode obfuscation (similar looking characters)
+  unicodeObfuscation: /[\u200B-\u200D\uFEFF\u00A0]/g, // Zero-width spaces, non-breaking spaces
+  // Common obfuscation: using letters that look like numbers (O vs 0, I vs 1, etc.)
+  letterNumberSubstitution: /\b[OIl1]{4,}\b/i,
+  handle: /@[a-z0-9_.]{3,}/i,
+  // More payment/contact terms
+  contactTerms: /\b(contact\s*me|reach\s*out|call\s*me|text\s*me|dm\s*me|message\s*me|email\s*me|whatsapp|telegram|discord|signal)\b/i,
+  // Cryptocurrency
+  crypto: /\b(bitcoin|btc|ethereum|eth|crypto|wallet|blockchain)\b/i
 };
 
 export type GuardResult = 
@@ -88,6 +112,77 @@ export function guardMessage(raw: string): GuardResult {
     reasons.push('Payment/Bank details are not allowed');
     const matches = raw.match(re.payment);
     if (matches) detectedContent.push(...matches);
+  }
+  
+  if (re.budget.test(raw)) {
+    reasons.push('Budget/Pricing information is not allowed');
+    const matches = raw.match(re.budget);
+    if (matches) detectedContent.push(...matches);
+  }
+  
+  // Check for ANY dollar sign - most aggressive check
+  if (re.dollarSign.test(raw)) {
+    reasons.push('Dollar signs are not allowed');
+    const matches = raw.match(/\$[^\s]*|\$\s+/g);
+    if (matches) detectedContent.push(...matches);
+  }
+  
+  if (re.obfuscatedDollar.test(raw)) {
+    reasons.push('Dollar amounts (including obfuscated formats) are not allowed');
+    const matches = raw.match(re.obfuscatedDollar);
+    if (matches) detectedContent.push(...matches);
+  }
+  
+  if (re.obfuscatedNumber.test(raw)) {
+    reasons.push('Obfuscated numbers (potential amounts) are not allowed');
+    const matches = raw.match(re.obfuscatedNumber);
+    if (matches) detectedContent.push(...matches);
+  }
+  
+  if (re.numberWordsWithDollar.test(raw)) {
+    reasons.push('Number words with dollar signs are not allowed');
+    const matches = raw.match(re.numberWordsWithDollar);
+    if (matches) detectedContent.push(...matches);
+  }
+  
+  if (re.mixedNumberWords.test(raw)) {
+    reasons.push('Mixed number words and digits are not allowed');
+    const matches = raw.match(re.mixedNumberWords);
+    if (matches) detectedContent.push(...matches);
+  }
+  
+  if (re.budgetWithNumberWords.test(raw)) {
+    reasons.push('Budget terms with number words are not allowed');
+    const matches = raw.match(re.budgetWithNumberWords);
+    if (matches) detectedContent.push(...matches);
+  }
+  
+  if (re.romanNumerals.test(raw)) {
+    reasons.push('Roman numerals (potential obfuscation) are not allowed');
+    const matches = raw.match(re.romanNumerals);
+    if (matches) detectedContent.push(...matches);
+  }
+  
+  if (re.contactTerms.test(raw)) {
+    reasons.push('Contact solicitation terms are not allowed');
+    const matches = raw.match(re.contactTerms);
+    if (matches) detectedContent.push(...matches);
+  }
+  
+  if (re.crypto.test(raw)) {
+    reasons.push('Cryptocurrency references are not allowed');
+    const matches = raw.match(re.crypto);
+    if (matches) detectedContent.push(...matches);
+  }
+  
+  // Check for number words near dollar signs or budget terms (normalized check)
+  const normalizedText = raw.toLowerCase();
+  const hasDollarNearNumberWord = /\$\s*(zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion)/i.test(raw) ||
+    /(budget|amount|price|cost|fee|charge|payment|pay|paid)\s+(zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion)/i.test(raw);
+  
+  if (hasDollarNearNumberWord) {
+    reasons.push('Number words used with payment/budget terms are not allowed');
+    detectedContent.push('Number words with payment context');
   }
   
   if (re.handle.test(raw)) {

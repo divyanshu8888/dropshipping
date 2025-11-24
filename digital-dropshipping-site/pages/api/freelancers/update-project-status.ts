@@ -47,9 +47,19 @@ export default async function handler(
 
     // Update project status
     await query(
-      `UPDATE projects SET status = ? WHERE id = ?`,
+      `UPDATE projects SET status = ?, updated_at = NOW() WHERE id = ?`,
       [status, Number(projectId)]
     );
+
+    // If status is 'delivered' or 'completed', set completed_at timestamp
+    if (status === 'delivered' || status === 'completed') {
+      await query(
+        `UPDATE projects 
+         SET completed_at = NOW() 
+         WHERE id = ? AND completed_at IS NULL`,
+        [Number(projectId)]
+      );
+    }
 
     return res.status(200).json({ 
       success: true,

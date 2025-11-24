@@ -60,7 +60,7 @@ export default function FreelancerProfileSetup() {
     
     const userData = JSON.parse(user);
     if (userData.role !== 'freelancer') {
-      router.push('/client-dashboard');
+      router.push('/clients/dashboard');
       return;
     }
 

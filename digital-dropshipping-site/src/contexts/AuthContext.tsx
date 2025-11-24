@@ -155,7 +155,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           } else if (data.user.role === 'FREELANCER') {
             router.push('/freelancers/dashboard');
           } else {
-            router.push('/client-dashboard');
+            router.push('/clients/dashboard');
           }
         }, 100);
         

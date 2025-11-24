@@ -1040,7 +1040,7 @@ export default function AdminDashboard({
               <span className="text-xs text-text-mute">Manage client accounts and briefs</span>
             </div>
             <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <Link href="/client-dashboard" className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm hover:border-brand-b/40 transition">
+              <Link href="/clients/dashboard" className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm hover:border-brand-b/40 transition">
                 <p className="font-semibold text-text-base">Client Dashboard</p>
                 <p className="text-xs text-text-mute mt-1">View client-side experience</p>
               </Link>

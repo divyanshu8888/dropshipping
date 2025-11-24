@@ -156,7 +156,7 @@ const Header: React.FC = () => {
                                     {user?.role === 'CLIENT' && (
                                         <div className="mt-3 space-y-1">
                                             <button
-                                                onClick={() => { setIsAdminMenuOpen(false); router.push('/client-dashboard'); }}
+                                                onClick={() => { setIsAdminMenuOpen(false); router.push('/clients/dashboard'); }}
                                                 className="w-full text-left flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-white/80 transition hover:bg-white/10"
                                             >
                                                 📋 My Dashboard
@@ -254,7 +254,7 @@ const Header: React.FC = () => {
                             </Link>
                         )}
                         {user?.role === 'CLIENT' && (
-                            <Link href="/client-dashboard" className="text-text-soft hover:text-accent-cyan hover:bg-white/5 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 flex items-center">
+                            <Link href="/clients/dashboard" className="text-text-soft hover:text-accent-cyan hover:bg-white/5 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 flex items-center">
                                 <span className="mr-2">📋</span>
                                 My Dashboard
                             </Link>

@@ -89,6 +89,7 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
                 m.body AS content,
                 m.created_at AS timestamp,
                 m.is_read,
+                m.message_type,
                 u.id AS sender_user_id,
                 CASE WHEN u.id = ? THEN 'client' ELSE 'freelancer' END AS sender
               FROM messages m
@@ -126,15 +127,49 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
               [contract.id]
             );
             
-            milestones = (Array.isArray(milestoneRows) ? milestoneRows : []).map((m: any) => ({
-              id: String(m.id),
-              title: m.title,
-              description: m.description,
-              amount_cents: m.amount_cents || 0,
-              due_date: m.due_date || null,
-              status: m.status || 'pending',
-              sort_order: m.sort_order || 1
-            }));
+            // Fetch deliverables for each milestone
+            milestones = await Promise.all(
+              (Array.isArray(milestoneRows) ? milestoneRows : []).map(async (m: any) => {
+                // Fetch deliverables for this milestone
+                const deliverables = await query(
+                  `SELECT 
+                    d.id,
+                    d.title AS name,
+                    d.description,
+                    d.file_path AS url,
+                    d.submitted_at AS uploadedAt,
+                    CASE 
+                      WHEN d.file_path LIKE '%.js' OR d.file_path LIKE '%.ts' OR d.file_path LIKE '%.jsx' OR d.file_path LIKE '%.tsx' OR d.file_path LIKE '%.py' OR d.file_path LIKE '%.java' OR d.file_path LIKE '%.cpp' OR d.file_path LIKE '%.c' THEN 'code'
+                      WHEN d.file_path LIKE '%.pdf' OR d.file_path LIKE '%.doc%' OR d.file_path LIKE '%.txt' THEN 'document'
+                      WHEN d.file_path LIKE '%.jpg' OR d.file_path LIKE '%.png' OR d.file_path LIKE '%.gif' THEN 'image'
+                      WHEN d.file_path LIKE '%.mp4' OR d.file_path LIKE '%.mov' THEN 'video'
+                      ELSE 'document'
+                    END AS type
+                  FROM deliverables d
+                  WHERE d.milestone_id = ?
+                  ORDER BY d.submitted_at DESC`,
+                  [m.id]
+                );
+
+                return {
+                  id: String(m.id),
+                  title: m.title,
+                  description: m.description,
+                  amount_cents: m.amount_cents || 0,
+                  due_date: m.due_date || null,
+                  status: m.status || 'pending',
+                  sort_order: m.sort_order || 1,
+                  deliverables: (Array.isArray(deliverables) ? deliverables : []).map((d: any) => ({
+                    id: String(d.id),
+                    name: d.name,
+                    type: d.type,
+                    url: d.url,
+                    uploadedAt: d.uploadedAt ? new Date(d.uploadedAt).toISOString() : new Date().toISOString(),
+                    description: d.description || ''
+                  }))
+                };
+              })
+            );
 
             // Calculate progress
             const total = milestones.length;
@@ -166,7 +201,8 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
             sender: m.sender,
             content: m.content || m.body || '',
             timestamp: new Date(m.timestamp).toISOString(),
-            read: m.is_read === 1 || m.is_read === 'TRUE'
+            read: m.is_read === 1 || m.is_read === 'TRUE',
+            messageType: m.message_type || 'text'
           }))
         };
       })

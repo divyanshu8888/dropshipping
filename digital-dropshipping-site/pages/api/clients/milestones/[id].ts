@@ -31,7 +31,9 @@ export default async function handler(
       return res.status(401).json({ error: 'User not found' });
     }
 
-    if (user.role !== 'CLIENT') {
+    // Check if user is a client (database stores roles in lowercase)
+    const userRole = user.role?.toUpperCase();
+    if (userRole !== 'CLIENT') {
       return res.status(403).json({ error: 'Only clients can update milestone status' });
     }
 
@@ -42,7 +44,10 @@ export default async function handler(
     );
 
     if (!client) {
-      return res.status(403).json({ error: 'Client record not found' });
+      console.error('Client record not found for user:', user.id);
+      return res.status(403).json({ 
+        error: 'Client record not found. Please ensure your account is properly set up as a client.' 
+      });
     }
 
     const clientId = client.id;
@@ -88,19 +93,210 @@ export default async function handler(
     );
 
     if (!milestone) {
-      return res.status(404).json({ error: 'Milestone not found or you do not have permission to update it' });
+      console.error('Milestone not found or permission denied:', { milestoneId, clientId, userId: user.id });
+      return res.status(404).json({ 
+        error: 'Milestone not found or you do not have permission to update it',
+        details: `Milestone ID: ${milestoneId}, Client ID: ${clientId}`
+      });
     }
 
-    // Clients can change milestone status to any valid status
-    // No restrictions on status transitions for clients
+    // Enforce workflow: Clients can approve/reject submitted milestones
+    // Or manually set status for administrative purposes
+    // Best practice: Only allow transitions that make sense
+    
+    // Workflow enforcement (optional - can be relaxed for admin flexibility):
+    // For strict enforcement, import and use milestoneWorkflow.ts:
+    /*
+    import { isValidTransition } from '../../../../src/lib/milestoneWorkflow';
+    
+    if (!isValidTransition(milestone.status as MilestoneStatus, status as MilestoneStatus)) {
+      return res.status(400).json({ 
+        error: `Invalid status transition from ${milestone.status} to ${status}`,
+        allowedTransitions: getNextValidStatuses(milestone.status as MilestoneStatus)
+      });
+    }
+    */
+    
+    // Current implementation: Allow flexible transitions for admin purposes
+    // Recommended transitions:
+    // - 'submitted' → 'approved' or 'rejected'
+    // - 'approved' → 'released' (auto)
+    // - 'rejected' → 'submitted' (resubmit)
 
-    // Update the milestone status
+    // Update the milestone status with workflow logic
+    let finalStatus = status;
+    let updateQuery = `UPDATE milestones SET status = ?, updated_at = NOW()`;
+    const updateParams: any[] = [status];
+
+    // Set submitted_at when milestone is submitted
+    if (status === 'submitted' && milestone.status !== 'submitted') {
+      updateQuery += `, submitted_at = NOW()`;
+    }
+
+    // Auto-release funds when approved (change to 'released' automatically)
+    // Note: In production, you might want to integrate with payment processor here
+    if (status === 'approved') {
+      // Auto-release: Change status to 'released' immediately after approval
+      // This represents funds being released from escrow
+      finalStatus = 'released';
+      updateParams[0] = 'released';
+    }
+
+    updateQuery += ` WHERE id = ?`;
+    updateParams.push(milestoneId);
+
+    console.log('Updating milestone:', { milestoneId, status, finalStatus, updateQuery, updateParams, currentStatus: milestone.status });
+    
+    try {
+      const updateResult = await query(updateQuery, updateParams);
+      console.log('Update result:', updateResult);
+    } catch (updateError: any) {
+      console.error('Database update error:', updateError);
+      return res.status(500).json({ 
+        error: 'Failed to update milestone in database',
+        details: updateError.message || 'Unknown database error'
+      });
+    }
+    
+    // Verify the update was successful
+    const verificationMilestone = await queryOne<{ id: number; status: string }>(
+      `SELECT id, status FROM milestones WHERE id = ?`,
+      [milestoneId]
+    );
+
+    console.log('Updated milestone from database:', verificationMilestone);
+
+    if (!verificationMilestone) {
+      console.error('Milestone not found after update');
+      return res.status(500).json({ error: 'Failed to update milestone in database - milestone not found after update' });
+    }
+
+    if (verificationMilestone.status !== finalStatus) {
+      console.error('Status mismatch:', { expected: finalStatus, actual: verificationMilestone.status });
+      return res.status(500).json({ 
+        error: `Failed to update milestone status. Expected: ${finalStatus}, but got: ${verificationMilestone.status}` 
+      });
+    }
+
+    // Get milestone title and project info for notification
+    const milestoneInfo = await queryOne<{ title: string; project_id: number }>(
+      `SELECT m.title, c.project_id
+       FROM milestones m
+       INNER JOIN contracts c ON m.contract_id = c.id
+       WHERE m.id = ?`,
+      [milestoneId]
+    );
+
+    // Get or create conversation for this project
+    if (milestoneInfo) {
+      let conversation = await queryOne<{ id: number }>(
+        `SELECT id FROM conversations WHERE project_id = ? LIMIT 1`,
+        [milestoneInfo.project_id]
+      );
+
+      if (!conversation) {
+        await query(
+          `INSERT INTO conversations (project_id, title) VALUES (?, ?)`,
+          [milestoneInfo.project_id, `Project Discussion`]
+        );
+        conversation = await queryOne<{ id: number }>(
+          `SELECT id FROM conversations WHERE project_id = ? LIMIT 1`,
+          [milestoneInfo.project_id]
+        );
+      }
+
+      // Send notification message to inbox
+      if (conversation) {
+        const statusMessages: Record<string, string> = {
+          'funded': `Funded milestone "${milestoneInfo.title}"`,
+          'approved': `Approved milestone "${milestoneInfo.title}"`,
+          'rejected': `Rejected milestone "${milestoneInfo.title}"`,
+          'released': `Released payment for milestone "${milestoneInfo.title}"`
+        };
+
+        const message = statusMessages[finalStatus];
+        if (message) {
+          await query(
+            `INSERT INTO messages (conversation_id, sender_id, body, message_type, is_read) 
+             VALUES (?, ?, ?, 'milestone', 'FALSE')`,
+            [conversation.id, user.id, message]
+          );
+        }
+      }
+    }
+
+    // Update project status and progress based on milestone states
+    // Get all milestones for this project
+    const allMilestones = await query<{
+      id: number;
+      status: string;
+    }>(
+      `SELECT m.id, m.status
+       FROM milestones m
+       INNER JOIN contracts c ON m.contract_id = c.id
+       WHERE c.project_id = ?`,
+      [milestone.project_id]
+    );
+
+    if (allMilestones && allMilestones.length > 0) {
+      const totalMilestones = allMilestones.length;
+      const completedMilestones = allMilestones.filter(m => 
+        ['approved', 'released'].includes(m.status)
+      ).length;
+      const allCompleted = completedMilestones === totalMilestones;
+      const hasApproved = completedMilestones > 0;
+
+      // Get current project status
+      const project = await queryOne<{
+        id: number;
+        status: string;
+        completed_at: string | null;
+        started_at: string | null;
+      }>(
+        `SELECT id, status, completed_at, started_at FROM projects WHERE id = ?`,
+        [milestone.project_id]
+      );
+
+      if (project) {
+        let newProjectStatus = project.status;
+
+        // Logic for project status updates:
+        // 1. Projects should NOT automatically go to 'delivered' - only freelancer can set it manually
+        // 2. If at least one milestone is approved -> project should be 'in_progress'
+        // 3. If milestone is submitted (by freelancer) -> project should be 'in_progress'
+        // 4. When all milestones are completed, project stays 'in_progress' until freelancer marks it 'delivered'
+        
+        if (hasApproved || finalStatus === 'submitted' || finalStatus === 'released') {
+          // At least one milestone approved/released or submitted - project is in progress
+          if (project.status === 'contracted' || project.status === 'open' || project.status === 'in_review') {
+            newProjectStatus = 'in_progress';
+          }
+        }
+
+        // Update project status if it changed
+        if (newProjectStatus !== project.status) {
     await query(
-      `UPDATE milestones 
+            `UPDATE projects 
        SET status = ?, updated_at = NOW() 
        WHERE id = ?`,
-      [status, milestoneId]
-    );
+            [newProjectStatus, milestone.project_id]
+          );
+
+          // Set started_at if project is moving to in_progress for the first time
+          if (newProjectStatus === 'in_progress' && !project.started_at) {
+            await query(
+              `UPDATE projects 
+               SET started_at = NOW() 
+               WHERE id = ? AND started_at IS NULL`,
+              [milestone.project_id]
+            );
+          }
+
+          // Note: completed_at should only be set when freelancer manually marks project as 'delivered'
+          // This is handled in the freelancer's update-project-status API
+        }
+      }
+    }
 
     // Get updated milestone
     const updatedMilestone = await queryOne<{

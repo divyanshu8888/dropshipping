@@ -51,8 +51,11 @@ const ModerationDashboard: React.FC = () => {
   const router = useRouter();
   const [dashboardData, setDashboardData] = useState<ModerationDashboard | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedTab, setSelectedTab] = useState<'live' | 'violations' | 'muted' | 'conversations'>('live');
+  const [selectedTab, setSelectedTab] = useState<'live' | 'violations' | 'muted' | 'conversations' | 'all-messages'>('live');
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
+  const [allMessagesData, setAllMessagesData] = useState<{ messages: any[]; milestones: any[] } | null>(null);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [messagesError, setMessagesError] = useState<string | null>(null);
 
   // Check authentication
   useEffect(() => {
@@ -143,6 +146,38 @@ const ModerationDashboard: React.FC = () => {
     const interval = setInterval(loadDashboardData, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  // Load all messages and milestone descriptions
+  useEffect(() => {
+    const loadAllMessages = async () => {
+      if (selectedTab !== 'all-messages') return;
+      
+      try {
+        setLoadingMessages(true);
+        const userData = localStorage.getItem('user');
+        if (!userData) return;
+        
+        const user = JSON.parse(userData);
+        const response = await fetch(`/api/admin/all-messages?userId=${user.id}&limit=200`);
+        
+        if (response.ok) {
+          const data = await response.json();
+          setAllMessagesData(data);
+          setMessagesError(null);
+        } else {
+          const errorData = await response.json().catch(() => ({ error: 'Failed to load messages' }));
+          setMessagesError(errorData.error || 'Failed to load messages');
+        }
+      } catch (error) {
+        console.error('Error loading all messages:', error);
+        setMessagesError('Failed to load messages. Please try again.');
+      } finally {
+        setLoadingMessages(false);
+      }
+    };
+
+    loadAllMessages();
+  }, [selectedTab]);
 
   // Toggle user mute
   const toggleUserMute = async (userId: string, conversationId: string) => {
@@ -289,12 +324,13 @@ const ModerationDashboard: React.FC = () => {
         {/* Tabs */}
         <div className="bg-white rounded-lg shadow mb-8">
           <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8 px-6">
+            <nav className="-mb-px flex space-x-8 px-6 overflow-x-auto">
               {[
-                { id: 'live', name: 'Live Monitor', count: dashboardData.active_conversations.length },
-                { id: 'violations', name: 'Recent Violations', count: dashboardData.recent_violations.length },
-                { id: 'muted', name: 'Muted Users', count: dashboardData.muted_users.length },
-                { id: 'conversations', name: 'All Conversations', count: dashboardData.active_conversations.length }
+                { id: 'live', name: 'Live Monitor', count: dashboardData?.active_conversations?.length || 0 },
+                { id: 'violations', name: 'Recent Violations', count: dashboardData?.recent_violations?.length || 0 },
+                { id: 'muted', name: 'Muted Users', count: dashboardData?.muted_users?.length || 0 },
+                { id: 'conversations', name: 'All Conversations', count: dashboardData?.active_conversations?.length || 0 },
+                { id: 'all-messages', name: '💬 All Messages & Descriptions', count: allMessagesData ? allMessagesData.messages.length + allMessagesData.milestones.length : null }
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -306,11 +342,16 @@ const ModerationDashboard: React.FC = () => {
                   }`}
                 >
                   {tab.name}
-                  {tab.count > 0 && (
+                  {tab.count !== null && tab.count > 0 && (
                     <span className={`ml-2 py-0.5 px-2 rounded-full text-xs ${
                       selectedTab === tab.id ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-100 text-gray-600'
                     }`}>
                       {tab.count}
+                    </span>
+                  )}
+                  {tab.count === null && selectedTab === tab.id && loadingMessages && (
+                    <span className="ml-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600 inline-block"></div>
                     </span>
                   )}
                 </button>
@@ -485,6 +526,145 @@ const ModerationDashboard: React.FC = () => {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {/* All Messages & Descriptions Tab */}
+            {selectedTab === 'all-messages' && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-gray-900">All Messages & Milestone Descriptions</h3>
+                  {loadingMessages && (
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-600"></div>
+                  )}
+                </div>
+
+                {allMessagesData && (
+                  <>
+                    {/* Messages Section */}
+                    <div>
+                      <h4 className="text-md font-semibold text-gray-800 mb-3">
+                        Chat Messages ({allMessagesData.messages.length})
+                      </h4>
+                      <div className="space-y-3 max-h-96 overflow-y-auto">
+                        {allMessagesData.messages.length === 0 ? (
+                          <p className="text-sm text-gray-500">No messages found</p>
+                        ) : (
+                          allMessagesData.messages.map((message: any) => (
+                            <div key={message.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                              <div className="flex items-start justify-between mb-2">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-sm font-medium text-gray-900">
+                                      {message.sender_name || message.sender_email}
+                                    </span>
+                                    <span className="text-xs text-gray-500">({message.sender_role})</span>
+                                    {message.project_title && (
+                                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+                                        Project: {message.project_title}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-sm text-gray-700 whitespace-pre-wrap">{message.body}</p>
+                                  {message.message_type && message.message_type !== 'text' && (
+                                    <span className="inline-block mt-1 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">
+                                      Type: {message.message_type}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-xs text-gray-500 ml-4">
+                                  {new Date(message.created_at).toLocaleString()}
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Milestone Descriptions Section */}
+                    <div>
+                      <h4 className="text-md font-semibold text-gray-800 mb-3">
+                        Milestone Descriptions ({allMessagesData.milestones.length})
+                      </h4>
+                      <div className="space-y-3 max-h-96 overflow-y-auto">
+                        {allMessagesData.milestones.length === 0 ? (
+                          <p className="text-sm text-gray-500">No milestone descriptions found</p>
+                        ) : (
+                          allMessagesData.milestones.map((milestone: any) => (
+                            <div key={milestone.milestone_id} className="border border-gray-200 rounded-lg p-4 bg-yellow-50">
+                              <div className="flex items-start justify-between mb-2">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-sm font-semibold text-gray-900">
+                                      {milestone.milestone_title}
+                                    </span>
+                                    <span className={`text-xs px-2 py-0.5 rounded ${
+                                      milestone.status === 'approved' || milestone.status === 'released' ? 'bg-green-100 text-green-700' :
+                                      milestone.status === 'submitted' ? 'bg-blue-100 text-blue-700' :
+                                      milestone.status === 'in_progress' ? 'bg-yellow-100 text-yellow-700' :
+                                      'bg-gray-100 text-gray-700'
+                                    }`}>
+                                      {milestone.status}
+                                    </span>
+                                    {milestone.project_title && (
+                                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+                                        Project: {milestone.project_title}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-xs text-gray-600 mb-1">
+                                    Freelancer: {milestone.freelancer_name || milestone.freelancer_email || 'N/A'} • 
+                                    Client: {milestone.client_name || milestone.client_email || 'N/A'}
+                                  </div>
+                                  <p className="text-sm text-gray-800 whitespace-pre-wrap bg-white p-2 rounded border border-gray-200">
+                                    {milestone.description}
+                                  </p>
+                                </div>
+                                <div className="text-xs text-gray-500 ml-4">
+                                  Updated: {new Date(milestone.updated_at).toLocaleString()}
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {loadingMessages && (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                    <span className="ml-3 text-sm text-gray-600">Loading messages and descriptions...</span>
+                  </div>
+                )}
+
+                {messagesError && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <p className="text-sm text-red-800">{messagesError}</p>
+                    <button
+                      onClick={() => {
+                        setMessagesError(null);
+                        const userData = localStorage.getItem('user');
+                        if (userData) {
+                          const user = JSON.parse(userData);
+                          fetch(`/api/admin/all-messages?userId=${user.id}&limit=200`)
+                            .then(res => res.json())
+                            .then(data => setAllMessagesData(data))
+                            .catch(err => setMessagesError('Failed to load messages'));
+                        }
+                      }}
+                      className="mt-2 text-sm text-red-600 hover:text-red-800 underline"
+                    >
+                      Retry
+                    </button>
+                  </div>
+                )}
+
+                {!allMessagesData && !loadingMessages && !messagesError && (
+                  <p className="text-sm text-gray-500">Click the tab to load all messages and descriptions</p>
+                )}
               </div>
             )}
           </div>

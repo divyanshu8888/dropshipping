@@ -43,8 +43,213 @@ import {
   Globe,
   MapPin,
   Lock,
-  Trash2
+  Trash2,
+  Info
 } from 'lucide-react';
+
+// Milestone definitions from template
+const MILESTONE_DEFINITIONS: Record<string, string> = {
+  'Discovery & Specification': 'Scope finalization, success metrics, timelines, wireframe/plan, and requirements documentation',
+  'Foundations & Architecture': 'Architecture setup, design system, base components, core flows, and initial infrastructure',
+  'Feature Pack 1': 'First major feature set with demo, testing, and client acceptance',
+  'Feature Pack 2': 'Additional features/modules, integration testing, and refinement',
+  'Handover & Launch': 'Final QA, documentation, deployment, knowledge transfer, and 7-14 days warranty support'
+};
+
+// Predefined milestone titles from template10k
+const PREDEFINED_MILESTONE_TITLES = [
+  'Discovery & Specification',
+  'Foundations & Architecture',
+  'Feature Pack 1',
+  'Feature Pack 2',
+  'Handover & Launch'
+];
+
+// Helper function to filter budget information from descriptions
+const filterBudgetInfo = (text: string): string => {
+  if (!text) return '';
+  return text
+    .replace(/\b(budget|amount|price|cost|fee|charge|payment|invoice|rate|hourly|per hour|quotation|quote|estimate|pricing|pay|paid|compensation|remuneration|salary|wage)\s*:?\s*(\$?\d+(\.\d{1,2})?)\b/gi, '')
+    .replace(/\b(budget|amount|price|cost|fee|charge|payment|invoice|quotation|quote|estimate|pricing|pay|paid|compensation|remuneration|salary|wage)\s*(\d+)\b/gi, '')
+    .replace(/\b(\$?\d+(\.\d{1,2})?)\s*(dollar|dollars|usd|eur|gbp|inr|rupee|rupees)\b/gi, '')
+    .replace(/\b(\$?\d+(\.\d{1,2})?)\s*(budget|amount|price|cost|fee|charge|payment|invoice)\b/gi, '')
+    .replace(/\$/g, '') // Remove ALL dollar signs first - most aggressive
+    .replace(/\$\s*[\d\s\.\-_,a-zA-Z]+|\$\s*$/g, '') // Remove obfuscated dollar amounts like "$ 5.7.8.9", "$ 5 7 8 9", "$ 5-7-8-9", "$ five", "$ "
+    .replace(/\$\d+(\.\d{1,2})?/g, '')
+    .replace(/\b\d+[\s.\-_,]+\d+[\s.\-_,]+\d+[\s.\-_,]+\d+/g, '') // Remove obfuscated numbers like "5.7.8.9", "5 7 8 9", "5-7-8-9"
+    .replace(/\$\s*(zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion)[\s\d]*/gi, '') // Remove "$ five 2 3 4"
+    .replace(/\b(zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion)\s+[\d\s]+/gi, '') // Remove "five 2 3 4"
+    .replace(/\b[\d\s]+(zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion)\b/gi, '') // Remove "2 3 4 five"
+    .replace(/\b(budget|amount|price|cost|fee|charge|invoice|rate|payment|pay|paid)\s+(zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion)\b/gi, '') // Remove "budget five thousand"
+    .replace(/\b\d{3,}\s*(dollar|dollars|usd|eur|gbp|inr|rupee|rupees)\b/gi, '')
+    .replace(/\b(budget|amount|price|cost|fee|charge|payment|invoice|rate|quotation|quote|estimate|pricing|pay|paid|compensation|remuneration|salary|wage)\b/gi, '') // Remove standalone budget-related words
+    .replace(/\b[IVXLCDM]{3,}\b/gi, '') // Remove Roman numerals
+    .trim()
+    .replace(/\s+/g, ' ')
+    .replace(/,\s*$/, '') // Remove trailing comma if left after filtering
+    .trim();
+};
+
+// Helper function to detect restricted words (for client-side warnings)
+const detectRestrictedWords = (text: string): { hasRestricted: boolean; detectedWords: string[] } => {
+  if (!text) return { hasRestricted: false, detectedWords: [] };
+  
+  const restrictedPatterns = [
+    { pattern: /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i, word: 'Email addresses' },
+    { pattern: /(https?:\/\/|www\.)\S+/i, word: 'External links' },
+    { pattern: /(?:\+?\d[\s-]?){8,}\d/i, word: 'Phone numbers' },
+    { pattern: /\b(whats?app|telegram|discord|signal|wechat|instagram|facebook|snapchat|skype|linkedin|twitter|x\.com|tiktok|youtube|reddit)\b/i, word: 'Social media platforms' },
+    { pattern: /\b(upi|gpay|googlepay|phonepe|paytm|iban|swift|ifsc|routing|account\s?no|bank\s?account|venmo|cashapp|paypal|stripe|square|zelle|wise|revolut|monzo|n26)\b/i, word: 'Payment methods' },
+    { pattern: /\b(budget|amount|price|cost|fee|charge|payment|invoice|rate|hourly|per hour|quotation|quote|estimate|pricing|pay|paid|compensation|remuneration|salary|wage)\s*:?\s*(\$?\d+(\.\d{1,2})?)\b/i, word: 'Budget/Pricing information' },
+    { pattern: /\b(budget|amount|price|cost|fee|charge|payment|invoice|rate|quotation|quote|estimate|pricing|pay|paid|compensation|remuneration|salary|wage)\b/i, word: 'Budget/Pricing terms' },
+    { pattern: /\$/g, word: 'Dollar signs' }, // Catch ANY dollar sign - most aggressive
+    { pattern: /\$\s*[\d\s\.\-_,a-zA-Z]+|\$\s*$/g, word: 'Dollar amounts' }, // Catches "$ 5.7.8.9", "$ 5 7 8 9", "$5789", "$ 5-7-8-9", "$ five", "$ "
+    { pattern: /\$\d+(\.\d{1,2})?/g, word: 'Dollar amounts' },
+    { pattern: /\b\d+[\s.\-_,]+\d+[\s.\-_,]+\d+[\s.\-_,]+\d+/g, word: 'Obfuscated numbers' }, // Catches "5.7.8.9", "5 7 8 9", "5-7-8-9"
+    { pattern: /\b\d{3,}\s*(dollar|dollars|usd|eur|gbp|inr|rupee|rupees)\b/gi, word: 'Currency amounts' },
+    { pattern: /\$\s*(zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion)[\s\d]*/i, word: 'Number words with dollar signs' },
+    { pattern: /\b(zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion)\s+[\d\s]+|\b[\d\s]+(zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion)\b/i, word: 'Mixed number words and digits' },
+    { pattern: /\b(budget|amount|price|cost|fee|charge|invoice|rate|payment|pay|paid)\s+(zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion)\b/i, word: 'Budget terms with number words' },
+    { pattern: /\b[IVXLCDM]{3,}\b/i, word: 'Roman numerals' },
+    { pattern: /\b(contact\s*me|reach\s*out|call\s*me|text\s*me|dm\s*me|message\s*me|email\s*me)\b/i, word: 'Contact solicitation' },
+    { pattern: /\b(bitcoin|btc|ethereum|eth|crypto|wallet|blockchain)\b/i, word: 'Cryptocurrency' },
+    { pattern: /@[a-z0-9_.]{3,}/i, word: 'Social handles' }
+  ];
+  
+  const detectedWords: string[] = [];
+  for (const { pattern, word } of restrictedPatterns) {
+    if (pattern.test(text)) {
+      detectedWords.push(word);
+    }
+  }
+  
+  return {
+    hasRestricted: detectedWords.length > 0,
+    detectedWords: Array.from(new Set(detectedWords)) // Remove duplicates
+  };
+};
+
+// Calendar Picker Component
+const CalendarPicker = ({ selectedDate, onSelectDate, onClose }: { selectedDate: string; onSelectDate: (date: string) => void; onClose: () => void }) => {
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  const getDaysInMonth = (date: Date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = firstDay.getDay();
+
+    const days = [];
+    // Add empty cells for days before the first day of the month
+    for (let i = 0; i < startingDayOfWeek; i++) {
+      days.push(null);
+    }
+    // Add all days of the month
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push(new Date(year, month, i));
+    }
+    return days;
+  };
+
+  const handleDateClick = (date: Date | null) => {
+    if (date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      onSelectDate(`${year}-${month}-${day}`);
+    }
+  };
+
+  const isSelected = (date: Date | null) => {
+    if (!date || !selectedDate) return false;
+    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    return dateStr === selectedDate;
+  };
+
+  const isToday = (date: Date | null) => {
+    if (!date) return false;
+    return date.toDateString() === today.toDateString();
+  };
+
+  const isPast = (date: Date | null) => {
+    if (!date) return false;
+    return date < today;
+  };
+
+  const prevMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
+  };
+
+  const nextMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
+  };
+
+  const days = getDaysInMonth(currentMonth);
+
+  return (
+    <div className="w-64">
+      <div className="flex items-center justify-between mb-4">
+        <button
+          onClick={prevMonth}
+          className="p-1 hover:bg-white/10 rounded transition-colors"
+        >
+          <ChevronUp className="w-4 h-4 text-white/70 rotate-[-90deg]" />
+        </button>
+        <h3 className="text-sm font-semibold text-white">
+          {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+        </h3>
+        <button
+          onClick={nextMonth}
+          className="p-1 hover:bg-white/10 rounded transition-colors"
+        >
+          <ChevronUp className="w-4 h-4 text-white/70 rotate-90" />
+        </button>
+      </div>
+      <div className="grid grid-cols-7 gap-1 mb-2">
+        {dayNames.map(day => (
+          <div key={day} className="text-xs text-white/50 text-center py-1 font-medium">
+            {day}
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 gap-1">
+        {days.map((date, idx) => (
+          <button
+            key={idx}
+            onClick={() => handleDateClick(date)}
+            disabled={!date || isPast(date)}
+            className={`
+              aspect-square text-xs rounded transition-colors
+              ${!date ? '' : 
+                isSelected(date) ? 'bg-cyan-500 text-white font-semibold' :
+                isToday(date) ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-semibold' :
+                isPast(date) ? 'text-white/20 cursor-not-allowed' :
+                'text-white/70 hover:bg-white/10 hover:text-white'
+              }
+            `}
+          >
+            {date ? date.getDate() : ''}
+          </button>
+        ))}
+      </div>
+      <div className="mt-4 pt-4 border-t border-white/10 flex justify-end">
+        <button
+          onClick={onClose}
+          className="px-3 py-1.5 text-xs bg-white/10 hover:bg-white/20 rounded text-white transition-colors"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  );
+};
 
 interface Project {
   id: string;
@@ -68,6 +273,7 @@ interface Message {
   timestamp: string;
   attachments?: string[];
   read?: boolean;
+  messageType?: string;
 }
 
 interface Deliverable {
@@ -127,9 +333,13 @@ export default function FreelancerDashboard() {
   const [totalReviews, setTotalReviews] = useState<number | null>(null);
   const [profileName, setProfileName] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [editingMilestone, setEditingMilestone] = useState<{ id: string; field: 'description' | 'dueDate' } | null>(null);
+  const [milestoneEditForm, setMilestoneEditForm] = useState({ description: '', dueDate: '' });
   const [projectFilter, setProjectFilter] = useState<string>('all');
   const [projectSearch, setProjectSearch] = useState('');
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
+  const [expandedMilestones, setExpandedMilestones] = useState<Set<string>>(new Set());
   
   const displayName = useMemo(() => {
     return profileName || user?.name || user?.email?.split('@')[0] || '';
@@ -282,7 +492,7 @@ export default function FreelancerDashboard() {
     }
   }, [selectedProject?.messages]);
 
-  // Auto-refresh all dashboard data every 5 seconds
+  // Auto-refresh all dashboard data every 30 seconds
   useEffect(() => {
     if (authLoading || !authVerified || !user?.id || !isFreelancer()) return;
 
@@ -305,8 +515,8 @@ export default function FreelancerDashboard() {
       }
     };
 
-    // Refresh every 5 seconds
-    const interval = setInterval(refreshAllData, 5000);
+    // Refresh every 30 seconds
+    const interval = setInterval(refreshAllData, 30000);
 
     return () => clearInterval(interval);
   }, [user?.id, authLoading, authVerified, isFreelancer, selectedProject?.id]);
@@ -691,6 +901,30 @@ export default function FreelancerDashboard() {
     }
   };
 
+  const updateMilestoneStatus = async (milestoneId: string, status: string, projectId: string) => {
+    if (!user?.id) return;
+
+    try {
+      const response = await fetch(`/api/freelancers/milestones/${milestoneId}?freelancerId=${user.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
+
+      if (response.ok) {
+        const statusLabel = status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+        addToast(`Milestone ${statusLabel}`, 'success');
+        await fetchFreelancerData();
+      } else {
+        const error = await response.json();
+        addToast(error?.error || 'Failed to update milestone status', 'error');
+      }
+    } catch (error) {
+      console.error('Error updating milestone status:', error);
+      addToast('Failed to update milestone status', 'error');
+    }
+  };
+
   const updateProjectStatus = async (projectId: string, status: string) => {
     try {
       const response = await fetch('/api/freelancers/update-project-status', {
@@ -810,6 +1044,68 @@ export default function FreelancerDashboard() {
       addToast('Failed to upload file', 'error');
     } finally {
       setUploadingFile(false);
+    }
+  };
+
+  const updateMilestoneDescription = async (milestoneId: string, description: string, projectId: string) => {
+    setSaving(true);
+    try {
+      const response = await fetch(`/api/freelancers/milestones/${milestoneId}/description?freelancerId=${user?.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description })
+      });
+
+      if (response.ok) {
+        addToast('Milestone description updated successfully', 'success');
+        setEditingMilestone(null);
+        setMilestoneEditForm({ description: '', dueDate: '' });
+        await fetchFreelancerData();
+      } else {
+        const error = await response.json();
+        const errorMsg = error?.error || 'Failed to update description';
+        // If description requires refinement, keep the editing state open
+        if (error?.requiresRefinement) {
+          addToast(errorMsg, 'error');
+          // Keep editing state open so freelancer can refine the description
+        } else if (error?.adminNotified) {
+          addToast(`${errorMsg} This attempt has been reported to administrators.`, 'error');
+        } else {
+          addToast(errorMsg, 'error');
+        }
+      }
+    } catch (error) {
+      console.error('Error updating milestone description:', error);
+      addToast('Failed to update description', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const updateMilestoneDueDate = async (milestoneId: string, dueDate: string, projectId: string) => {
+    setSaving(true);
+    try {
+      // Use the same endpoint but with dueDate instead of status
+      const response = await fetch(`/api/freelancers/milestones/${milestoneId}?freelancerId=${user?.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dueDate: dueDate || null })
+      });
+
+      if (response.ok) {
+        addToast('Milestone due date updated successfully', 'success');
+        setEditingMilestone(null);
+        setMilestoneEditForm({ description: '', dueDate: '' });
+        await fetchFreelancerData();
+      } else {
+        const error = await response.json();
+        addToast(error?.error || 'Failed to update due date', 'error');
+      }
+    } catch (error) {
+      console.error('Error updating milestone due date:', error);
+      addToast('Failed to update due date', 'error');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -1462,35 +1758,39 @@ export default function FreelancerDashboard() {
                     {filteredProjects.map(project => {
                       const isExpanded = expandedProjects.has(project.id);
                       return (
-                        <div key={project.id} className="p-6 hover:bg-white/5 transition-colors">
-                          <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                              <div className="flex items-center space-x-3 mb-2">
+                        <div key={project.id} className="rounded-xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-6 hover:border-white/20 transition-all shadow-lg">
+                          <div className="flex items-start justify-between mb-4">
+                        <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-3 mb-3">
                                 <h3 
                                   onClick={() => {
                                     setSelectedProject(project);
                                     setActiveTab('inbox');
                                   }}
-                                  className="text-lg font-semibold cursor-pointer hover:text-cyan-400 transition-colors"
+                                  className="text-lg font-semibold text-white cursor-pointer hover:text-cyan-400 transition-colors"
                                 >
                                   {project.title}
                                 </h3>
-                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(project.status)}`}>
+                                <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold border whitespace-nowrap ${getStatusColor(project.status)}`}>
                               {getStatusIcon(project.status)}
                               <span className="ml-1 capitalize">{formatStatusLabel(project.status)}</span>
                             </span>
                           </div>
-                              <p className="text-white/70 text-sm mb-3">{project.description || 'No description provided'}</p>
-                              <div className="flex flex-wrap items-center gap-4 text-sm text-white/60">
-                                <span className="flex items-center space-x-1">
-                                  <User className="w-4 h-4" />
-                                  <span>{project.client}</span>
-                                </span>
+                              <p className="text-white/60 text-sm mb-4 leading-relaxed line-clamp-2">{project.description || 'No description provided'}</p>
+                              <div className="flex flex-wrap items-center gap-4 text-xs">
+                                <div className="flex items-center gap-1.5 text-white/70">
+                                  <div className="w-5 h-5 rounded bg-cyan-500/10 flex items-center justify-center">
+                                    <User className="w-3 h-3 text-cyan-400" />
+                                  </div>
+                                  <span className="font-medium">{project.client}</span>
+                                </div>
                                 {project.deadline && (
-                                  <span className="flex items-center space-x-1">
-                                    <Calendar className="w-4 h-4" />
+                                  <div className="flex items-center gap-1.5 text-white/70">
+                                    <div className="w-5 h-5 rounded bg-blue-500/10 flex items-center justify-center">
+                                      <Calendar className="w-3 h-3 text-blue-400" />
+                                    </div>
                                     <span>{formatDate(project.deadline)}</span>
-                                  </span>
+                                  </div>
                                 )}
                           </div>
                           {project.status === 'in_progress' && (
@@ -1625,10 +1925,24 @@ export default function FreelancerDashboard() {
                               </h4>
                               <button
                                 onClick={() => {
+                                  // Calculate next milestone number
+                                  const existingMilestones = milestones[project.id] || [];
+                                  const nextMilestoneNumber = existingMilestones.length + 1;
+                                  
+                                  // Get predefined title for this milestone number
+                                  const predefinedTitle = nextMilestoneNumber <= PREDEFINED_MILESTONE_TITLES.length 
+                                    ? PREDEFINED_MILESTONE_TITLES[nextMilestoneNumber - 1]
+                                    : '';
+                                  
+                                  // Get default description from template
+                                  const defaultDescription = predefinedTitle && MILESTONE_DEFINITIONS[predefinedTitle]
+                                    ? MILESTONE_DEFINITIONS[predefinedTitle]
+                                    : '';
+                                  
                                   setMilestoneForm({
                                     projectId: project.id,
-                                    title: '',
-                                    description: '',
+                                    title: predefinedTitle,
+                                    description: defaultDescription,
                                     amount: '',
                                     dueDate: ''
                                   });
@@ -1643,33 +1957,233 @@ export default function FreelancerDashboard() {
 
                             {milestones[project.id] && milestones[project.id].length > 0 ? (
                               <div className="space-y-3">
-                                {milestones[project.id].map(milestone => (
-                                  <div key={milestone.id} className="p-4 rounded-lg border border-white/10 bg-white/5">
-                                    <div className="flex items-start justify-between mb-2">
-                                      <div className="flex-1">
-                                        <h5 className="font-medium text-sm text-white">{milestone.title}</h5>
-                                        {milestone.description && (
-                                          <p className="text-xs text-white/70 mt-1">{milestone.description}</p>
-                                        )}
+                                {milestones[project.id].map((milestone, index) => {
+                                  const milestoneNumber = index + 1;
+                                  const isExpanded = expandedMilestones.has(milestone.id);
+                                  return (
+                                  <div key={milestone.id} className="rounded-xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] hover:border-white/20 transition-all">
+                                    {/* Header Row - Clickable */}
+                                    <div 
+                                      onClick={() => {
+                                        setExpandedMilestones(prev => {
+                                          const next = new Set(prev);
+                                          if (next.has(milestone.id)) {
+                                            next.delete(milestone.id);
+                                          } else {
+                                            next.add(milestone.id);
+                                          }
+                                          return next;
+                                        });
+                                      }}
+                                      className="flex items-start justify-between p-5 cursor-pointer"
+                                    >
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-1.5">
+                                          <span className="text-xs font-bold text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/30">
+                                            #{milestoneNumber}
+                                          </span>
+                                          <h5 className="font-semibold text-sm text-white truncate">{milestone.title}</h5>
+                                          {MILESTONE_DEFINITIONS[milestone.title] && (
+                                            <div className="group relative">
+                                              <button
+                                                type="button"
+                                                className="w-4 h-4 rounded-full bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/30 flex items-center justify-center transition-colors"
+                                                title={MILESTONE_DEFINITIONS[milestone.title]}
+                                              >
+                                                <Info className="w-2.5 h-2.5 text-cyan-400" />
+                                              </button>
+                                              <div className="absolute left-0 top-6 z-50 hidden group-hover:block w-64 p-3 bg-[#1a1d24] border border-white/20 rounded-lg shadow-xl">
+                                                <p className="text-xs text-white/90 font-medium mb-1.5">{milestone.title}</p>
+                                                <p className="text-xs text-white/70 leading-relaxed">{MILESTONE_DEFINITIONS[milestone.title]}</p>
                                       </div>
-                                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                                        milestone.status === 'approved' ? 'bg-emerald-500/15 text-emerald-300' :
-                                        milestone.status === 'submitted' ? 'bg-cyan-500/15 text-cyan-300' :
-                                        milestone.status === 'in_progress' ? 'bg-blue-500/15 text-blue-300' :
-                                        'bg-gray-500/15 text-gray-300'
-                                      }`}>
-                                        {milestone.status.replace('_', ' ')}
+                                            </div>
+                                          )}
+                                          <span className={`px-2.5 py-1 rounded-md text-xs font-semibold whitespace-nowrap ${
+                                            milestone.status === 'approved' || milestone.status === 'released' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
+                                            milestone.status === 'submitted' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' :
+                                            milestone.status === 'in_progress' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' :
+                                            milestone.status === 'funded' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' :
+                                            milestone.status === 'rejected' ? 'bg-red-500/20 text-red-300 border border-red-500/30' :
+                                            'bg-gray-500/20 text-gray-300 border border-gray-500/30'
+                                          }`}>
+                                            {milestone.status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                                       </span>
                                     </div>
-                                    <div className="flex items-center justify-between mt-3 mb-3">
-                                      <div className="flex items-center space-x-4 text-xs text-white/50">
+                                      </div>
+                                      <ChevronDown className={`w-4 h-4 text-white/50 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                    </div>
+                                    
+                                    {/* Expanded Content */}
+                                    {isExpanded && (
+                                      <div className="px-5 pb-5 space-y-4">
+                                        <div className="flex items-start gap-2">
+                                          {editingMilestone?.id === milestone.id && editingMilestone.field === 'description' ? (
+                                            <div className="flex-1">
+                                              <textarea
+                                                value={milestoneEditForm.description}
+                                                onChange={(e) => setMilestoneEditForm({ ...milestoneEditForm, description: e.target.value })}
+                                                className={`w-full px-2 py-1 text-xs border rounded text-white resize-none ${
+                                                  detectRestrictedWords(milestoneEditForm.description).hasRestricted
+                                                    ? 'border-red-500/50 bg-red-500/5'
+                                                    : 'border-white/20 bg-black/30'
+                                                }`}
+                                                rows={3}
+                                                placeholder="Describe what this milestone includes..."
+                                              />
+                                              {detectRestrictedWords(milestoneEditForm.description).hasRestricted && (
+                                                <div className="mt-2 p-2 bg-red-500/10 border border-red-500/30 rounded text-xs">
+                                                  <div className="flex items-start gap-2">
+                                                    <AlertCircle className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
+                                                    <div className="flex-1">
+                                                      <p className="text-red-300 font-semibold mb-1">⚠️ Restricted Content Detected</p>
+                                                      <p className="text-red-200/80 mb-1.5">
+                                                        Your description contains restricted content: <span className="font-medium">{detectRestrictedWords(milestoneEditForm.description).detectedWords.join(', ')}</span>
+                                                      </p>
+                                                      <p className="text-red-200/70 text-[10px] leading-relaxed mb-1.5">
+                                                        <strong className="font-semibold">This description cannot be saved.</strong> Please refine your description by removing all contact details, payment information, and budget-related terms before saving.
+                                                      </p>
+                                                      <p className="text-red-200/60 text-[10px] leading-relaxed italic">
+                                                        Note: Any attempt to save restricted content will be blocked and automatically reported to administrators.
+                                                      </p>
+                                                    </div>
+                                                  </div>
+                                                </div>
+                                              )}
+                                              <div className="flex items-center gap-2 mt-2">
+                                                <button
+                                                  onClick={() => {
+                                                    const restricted = detectRestrictedWords(milestoneEditForm.description);
+                                                    if (restricted.hasRestricted) {
+                                                      addToast(
+                                                        `Cannot save: Your description contains restricted content (${restricted.detectedWords.join(', ')}). Please refine your description by removing all restricted content before saving. This attempt will be reported to administrators.`,
+                                                        'error'
+                                                      );
+                                                      return;
+                                                    }
+                                                    updateMilestoneDescription(milestone.id, milestoneEditForm.description, project.id);
+                                                  }}
+                                                  disabled={saving || detectRestrictedWords(milestoneEditForm.description).hasRestricted}
+                                                  className={`px-2 py-1 text-xs rounded transition-colors ${
+                                                    detectRestrictedWords(milestoneEditForm.description).hasRestricted
+                                                      ? 'bg-red-500/20 text-red-300 cursor-not-allowed opacity-50'
+                                                      : 'bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300'
+                                                  }`}
+                                                >
+                                                  Save
+                                                </button>
+                                                <button
+                                                  onClick={() => {
+                                                    setEditingMilestone(null);
+                                                    setMilestoneEditForm({ description: '', dueDate: '' });
+                                                  }}
+                                                  className="px-2 py-1 text-xs bg-white/10 hover:bg-white/20 text-white/70 rounded transition-colors"
+                                                >
+                                                  Cancel
+                                                </button>
+                                              </div>
+                                            </div>
+                                          ) : (
+                                            <>
+                                              {milestone.description && (() => {
+                                                // Remove budget information from description
+                                                const cleanDescription = filterBudgetInfo(milestone.description);
+                                                return cleanDescription ? (
+                                                  <p className="text-xs text-white/60 leading-relaxed flex-1">{cleanDescription}</p>
+                                                ) : null;
+                                              })()}
+                                              <button
+                                                onClick={() => {
+                                                  setEditingMilestone({ id: milestone.id, field: 'description' });
+                                                  // Filter budget info when loading description for editing
+                                                  const cleanedDescription = filterBudgetInfo(milestone.description || '');
+                                                  setMilestoneEditForm({ description: cleanedDescription, dueDate: milestone.due_date || '' });
+                                                }}
+                                                className="p-1 hover:bg-white/10 rounded transition-colors"
+                                                title="Edit description"
+                                              >
+                                                <Edit3 className="w-3 h-3 text-white/50 hover:text-white/80" />
+                                              </button>
+                                            </>
+                                          )}
+                                        </div>
+
+                                        {/* Info Row */}
+                                        <div className="flex items-center gap-4 pt-4 border-t border-white/5">
+                                          {milestone.amount_cents && (
+                                            <div className="flex items-center gap-1.5 text-xs">
+                                              <div className="w-5 h-5 rounded bg-emerald-500/10 flex items-center justify-center">
+                                                <DollarSign className="w-3 h-3 text-emerald-400" />
+                                              </div>
+                                              <span className="text-white/80 font-medium">{formatCurrency(milestone.amount_cents / 100)}</span>
+                                            </div>
+                                          )}
+                                          <div className="flex items-center gap-1.5 text-xs">
+                                            {editingMilestone?.id === milestone.id && editingMilestone.field === 'dueDate' ? (
+                                              <div className="flex items-center gap-2">
+                                                <input
+                                                  type="date"
+                                                  value={milestoneEditForm.dueDate ? new Date(milestoneEditForm.dueDate).toISOString().split('T')[0] : ''}
+                                                  onChange={(e) => setMilestoneEditForm({ ...milestoneEditForm, dueDate: e.target.value })}
+                                                  className="px-2 py-1 text-xs border border-white/20 bg-black/30 rounded text-white"
+                                                />
+                                                <button
+                                                  onClick={() => {
+                                                    updateMilestoneDueDate(milestone.id, milestoneEditForm.dueDate, project.id);
+                                                  }}
+                                                  disabled={saving}
+                                                  className="px-2 py-1 text-xs bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 rounded transition-colors"
+                                                >
+                                                  Save
+                                                </button>
+                                                <button
+                                                  onClick={() => {
+                                                    setEditingMilestone(null);
+                                                    setMilestoneEditForm({ description: '', dueDate: '' });
+                                                  }}
+                                                  className="px-2 py-1 text-xs bg-white/10 hover:bg-white/20 text-white/70 rounded transition-colors"
+                                                >
+                                                  Cancel
+                                                </button>
+                                              </div>
+                                            ) : (
+                                              <>
                                         {milestone.due_date && (
-                                          <span className="flex items-center space-x-1">
-                                            <Calendar className="w-3 h-3" />
-                                            <span>{formatDate(milestone.due_date)}</span>
-                                          </span>
+                                                  <>
+                                                    <div className="w-5 h-5 rounded bg-blue-500/10 flex items-center justify-center">
+                                                      <Calendar className="w-3 h-3 text-blue-400" />
+                                                    </div>
+                                                    <span className="text-white/60">{formatDate(milestone.due_date)}</span>
+                                                  </>
+                                                )}
+                                                <button
+                                                  onClick={() => {
+                                                    setEditingMilestone({ id: milestone.id, field: 'dueDate' });
+                                                    setMilestoneEditForm({ description: milestone.description || '', dueDate: milestone.due_date || '' });
+                                                  }}
+                                                  className="p-1 hover:bg-white/10 rounded transition-colors ml-1"
+                                                  title="Edit due date"
+                                                >
+                                                  <Edit3 className="w-3 h-3 text-white/50 hover:text-white/80" />
+                                                </button>
+                                              </>
                                         )}
                                       </div>
+                                        </div>
+
+                                        {/* Actions Row */}
+                                        <div className="flex items-center justify-between gap-3">
+                                          <div className="flex items-center gap-2 flex-1">
+                                        {milestone.status === 'funded' && (
+                                          <button
+                                            onClick={() => updateMilestoneStatus(milestone.id, 'in_progress', project.id)}
+                                            className="px-4 py-2 text-xs font-medium rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white transition-all flex items-center gap-1.5 shadow-lg shadow-blue-600/20"
+                                          >
+                                            <Play className="w-3.5 h-3.5" />
+                                            Start Work
+                                          </button>
+                                        )}
+                                        {/* File upload always available - freelancers can always add new files */}
+                                        <>
                                       <input
                                         type="file"
                                         id={`milestone-file-${milestone.id}`}
@@ -1679,40 +2193,72 @@ export default function FreelancerDashboard() {
                                           if (file) {
                                             uploadMilestoneFile(milestone.id, project.id, file);
                                           }
-                                          // Reset input to allow re-uploading same file
                                           e.target.value = '';
                                         }}
                                         accept=".zip,.rar,.7z,.tar,.gz,.pdf,.doc,.docx,.txt,.js,.ts,.jsx,.tsx,.py,.java,.cpp,.c,.html,.css,.json,.xml"
                                       />
                                       <label
                                         htmlFor={`milestone-file-${milestone.id}`}
-                                        className="px-3 py-1.5 text-xs rounded-lg border border-purple-400/30 bg-purple-400/10 text-purple-200 hover:bg-purple-400/15 transition-colors cursor-pointer flex items-center space-x-1"
+                                            className="px-4 py-2 text-xs font-medium rounded-lg border border-purple-400/40 bg-purple-400/10 text-purple-200 hover:bg-purple-400/20 transition-all cursor-pointer flex items-center gap-1.5"
                                       >
-                                        <Upload className="w-3 h-3" />
-                                        <span>Upload Code/File</span>
+                                            <Upload className="w-3.5 h-3.5" />
+                                            Upload File
                                       </label>
+                                        </>
+                                        {milestone.status === 'in_progress' && (
+                                          <button
+                                            onClick={() => updateMilestoneStatus(milestone.id, 'submitted', project.id)}
+                                            className="px-4 py-2 text-xs font-medium rounded-lg bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 text-white transition-all flex items-center gap-1.5 shadow-lg shadow-green-600/20"
+                                          >
+                                            <CheckCircle className="w-3.5 h-3.5" />
+                                            Submit for Review
+                                          </button>
+                                        )}
+                                        {milestone.status === 'rejected' && (
+                                          <button
+                                            onClick={() => updateMilestoneStatus(milestone.id, 'in_progress', project.id)}
+                                            className="px-4 py-2 text-xs font-medium rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white transition-all flex items-center gap-1.5 shadow-lg shadow-blue-600/20"
+                                          >
+                                            <Edit3 className="w-3.5 h-3.5" />
+                                            Resubmit
+                                          </button>
+                                        )}
+                                        {(milestone.status === 'submitted' || milestone.status === 'approved' || milestone.status === 'released') && (
+                                          <span className="text-xs text-white/50 italic">
+                                            {milestone.status === 'submitted' && 'Awaiting client approval'}
+                                            {milestone.status === 'approved' && 'Approved - funds releasing'}
+                                            {milestone.status === 'released' && 'Payment released'}
+                                          </span>
+                                        )}
+                                          </div>
                                     </div>
                                     
                                     {/* Files under milestone */}
                                     {milestone.deliverables && milestone.deliverables.length > 0 && (
-                                      <div className="mt-3 pt-3 border-t border-white/10">
-                                        <h6 className="text-xs font-medium text-white/70 mb-2 flex items-center space-x-1">
-                                          <Upload className="w-3 h-3" />
-                                          <span>Files ({milestone.deliverables.length})</span>
+                                          <div className="mt-4 pt-4 border-t border-white/10">
+                                            <h6 className="text-xs font-semibold text-white/80 mb-3 flex items-center gap-1.5">
+                                              <Upload className="w-3.5 h-3.5 text-cyan-400" />
+                                              <span>Deliverables ({milestone.deliverables.length})</span>
                                         </h6>
                                         <div className="space-y-2">
                                           {milestone.deliverables.map(deliverable => (
-                                            <div key={deliverable.id} className="flex items-center justify-between p-2 rounded border border-white/10 bg-black/30">
-                                              <div className="flex items-center space-x-2 flex-1 min-w-0">
+                                                <div key={deliverable.id} className="flex items-center justify-between p-3 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition-colors">
+                                                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                                                      deliverable.type === 'code' ? 'bg-emerald-500/10' : 'bg-cyan-500/10'
+                                                    }`}>
                                                 {deliverable.type === 'code' ? (
-                                                  <Code className="w-3 h-3 text-emerald-300 flex-shrink-0" />
+                                                        <Code className="w-4 h-4 text-emerald-300" />
                                                 ) : (
-                                                  <FileText className="w-3 h-3 text-cyan-300 flex-shrink-0" />
+                                                        <FileText className="w-4 h-4 text-cyan-300" />
                                                 )}
-                                                <span className="text-xs font-medium truncate">{deliverable.name}</span>
-                                                <span className="text-xs text-white/40">{formatDate(deliverable.uploadedAt)}</span>
                                               </div>
-                                              <div className="flex items-center space-x-2 ml-2">
+                                                    <div className="flex-1 min-w-0">
+                                                      <p className="text-xs font-medium text-white truncate">{deliverable.name}</p>
+                                                      <p className="text-xs text-white/50 mt-0.5">{formatDate(deliverable.uploadedAt)}</p>
+                                                    </div>
+                                                  </div>
+                                                  <div className="flex items-center gap-2 ml-3">
                                                 <a
                                                   href={deliverable.url}
                                                   target="_blank"
@@ -1722,6 +2268,8 @@ export default function FreelancerDashboard() {
                                                   <Download className="w-3 h-3" />
                                                   <span>Download</span>
                                                 </a>
+                                                    {/* Hide delete button if payment is released for this milestone */}
+                                                    {milestone.status !== 'released' && milestone.status !== 'approved' && (
                                                 <button
                                                   onClick={() => deleteDeliverable(deliverable.id, project.id)}
                                                   className="text-red-300 hover:text-red-200 text-xs flex items-center space-x-1 transition-colors"
@@ -1729,6 +2277,7 @@ export default function FreelancerDashboard() {
                                                   <X className="w-3 h-3" />
                                                   <span>Delete</span>
                                                 </button>
+                                                    )}
                                               </div>
                                             </div>
                                           ))}
@@ -1736,7 +2285,10 @@ export default function FreelancerDashboard() {
                                       </div>
                                     )}
                                   </div>
-                                ))}
+                                    )}
+                                  </div>
+                                );
+                                })}
                               </div>
                             ) : (
                               <div className="text-center py-6 text-white/50 border border-white/10 rounded-lg bg-white/5">
@@ -1856,27 +2408,42 @@ export default function FreelancerDashboard() {
                     </div>
                     <div className="flex-1 overflow-y-auto p-6 space-y-4 min-h-[400px] max-h-[600px]">
                       {selectedProject.messages && selectedProject.messages.length > 0 ? (
-                        selectedProject.messages.map(message => (
+                        selectedProject.messages.map(message => {
+                          const isMilestoneMessage = message.messageType === 'milestone';
+                          return (
                         <div
                           key={message.id}
                             className={`flex ${message.sender === 'freelancer' ? 'justify-end' : 'justify-start'}`}
                         >
                           <div
                               className={`max-w-[75%] rounded-2xl px-4 py-2.5 ${
-                              message.sender === 'freelancer'
+                                  isMilestoneMessage
+                                    ? 'bg-gradient-to-br from-amber-500/20 to-amber-600/20 text-amber-100 border border-amber-500/40 shadow-lg shadow-amber-500/10'
+                                    : message.sender === 'freelancer'
                                   ? 'bg-gradient-to-br from-cyan-500 to-blue-600 text-white'
                                   : 'bg-white/10 text-white border border-white/20'
                               }`}
                             >
+                                {isMilestoneMessage && (
+                                  <div className="flex items-center gap-1.5 mb-1.5">
+                                    <Target className="w-3.5 h-3.5 text-amber-400" />
+                                    <span className="text-xs font-semibold text-amber-300 uppercase tracking-wide">Milestone Update</span>
+                                  </div>
+                                )}
                               <p className="text-sm leading-relaxed">{message.content}</p>
                               <p className={`text-xs mt-1.5 ${
-                                message.sender === 'freelancer' ? 'text-white/80' : 'text-white/50'
+                                  isMilestoneMessage 
+                                    ? 'text-amber-300/70' 
+                                    : message.sender === 'freelancer' 
+                                    ? 'text-white/80' 
+                                    : 'text-white/50'
                               }`}>
                                 {formatTime(message.timestamp)}
                             </p>
                           </div>
                         </div>
-                        ))
+                          );
+                        })
                       ) : (
                         <div className="text-center py-12 text-white/50">
                           <MessageCircle className="w-12 h-12 text-white/20 mx-auto mb-3" />
@@ -2041,7 +2608,9 @@ export default function FreelancerDashboard() {
                   <select
                     value={availability.timezone}
                     onChange={(e) => {
-                      setAvailability(prev => ({ ...prev, timezone: e.target.value }));
+                      const newState = { ...availability, timezone: e.target.value };
+                      setAvailability(newState);
+                      updateAvailability(newState);
                     }}
                     className="w-full px-3 py-2.5 border border-white/10 bg-black/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-white"
                   >
@@ -2654,15 +3223,20 @@ export default function FreelancerDashboard() {
                 </div>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-white/70 mb-2">Title *</label>
+                    <label className="block text-sm font-medium text-white/70 mb-2">
+                      Title * 
+                      <span className="ml-2 text-xs text-white/50">
+                        (Predefined - Milestone {milestones[milestoneForm.projectId]?.length + 1 || 1} of {PREDEFINED_MILESTONE_TITLES.length})
+                      </span>
+                    </label>
                     <input
                       type="text"
                       value={milestoneForm.title}
-                      onChange={(e) => setMilestoneForm({ ...milestoneForm, title: e.target.value })}
-                      className="w-full px-3 py-2 border border-white/10 bg-black/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-white placeholder:text-white/40"
-                      placeholder="e.g., Initial Setup & Planning"
+                      readOnly
+                      className="w-full px-3 py-2 border border-white/10 bg-white/5 rounded-lg text-white/70 cursor-not-allowed"
                       required
                     />
+                    <p className="text-xs text-white/50 mt-1">Milestone title is predefined and cannot be changed</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-white/70 mb-2">Description</label>
@@ -2675,14 +3249,39 @@ export default function FreelancerDashboard() {
                     />
                     <p className="text-xs text-white/50 mt-1">Note: Cannot include email, phone, or price information</p>
                   </div>
-                  <div>
+                  <div className="relative">
                     <label className="block text-sm font-medium text-white/70 mb-2">Due Date (Optional)</label>
+                    <div className="relative">
                     <input
-                      type="date"
-                      value={milestoneForm.dueDate}
-                      onChange={(e) => setMilestoneForm({ ...milestoneForm, dueDate: e.target.value })}
-                      className="w-full px-3 py-2 border border-white/10 bg-black/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-white"
-                    />
+                        type="text"
+                        value={milestoneForm.dueDate ? new Date(milestoneForm.dueDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''}
+                        onClick={() => setShowCalendar(!showCalendar)}
+                        readOnly
+                        placeholder="dd-mm-yyyy"
+                        className="w-full px-3 py-2 pr-10 border border-white/10 bg-black/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-white placeholder:text-white/40 cursor-pointer"
+                      />
+                      <Calendar 
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/40 pointer-events-none" 
+                      />
+                    </div>
+                    {showCalendar && (
+                      <>
+                        <div 
+                          className="fixed inset-0 z-40" 
+                          onClick={() => setShowCalendar(false)}
+                        />
+                        <div className="absolute z-50 mt-2 bg-[#1a1d24] border border-white/20 rounded-lg shadow-xl p-4">
+                          <CalendarPicker
+                            selectedDate={milestoneForm.dueDate}
+                            onSelectDate={(date: string) => {
+                              setMilestoneForm({ ...milestoneForm, dueDate: date });
+                              setShowCalendar(false);
+                            }}
+                            onClose={() => setShowCalendar(false)}
+                          />
+                        </div>
+                      </>
+                    )}
                   </div>
                   <div className="flex items-center space-x-3 pt-4 border-t border-white/10">
                     <button
@@ -2696,10 +3295,10 @@ export default function FreelancerDashboard() {
                     </button>
                     <button
                       onClick={createMilestone}
-                      disabled={saving || !milestoneForm.title.trim()}
+                      disabled={saving || !milestoneForm.title.trim() || (milestones[milestoneForm.projectId]?.length || 0) >= PREDEFINED_MILESTONE_TITLES.length}
                       className="flex-1 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-lg hover:from-cyan-400 hover:to-blue-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {saving ? 'Creating...' : 'Create Milestone'}
+                      {saving ? 'Creating...' : (milestones[milestoneForm.projectId]?.length || 0) >= PREDEFINED_MILESTONE_TITLES.length ? 'Maximum Milestones Reached' : 'Create Milestone'}
                     </button>
                   </div>
                 </div>

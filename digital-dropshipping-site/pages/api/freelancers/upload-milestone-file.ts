@@ -3,6 +3,7 @@ import { query, queryOne } from 'lib/mysql';
 import formidable from 'formidable';
 import path from 'path';
 import { promises as fs } from 'fs';
+import { guardMessage } from '../../../src/lib/moderation/contactGuard';
 
 export const config = {
   api: {
@@ -58,26 +59,36 @@ export default async function handler(
       return res.status(400).json({ error: 'No file provided' });
     }
 
-    // Validate file name for personal info
+    // Validate file name for confidential information
     const fileName = file.originalFilename || file.newFilename || '';
-    const personalInfoPatterns = [
-      /email|contact|phone|price|cost|invoice|payment/i,
-      /\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/,
-      /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/
-    ];
-
-    for (const pattern of personalInfoPatterns) {
-      if (pattern.test(fileName)) {
-        // Clean up uploaded file
-        try {
-          await fs.unlink(file.filepath);
-        } catch (e) {
-          // Ignore cleanup errors
-        }
-        return res.status(400).json({ 
-          error: 'File name cannot contain personal information (email, contact, price)' 
-        });
+    const guardResult = guardMessage(fileName);
+    
+    if (!guardResult.allowed) {
+      // Clean up uploaded file
+      try {
+        await fs.unlink(file.filepath);
+      } catch (e) {
+        // Ignore cleanup errors
       }
+
+      const isPricingViolation = guardResult.reasons.some(reason => 
+        reason.toLowerCase().includes('payment') || 
+        reason.toLowerCase().includes('bank') ||
+        reason.toLowerCase().includes('price') ||
+        reason.toLowerCase().includes('cost') ||
+        reason.toLowerCase().includes('fee')
+      );
+
+      const errorMessage = isPricingViolation
+        ? 'File name cannot contain payment information. For your security, all payments must be processed through Uniti\'s secure payment system.'
+        : 'File name cannot contain phone numbers, email addresses, external links, or personal contact details.';
+
+      return res.status(400).json({ 
+        error: errorMessage,
+        reasons: guardResult.reasons,
+        detectedContent: guardResult.detectedContent,
+        violationType: isPricingViolation ? 'pricing_payment' : 'contact_info'
+      });
     }
 
     // Verify the milestone belongs to this freelancer's project

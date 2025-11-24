@@ -46,16 +46,28 @@ export default async function handler(
       active: number;
       completed: number;
       pending: number;
-      totalSpent: number;
     }>(
       `SELECT 
         COUNT(*) as total,
         SUM(CASE WHEN status NOT IN ('completed', 'delivered') THEN 1 ELSE 0 END) as active,
         SUM(CASE WHEN status IN ('completed', 'delivered') THEN 1 ELSE 0 END) as completed,
-        SUM(CASE WHEN status IN ('open', 'in_review') THEN 1 ELSE 0 END) as pending,
-        COALESCE(SUM(CASE WHEN status IN ('completed', 'delivered') THEN COALESCE(budget_cents, budget, 0) ELSE 0 END), 0) as totalSpent
+        SUM(CASE WHEN status IN ('open', 'in_review') THEN 1 ELSE 0 END) as pending
       FROM projects
       WHERE client_id = ?`,
+      [clientId]
+    );
+
+    // Calculate total spent from released/approved milestones
+    const totalSpentResult = await queryOne<{
+      totalSpent: number;
+    }>(
+      `SELECT 
+        COALESCE(SUM(m.amount_cents), 0) as totalSpent
+      FROM milestones m
+      INNER JOIN contracts c ON m.contract_id = c.id
+      INNER JOIN projects p ON c.project_id = p.id
+      WHERE p.client_id = ?
+        AND m.status IN ('released', 'approved')`,
       [clientId]
     );
 
@@ -108,7 +120,7 @@ export default async function handler(
         totalProjects: projectStats?.total || 0,
         activeProjects: projectStats?.active || 0,
         completedProjects: projectStats?.completed || 0,
-        totalSpent: projectStats?.totalSpent ? Number(projectStats.totalSpent) / 100 : 0,
+        totalSpent: totalSpentResult?.totalSpent ? Number(totalSpentResult.totalSpent) / 100 : 0,
         pendingProjects: projectStats?.pending || 0,
         totalMessages: messageStats.total,
         unreadMessages: messageStats.unread

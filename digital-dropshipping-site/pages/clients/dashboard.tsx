@@ -1,11 +1,11 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import dynamic from 'next/dynamic';
-const Header = dynamic(() => import('../src/components/Header'));
-import { useAuth } from '../src/contexts/AuthContext';
-import { useToast } from '../src/components/Toast';
+const Header = dynamic(() => import('../../src/components/Header'));
+import { useAuth } from '../../src/contexts/AuthContext';
+import { useToast } from '../../src/components/Toast';
 import {
   Calendar,
   MessageCircle,
@@ -44,7 +44,9 @@ import {
   MapPin,
   Briefcase,
   Users,
-  MessageSquare
+  MessageSquare,
+  Code,
+  Info
 } from 'lucide-react';
 
 interface Project {
@@ -69,8 +71,18 @@ interface Project {
     content: string;
     timestamp: string;
     read: boolean;
+    messageType?: string;
   }>;
 }
+
+// Milestone definitions from template
+const MILESTONE_DEFINITIONS: Record<string, string> = {
+  'Discovery & Specification': 'Scope finalization, success metrics, timelines, wireframe/plan, and requirements documentation',
+  'Foundations & Architecture': 'Architecture setup, design system, base components, core flows, and initial infrastructure',
+  'Feature Pack 1': 'First major feature set with demo, testing, and client acceptance',
+  'Feature Pack 2': 'Additional features/modules, integration testing, and refinement',
+  'Handover & Launch': 'Final QA, documentation, deployment, knowledge transfer, and 7-14 days warranty support'
+};
 
 interface DashboardMetrics {
   totalProjects: number;
@@ -102,6 +114,7 @@ export default function ClientDashboard() {
   const [projectFilter, setProjectFilter] = useState<string>('all');
   const [projectSearch, setProjectSearch] = useState('');
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
+  const [expandedMilestones, setExpandedMilestones] = useState<Set<string>>(new Set());
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
@@ -162,7 +175,7 @@ export default function ClientDashboard() {
     }
   }, [activeTab, projects, selectedProject]);
 
-  // Auto-refresh all dashboard data every 5 seconds
+  // Auto-refresh all dashboard data every 30 seconds
   useEffect(() => {
     if (!user?.id || authLoading || !authVerified) return;
 
@@ -185,8 +198,8 @@ export default function ClientDashboard() {
       }
     };
 
-    // Refresh every 5 seconds
-    const interval = setInterval(refreshAllData, 5000);
+    // Refresh every 30 seconds
+    const interval = setInterval(refreshAllData, 30000);
 
     return () => clearInterval(interval);
   }, [user?.id, authLoading, authVerified, selectedProject?.id]);
@@ -529,20 +542,30 @@ export default function ClientDashboard() {
   };
 
   const updateMilestoneStatus = async (milestoneId: string, status: string, projectId: string) => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      addToast('You must be logged in to update milestones', 'error');
+      return;
+    }
 
     try {
+      console.log('Updating milestone:', { milestoneId, status, projectId, userId: user.id });
+      
       const response = await fetch(`/api/clients/milestones/${milestoneId}?userId=${user.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status })
       });
 
+      const responseData = await response.json().catch(() => ({}));
+
       if (response.ok) {
+        console.log('Milestone updated successfully:', responseData);
         const statusLabel = formatStatusLabel(status);
         addToast(`Milestone status updated to ${statusLabel}`, 'success');
+        
         // Refresh projects data
         await fetchClientData();
+        
         // Update selected project if it's the one being updated
         if (selectedProject && selectedProject.id === projectId) {
           const freshProjects = await fetch(`/api/clients/projects?userId=${user.id}`).then(r => r.json());
@@ -554,12 +577,12 @@ export default function ClientDashboard() {
           }
         }
       } else {
-        const error = await response.json();
-        addToast(error?.error || 'Failed to update milestone status', 'error');
+        console.error('Failed to update milestone:', responseData);
+        addToast(responseData?.error || `Failed to update milestone status: ${response.status} ${response.statusText}`, 'error');
       }
     } catch (error) {
       console.error('Error updating milestone status:', error);
-      addToast('Failed to update milestone status', 'error');
+      addToast(`Failed to update milestone status: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
     }
   };
 
@@ -690,15 +713,6 @@ export default function ClientDashboard() {
     }
   };
 
-  const milestoneStatusOptions = [
-    { value: 'pending', label: 'Pending' },
-    { value: 'funded', label: 'Funded' },
-    { value: 'in_progress', label: 'In Progress' },
-    { value: 'submitted', label: 'Submitted' },
-    { value: 'approved', label: 'Approved' },
-    { value: 'released', label: 'Released' },
-    { value: 'rejected', label: 'Rejected' }
-  ];
 
   return (
     <>
@@ -988,44 +1002,52 @@ export default function ClientDashboard() {
                   {filteredProjects.map((project) => (
                     <div
                       key={project.id}
-                      className="bg-white/5 rounded-lg border border-white/10 p-6 hover:border-white/20 transition"
+                      className="rounded-xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-6 hover:border-white/20 transition-all shadow-lg"
                     >
                       <div className="flex items-start justify-between mb-4">
-                        <div className="flex-1">
-                          <h3 className="text-xl font-semibold mb-2">{project.title}</h3>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-3 mb-2">
+                            <h3 className="text-lg font-semibold text-white">{project.title}</h3>
+                            <span className={`px-2.5 py-1 rounded-md text-xs font-semibold border whitespace-nowrap ${getStatusColor(project.status)}`}>
+                              {formatStatusLabel(project.status)}
+                            </span>
+                          </div>
                           {project.description && (
-                            <p className="text-white/60 mb-3 line-clamp-2">{project.description}</p>
+                            <p className="text-sm text-white/60 mb-4 line-clamp-2 leading-relaxed">{project.description}</p>
                           )}
-                          <div className="flex flex-wrap gap-4 text-sm text-white/60">
+                          <div className="flex flex-wrap items-center gap-4 text-xs">
                             {project.freelancer && (
-                              <span className="flex items-center gap-1">
-                                <User className="w-4 h-4" />
-                                {project.freelancer}
+                              <div className="flex items-center gap-1.5 text-white/70">
+                                <div className="w-5 h-5 rounded bg-cyan-500/10 flex items-center justify-center">
+                                  <User className="w-3 h-3 text-cyan-400" />
+                                </div>
+                                <span className="font-medium">{project.freelancer}</span>
                                 {project.freelancerRating && (
-                                  <span className="flex items-center gap-1 ml-2">
-                                    <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
+                                  <span className="flex items-center gap-1 text-amber-400">
+                                    <Star className="w-3 h-3 fill-amber-400" />
                                     {Number(project.freelancerRating).toFixed(1)}
                                   </span>
                                 )}
-                              </span>
+                              </div>
                             )}
                             {project.budget && (
-                              <span className="flex items-center gap-1">
-                                <DollarSign className="w-4 h-4" />
-                                {project.currency} {project.budget.toLocaleString()}
-                              </span>
+                              <div className="flex items-center gap-1.5 text-white/70">
+                                <div className="w-5 h-5 rounded bg-emerald-500/10 flex items-center justify-center">
+                                  <DollarSign className="w-3 h-3 text-emerald-400" />
+                                </div>
+                                <span className="font-medium">{project.currency} {project.budget.toLocaleString()}</span>
+                              </div>
                             )}
                             {project.deadline && (
-                              <span className="flex items-center gap-1">
-                                <Calendar className="w-4 h-4" />
-                                {new Date(project.deadline).toLocaleDateString()}
-                              </span>
+                              <div className="flex items-center gap-1.5 text-white/70">
+                                <div className="w-5 h-5 rounded bg-blue-500/10 flex items-center justify-center">
+                                  <Calendar className="w-3 h-3 text-blue-400" />
+                                </div>
+                                <span>{new Date(project.deadline).toLocaleDateString()}</span>
+                              </div>
                             )}
                           </div>
                         </div>
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(project.status)}`}>
-                          {formatStatusLabel(project.status)}
-                        </span>
                       </div>
                       {project.progress > 0 && (
                         <div className="mb-4">
@@ -1041,30 +1063,30 @@ export default function ClientDashboard() {
                           </div>
                         </div>
                       )}
-                      <div className="flex gap-2">
+                      <div className="flex items-center gap-2 pt-2 border-t border-white/10">
                         <button
                           onClick={() => {
                             setSelectedProject(project);
                             setActiveTab('messages');
                           }}
-                          className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition flex items-center gap-2"
+                          className="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg transition flex items-center gap-1.5 text-xs font-medium"
                         >
-                          <MessageCircle className="w-4 h-4" />
+                          <MessageCircle className="w-3.5 h-3.5" />
                           Messages ({project.messages.length})
                         </button>
                         {project.milestones.length > 0 && (
                           <button
                             onClick={() => toggleProjectExpanded(project.id)}
-                            className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition flex items-center gap-2"
+                            className="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg transition flex items-center gap-1.5 text-xs font-medium"
                           >
                             {expandedProjects.has(project.id) ? (
                               <>
-                                <ChevronUp className="w-4 h-4" />
+                                <ChevronUp className="w-3.5 h-3.5" />
                                 Hide Milestones
                               </>
                             ) : (
                               <>
-                                <ChevronDown className="w-4 h-4" />
+                                <ChevronDown className="w-3.5 h-3.5" />
                                 View Milestones ({project.milestones.length})
                               </>
                             )}
@@ -1072,57 +1094,182 @@ export default function ClientDashboard() {
                         )}
                       </div>
                       {expandedProjects.has(project.id) && project.milestones.length > 0 && (
-                        <div className="mt-4 pt-4 border-t border-white/10">
-                          <h4 className="font-semibold mb-3">Milestones</h4>
-                          <div className="space-y-2">
-                            {project.milestones.map((milestone) => (
+                        <div className="mt-5 pt-5 border-t border-white/10">
+                          <div className="flex items-center justify-between mb-4">
+                            <h4 className="font-semibold text-base flex items-center gap-2">
+                              <Target className="w-4 h-4 text-cyan-400" />
+                              Milestones ({project.milestones.length})
+                            </h4>
+                          </div>
+                          <div className="space-y-3">
+                            {project.milestones.map((milestone, index) => {
+                              const milestoneNumber = index + 1;
+                              const isExpanded = expandedMilestones.has(milestone.id);
+                              return (
                               <div
                                 key={milestone.id}
-                                className="p-3 bg-white/5 rounded border border-white/10"
+                                className="rounded-xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] hover:border-white/20 transition-all"
                               >
-                                <div className="flex items-center justify-between">
-                                  <div className="flex-1">
-                                    <p className="font-medium">{milestone.title}</p>
-                                    {milestone.description && (
-                                      <p className="text-sm text-white/60">{milestone.description}</p>
-                                    )}
-                                    {milestone.amount_cents && (
-                                      <p className="text-xs text-white/40 mt-1">
-                                        Amount: {project.currency} {(milestone.amount_cents / 100).toLocaleString()}
-                                      </p>
-                                    )}
+                                {/* Header - Clickable */}
+                                <div 
+                                  onClick={() => {
+                                    setExpandedMilestones(prev => {
+                                      const next = new Set(prev);
+                                      if (next.has(milestone.id)) {
+                                        next.delete(milestone.id);
+                                      } else {
+                                        next.add(milestone.id);
+                                      }
+                                      return next;
+                                    });
+                                  }}
+                                  className="flex items-start justify-between p-5 cursor-pointer"
+                                >
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2.5 mb-2">
+                                      <span className="text-xs font-bold text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/30">
+                                        #{milestoneNumber}
+                                      </span>
+                                      <h5 className="font-semibold text-sm text-white">{milestone.title}</h5>
+                                      {MILESTONE_DEFINITIONS[milestone.title] && (
+                                        <div className="group relative">
+                                          <button
+                                            type="button"
+                                            className="w-4 h-4 rounded-full bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/30 flex items-center justify-center transition-colors"
+                                            title={MILESTONE_DEFINITIONS[milestone.title]}
+                                          >
+                                            <Info className="w-2.5 h-2.5 text-cyan-400" />
+                                          </button>
+                                          <div className="absolute left-0 top-6 z-50 hidden group-hover:block w-64 p-3 bg-[#1a1d24] border border-white/20 rounded-lg shadow-xl">
+                                            <p className="text-xs text-white/90 font-medium mb-1.5">{milestone.title}</p>
+                                            <p className="text-xs text-white/70 leading-relaxed">{MILESTONE_DEFINITIONS[milestone.title]}</p>
+                                          </div>
+                                        </div>
+                                      )}
+                                      <span className={`px-2.5 py-1 rounded-md text-xs font-semibold whitespace-nowrap ${
+                                        milestone.status === 'approved' || milestone.status === 'released' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
+                                        milestone.status === 'submitted' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' :
+                                        milestone.status === 'in_progress' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' :
+                                        milestone.status === 'funded' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' :
+                                        milestone.status === 'rejected' ? 'bg-red-500/20 text-red-300 border border-red-500/30' :
+                                        'bg-gray-500/20 text-gray-300 border border-gray-500/30'
+                                      }`}>
+                                        {milestone.status.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                                      </span>
+                                    </div>
                                   </div>
-                                  <div className="flex items-center gap-3">
-                                    <select
-                                      value={milestone.status}
-                                      onChange={(e) => {
-                                        if (e.target.value !== milestone.status) {
-                                          updateMilestoneStatus(milestone.id, e.target.value, project.id);
-                                        }
-                                      }}
-                                      className="px-3 py-1.5 bg-[#1a1d24] border border-white/10 rounded-lg text-xs font-medium text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 hover:bg-white/10 transition cursor-pointer appearance-none"
-                                      style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3E%3Cpath stroke=\'%23ffffff\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M6 8l4 4 4-4\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.5rem center', backgroundSize: '1.2em 1.2em', paddingRight: '2rem' }}
+                                  <ChevronDown className={`w-4 h-4 text-white/50 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                </div>
+                                
+                                {/* Expanded Content */}
+                                {isExpanded && (
+                                  <div className="px-5 pb-5 space-y-4">
+                                    {milestone.description && (
+                                      <p className="text-xs text-white/60 leading-relaxed">{milestone.description}</p>
+                                    )}
+                                    {milestone.amount_cents && Number(milestone.amount_cents) > 0 && (
+                                      <div className="flex items-center gap-1.5 text-xs">
+                                        <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
+                                        <span className="text-white/80 font-medium">{project.currency} {(Number(milestone.amount_cents) / 100).toLocaleString()}</span>
+                                      </div>
+                                    )}
+
+                                    {/* Actions */}
+                                    <div className="flex items-center justify-end gap-2 pt-4 border-t border-white/5">
+                                  {milestone.status === 'pending' && (
+                                    <button
+                                      onClick={() => updateMilestoneStatus(milestone.id, 'funded', project.id)}
+                                      className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white text-xs font-medium rounded-lg transition-all flex items-center gap-1.5 shadow-lg shadow-blue-600/20"
                                     >
-                                      {milestoneStatusOptions.map((option) => (
-                                        <option key={option.value} value={option.value} className="bg-[#1a1d24] text-white">
-                                          {option.label}
-                                        </option>
-                                      ))}
-                                    </select>
-                                    {milestone.status === 'submitted' && (
+                                      <DollarSign className="w-3.5 h-3.5" />
+                                      Fund Milestone
+                                    </button>
+                                  )}
+                                  {milestone.status === 'submitted' && (
+                                    <>
                                       <button
                                         onClick={() => updateMilestoneStatus(milestone.id, 'approved', project.id)}
-                                        className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs rounded-lg transition flex items-center gap-1.5 shadow-lg shadow-green-600/20"
-                                        title="Quick Approve"
+                                        className="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 text-white text-xs font-medium rounded-lg transition-all flex items-center gap-1.5 shadow-lg shadow-green-600/20"
                                       >
                                         <CheckCircle className="w-3.5 h-3.5" />
                                         Approve
                                       </button>
+                                      <button
+                                        onClick={() => updateMilestoneStatus(milestone.id, 'rejected', project.id)}
+                                        className="px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white text-xs font-medium rounded-lg transition-all flex items-center gap-1.5 shadow-lg shadow-red-600/20"
+                                      >
+                                        <X className="w-3.5 h-3.5" />
+                                        Reject
+                                      </button>
+                                    </>
+                                  )}
+                                  {(milestone.status === 'funded' || milestone.status === 'in_progress') && (
+                                    <div className="text-xs text-white/50 italic">
+                                      Waiting for freelancer to submit work
+                                    </div>
+                                  )}
+                                  {(milestone.status === 'approved' || milestone.status === 'released') && (
+                                    <div className="text-xs text-emerald-400 font-medium flex items-center gap-1.5">
+                                      <CheckCircle className="w-3.5 h-3.5" />
+                                      {milestone.status === 'approved' ? 'Approved - funds releasing' : 'Payment released'}
+                                    </div>
+                                  )}
+                                  {milestone.status === 'rejected' && (
+                                    <div className="text-xs text-red-400 font-medium flex items-center gap-1.5">
+                                      <X className="w-3.5 h-3.5" />
+                                      Rejected - awaiting resubmission
+                                    </div>
+                                  )}
+                                    </div>
+
+                                    {/* Deliverables Section */}
+                                    {milestone.deliverables && milestone.deliverables.length > 0 && (
+                                      <div className="mt-4 pt-4 border-t border-white/10">
+                                        <h6 className="text-xs font-semibold text-white/80 mb-3 flex items-center gap-1.5">
+                                          <Upload className="w-3.5 h-3.5 text-cyan-400" />
+                                          <span>Deliverables ({milestone.deliverables.length})</span>
+                                        </h6>
+                                        <div className="space-y-2">
+                                          {milestone.deliverables.map((deliverable: any) => (
+                                            <div key={deliverable.id} className="flex items-center justify-between p-3 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition-colors">
+                                              <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                                                  deliverable.type === 'code' ? 'bg-emerald-500/10' : 'bg-cyan-500/10'
+                                                }`}>
+                                                  {deliverable.type === 'code' ? (
+                                                    <Code className="w-4 h-4 text-emerald-300" />
+                                                  ) : (
+                                                    <FileText className="w-4 h-4 text-cyan-300" />
+                                                  )}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                  <p className="text-xs font-medium text-white truncate">{deliverable.name}</p>
+                                                  <p className="text-xs text-white/50 mt-0.5">
+                                                    {deliverable.uploadedAt ? new Date(deliverable.uploadedAt).toLocaleDateString() : ''}
+                                                  </p>
+                                                </div>
+                                              </div>
+                                              <div className="flex items-center gap-2 ml-3">
+                                                <a
+                                                  href={deliverable.url}
+                                                  target="_blank"
+                                                  rel="noopener noreferrer"
+                                                  className="text-cyan-300 hover:text-cyan-200 text-xs flex items-center space-x-1 transition-colors"
+                                                >
+                                                  <Download className="w-3 h-3" />
+                                                  <span>Download</span>
+                                                </a>
+                                              </div>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
                                     )}
                                   </div>
-                                </div>
+                                )}
                               </div>
-                            ))}
+                            );
+                            })}
                           </div>
                         </div>
                       )}
@@ -1223,25 +1370,36 @@ export default function ClientDashboard() {
                     <div className="flex-1 overflow-y-auto p-4 space-y-4">
                       {selectedProject.messages.length > 0 ? (
                         <>
-                          {selectedProject.messages.map((message) => (
-                            <div
-                              key={message.id}
-                              className={`flex ${message.sender === 'client' ? 'justify-end' : 'justify-start'}`}
-                            >
+                          {selectedProject.messages.map((message) => {
+                            const isMilestoneMessage = message.messageType === 'milestone';
+                            return (
                               <div
-                                className={`max-w-[70%] p-3 rounded-lg ${
-                                  message.sender === 'client'
-                                    ? 'bg-cyan-500/20 border border-cyan-500/30'
-                                    : 'bg-white/10 border border-white/20'
-                                }`}
+                                key={message.id}
+                                className={`flex ${message.sender === 'client' ? 'justify-end' : 'justify-start'}`}
                               >
-                                <p className="text-sm">{message.content}</p>
-                                <p className="text-xs text-white/40 mt-1">
-                                  {new Date(message.timestamp).toLocaleString()}
-                                </p>
+                                <div
+                                  className={`max-w-[70%] p-3 rounded-lg ${
+                                    isMilestoneMessage
+                                      ? 'bg-amber-500/20 border border-amber-500/40 shadow-lg shadow-amber-500/10'
+                                      : message.sender === 'client'
+                                      ? 'bg-cyan-500/20 border border-cyan-500/30'
+                                      : 'bg-white/10 border border-white/20'
+                                  }`}
+                                >
+                                  {isMilestoneMessage && (
+                                    <div className="flex items-center gap-1.5 mb-1.5">
+                                      <Target className="w-3.5 h-3.5 text-amber-400" />
+                                      <span className="text-xs font-semibold text-amber-300 uppercase tracking-wide">Milestone Update</span>
+                                    </div>
+                                  )}
+                                  <p className={`text-sm ${isMilestoneMessage ? 'text-amber-100' : ''}`}>{message.content}</p>
+                                  <p className={`text-xs mt-1 ${isMilestoneMessage ? 'text-amber-300/70' : 'text-white/40'}`}>
+                                    {new Date(message.timestamp).toLocaleString()}
+                                  </p>
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                           <div ref={messagesEndRef} />
                         </>
                       ) : (
