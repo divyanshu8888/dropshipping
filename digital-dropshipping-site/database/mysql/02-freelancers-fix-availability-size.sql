@@ -16,3 +16,4 @@ ALTER TABLE freelancers
 ALTER TABLE freelancers_recovery
   MODIFY COLUMN availability VARCHAR(255) DEFAULT 'available';
 
+

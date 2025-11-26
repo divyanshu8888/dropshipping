@@ -7,46 +7,47 @@ const Header = dynamic(() => import('../../src/components/Header'));
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useToast } from '../../src/components/Toast';
 import {
+  AlertCircle,
+  Award,
+  BarChart3,
   Calendar,
-  MessageCircle,
-  Upload,
   CheckCircle,
-  Clock,
-  User,
-  FileText,
-  Settings,
-  Bell,
-  TrendingUp,
-  DollarSign,
-  Star,
-  Eye,
-  Send,
-  Paperclip,
-  Download,
-  Play,
-  Pause,
-  Edit3,
-  Save,
-  X,
-  Filter,
-  Search,
   ChevronDown,
   ChevronUp,
-  AlertCircle,
-  Zap,
-  Award,
-  Target,
-  BarChart3,
-  Activity,
-  Plus,
-  MoreVertical,
+  Clock,
+  Code,
+  Download,
+  Edit3,
+  Eye,
+  FileText,
+  Filter,
   Globe,
+  Info,
   MapPin,
+  MessageCircle,
+  MessageSquare,
+  MoreVertical,
+  Pause,
+  Paperclip,
+  Play,
+  Plus,
+  RefreshCw,
+  Save,
+  Search,
+  Send,
+  Settings,
+  Star,
+  Target,
+  TrendingUp,
+  Upload,
+  User,
+  Zap,
+  DollarSign,
+  Activity,
   Briefcase,
   Users,
-  MessageSquare,
-  Code,
-  Info
+  ShieldCheck,
+  X
 } from 'lucide-react';
 
 interface Project {
@@ -127,7 +128,500 @@ export default function ClientDashboard() {
     deadline: '',
     freelancerId: ''
   });
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [commandProjectFilter, setCommandProjectFilter] = useState('all');
+  const [commandVendorFilter, setCommandVendorFilter] = useState('all');
+  const [commandTimeFilter, setCommandTimeFilter] = useState('30d');
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const milestoneSnapshotRef = useRef<Map<string, string>>(new Map());
+  const displayCurrency = 'USD';
+  const formatCurrency = (value: number, currency = displayCurrency) =>
+    `${currency} ${value.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    })}`;
+
+  const cn = (...classes: Array<string | undefined | null | false>) =>
+    classes.filter(Boolean).join(' ');
+
+  type PillTone = 'neutral' | 'ok' | 'warn' | 'danger';
+
+  const Pill = ({ children, tone = 'neutral' }: { children: React.ReactNode; tone?: PillTone }) => (
+    <span
+      className={cn(
+        'inline-flex items-center justify-center rounded-full px-2.5 h-6 text-[11px] font-semibold tracking-[0.04em]',
+        tone === 'ok' && 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-400/30',
+        tone === 'warn' && 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-400/30',
+        tone === 'danger' && 'bg-rose-500/15 text-rose-300 ring-1 ring-rose-400/30',
+        tone === 'neutral' && 'bg-white/10 text-white/80 ring-1 ring-white/10'
+      )}
+    >
+      {children}
+    </span>
+  );
+
+  const cardRadius = 'rounded-[28px]';
+  const cardShadow = 'shadow-[0_20px_45px_rgba(5,5,15,0.55)]';
+
+
+  const handleMilestoneNotifications = (projectsData: Project[]) => {
+    const nextSnapshot = new Map<string, string>();
+
+    projectsData.forEach((project) => {
+      project.milestones.forEach((milestone) => {
+        const key = `${project.id}-${milestone.id}`;
+        const currentStatus = milestone.status || 'pending';
+        const previousStatus = milestoneSnapshotRef.current.get(key);
+        nextSnapshot.set(key, currentStatus);
+
+      });
+    });
+
+    milestoneSnapshotRef.current = nextSnapshot;
+  };
+
+  const handleReplyProject = (projectId: string) => {
+    const project = projects.find((p) => p.id === projectId);
+    if (!project) return;
+    setSelectedProject(project);
+    setActiveTab('messages');
+  };
+
+  
+  const heroProject =
+    projects.find((p) => p.status === 'in_progress') ||
+    projects.find((p) => p.status === 'open') ||
+    projects[0] ||
+    null;
+
+  const approvalsCount = useMemo(
+    () =>
+      projects.reduce(
+        (count, project) =>
+          count + project.milestones.filter((milestone) => ['submitted', 'pending'].includes(milestone.status || 'pending')).length,
+        0
+      ),
+    [projects]
+  );
+
+  const budgetStats = useMemo(() => {
+    const totals = projects.reduce(
+      (acc, project) => {
+        const projectBudget = project.budget ?? 0;
+        const spentEstimate = projectBudget * (project.progress / 100);
+        return {
+          budget: acc.budget + projectBudget,
+          spent: acc.spent + spentEstimate
+        };
+      },
+      { budget: 0, spent: 0 }
+    );
+    const remaining = Math.max(totals.budget - totals.spent, 0);
+    const ratio = totals.budget > 0 ? remaining / totals.budget : 1;
+    return {
+      remaining,
+      ratio,
+      warning: ratio < 0.2 && totals.budget > 0
+    };
+  }, [projects]);
+
+  const upcomingDeadlinesCount = useMemo(() => {
+    const now = Date.now();
+    const inSevenDays = now + 7 * 24 * 60 * 60 * 1000;
+    return projects.filter((project) => {
+      if (!project.deadline) return false;
+      const deadline = new Date(project.deadline).getTime();
+      return deadline >= now && deadline <= inSevenDays;
+    }).length;
+  }, [projects]);
+
+  const focusToolbarOptions = ['Milestones', 'Files', 'Invoices', 'Team', 'Scope'];
+  const heroBurn = heroProject ? Math.min((heroProject.budget ?? 0) * (heroProject.progress / 100), heroProject.budget ?? 0) : 0;
+  const heroPlan = heroProject?.budget ?? 0;
+  const heroDaysLeft = heroProject?.deadline
+    ? Math.max(
+        0,
+        Math.ceil((new Date(heroProject.deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+      )
+    : null;
+  const heroScopeChange = heroProject ? Math.max(heroProject.milestones.length - 4, 0) : 0;
+  const heroNextMilestone = heroProject?.milestones.find(
+    (milestone) => ['pending', 'submitted'].includes(milestone.status || 'pending')
+  );
+  const nextActionLabel = heroNextMilestone ? `Approve ${heroNextMilestone.title}` : 'Plan next milestone';
+  const heroAcceptedMilestones = heroProject
+    ? heroProject.milestones.filter((m) =>
+        ['approved', 'completed', 'released'].includes(m.status || '')
+      ).length
+    : 0;
+  const heroTotalMilestones = Math.max(heroProject?.milestones.length ?? 1, 1);
+  const heroProgressFraction = heroProject
+    ? Math.min(100, Math.round((heroAcceptedMilestones / heroTotalMilestones) * 100))
+    : 0;
+  const heroHealth = heroProject
+    ? heroProject.progress >= 70
+      ? 'On track'
+      : 'At risk'
+    : 'Awaiting kickoff';
+  const heroRemainingBudget = Math.max(heroPlan - heroBurn, 0);
+  const heroLastUpdatedLabel = lastUpdated ? `Updated ${getRelativeTime(lastUpdated)} ago` : null;
+  const heroSubmittedMilestone = heroProject?.milestones.find((milestone) => milestone.status === 'submitted');
+  const heroPendingMilestone = heroProject?.milestones.find((milestone) => milestone.status === 'pending');
+  const heroHealthTone: PillTone =
+    heroHealth === 'On track' ? 'ok' : heroHealth === 'At risk' ? 'warn' : 'neutral';
+  const focusPrimaryAction = heroProject
+    ? heroSubmittedMilestone
+      ? {
+          label: `Approve ${heroSubmittedMilestone.title}`,
+          onClick: () =>
+            updateMilestoneStatus(heroSubmittedMilestone.id, 'approved', heroProject.id)
+        }
+      : heroPendingMilestone
+        ? {
+            label: 'Fund next milestone',
+            onClick: () =>
+              updateMilestoneStatus(heroPendingMilestone.id, 'funded', heroProject.id)
+          }
+      : {
+          label: 'Open project workspace',
+          onClick: () => setActiveTab('projects')
+        }
+    : null;
+  const focusSecondaryActions = heroProject
+    ? heroSubmittedMilestone
+      ? [
+          {
+            label: 'Request changes',
+            onClick: () =>
+              updateMilestoneStatus(heroSubmittedMilestone.id, 'rejected', heroProject.id)
+          },
+          { label: 'More ▾', onClick: () => setActiveTab('projects') }
+        ]
+      : [{ label: 'More ▾', onClick: () => setActiveTab('projects') }]
+    : [];
+
+  const fundedAmount = Math.min(heroBurn, heroPlan);
+  const committedAmount = Math.max(heroPlan - heroBurn - heroRemainingBudget, 0);
+  const stackedTotal = heroPlan > 0 ? heroPlan : 1;
+  const stackedSegments = [
+    { label: 'Funded', value: fundedAmount, color: 'from-cyan-400 to-blue-500' },
+    { label: 'Committed', value: committedAmount, color: 'from-purple-500 to-pink-500' },
+    { label: 'Remaining', value: heroRemainingBudget, color: 'from-emerald-500 to-cyan-400' }
+  ];
+
+  const stackTooltip = stackedSegments
+    .map((segment) => `${segment.label}: ${formatCurrency(segment.value)}`)
+    .join(' · ');
+
+  const stackedSegmentData = stackedSegments.map((segment, index) => {
+    const prevValue = stackedSegments.slice(0, index).reduce((sum, seg) => sum + seg.value, 0);
+    const widthPct = (segment.value / stackedTotal) * 100;
+    return {
+      ...segment,
+      widthPct,
+      offsetPct: (prevValue / stackedTotal) * 100
+    };
+  });
+
+  type FooterAction = {
+    label: string;
+    onClick: () => void;
+    tone?: 'primary' | 'secondary';
+  };
+
+  type KpiTile = {
+    id: string;
+    title: string;
+    value: string | number;
+    caption: string;
+    hint: string;
+    Icon?: React.ComponentType<{ className?: string }>;
+    iconColor?: string;
+    accent: string;
+    badgeLabel?: string;
+    badgeTone?: PillTone;
+    tooltip?: string;
+    delta?: string;
+    secondaryValue?: string;
+    iconAction?: () => void;
+    footerAction?: FooterAction;
+    onClick?: () => void;
+  };
+
+  const budgetPct = budgetStats.ratio;
+  const budgetTone: PillTone =
+    budgetPct <= 0.1 ? 'danger' : budgetPct <= 0.25 ? 'warn' : 'neutral';
+
+  const budgetAccentMap: Record<PillTone, string> = {
+    neutral: 'from-cyan-500/70 to-blue-500/70',
+    ok: 'from-emerald-500/70 to-cyan-500/70',
+    warn: 'from-amber-500/80 to-orange-500/80',
+    danger: 'from-rose-500/80 to-pink-600/80'
+  };
+
+  const calculateUnread = (list: Project[]) =>
+    list.reduce(
+      (sum, project) =>
+        sum +
+        project.messages.filter((message) => message.sender !== 'client' && !message.read).length,
+      0
+    );
+
+  const hasUrgentDeadline = useMemo(() => {
+    const now = Date.now();
+    const threeDaysMs = 3 * 24 * 60 * 60 * 1000;
+    return projects.some((project) => {
+      if (!project.deadline) return false;
+      const due = new Date(project.deadline).getTime();
+      return due >= now && due <= now + threeDaysMs;
+    });
+  }, [projects]);
+
+  const approvalsBadgeTone: PillTone = approvalsCount > 0 ? 'warn' : 'neutral';
+  const deadlinesBadgeTone: PillTone = hasUrgentDeadline ? 'warn' : 'neutral';
+
+  const budgetBadgeTone: PillTone | undefined =
+    budgetTone === 'warn' ? 'warn' : budgetTone === 'danger' ? 'danger' : undefined;
+
+  const confidenceIndicators = [
+    {
+      label: 'Schedule',
+      reason: heroDaysLeft !== null ? `${heroDaysLeft} days remaining` : 'Date TBD',
+      strength: heroDaysLeft !== null && heroDaysLeft >= 5 ? 'strong' : 'caution'
+    },
+    {
+      label: 'Scope',
+      reason: heroScopeChange > 0 ? `+${heroScopeChange} scope items` : 'Stable',
+      strength: heroScopeChange <= 0 ? 'strong' : 'caution'
+    },
+    {
+      label: 'Budget',
+      reason: budgetTone === 'danger' ? 'Urgent' : budgetTone === 'warn' ? 'Monitor' : 'Healthy',
+      strength: budgetTone === 'danger' ? 'weak' : 'strong'
+    }
+  ];
+
+  const milestoneChecklist = heroProject?.milestones ?? [];
+
+  const pendingMilestones = useMemo(() => {
+    return projects
+      .flatMap((project) =>
+        project.milestones.map((milestone) => ({
+          ...milestone,
+          projectTitle: project.title,
+          projectId: project.id
+        }))
+      )
+      .filter((milestone) => ['submitted', 'pending'].includes(milestone.status || 'pending'))
+      .slice(0, 3);
+  }, [projects]);
+
+  const kpiTiles = useMemo<KpiTile[]>(
+    () => {
+      const deltas = [
+        approvalsCount > 0 ? '+2 since yesterday' : 'What happens here?',
+        `${metrics.unreadMessages} replies waiting`,
+        hasUrgentDeadline ? '+1 due soon' : 'On track'
+      ];
+
+      const goToSection = (section: 'projects' | 'messages' | 'overview') => {
+        setActiveTab(section);
+        if (section === 'messages' && !selectedProject && projects.length > 0) {
+          setSelectedProject(projects[0]);
+        }
+      };
+
+      return [
+      {
+        id: 'approvals',
+          title: 'Approvals waiting for you',
+        value: approvalsCount,
+        caption: 'Milestones & invoices awaiting your sign-off',
+        hint: 'Pending milestone approvals, invoices, and briefs that need your OK',
+        Icon: ShieldCheck,
+        iconColor: 'text-purple-300',
+          onClick: () => goToSection('projects'),
+          iconAction: () => goToSection('projects'),
+          accent: 'from-slate-800/70 to-slate-700/70',
+          badgeLabel: approvalsCount > 0 ? 'ACTION REQUIRED' : undefined,
+          badgeTone: approvalsBadgeTone,
+          delta: deltas[0],
+          secondaryValue: approvalsCount ? 'SLA 24h' : 'Need approvals?'
+      },
+        {
+        id: 'milestones',
+        title: 'Milestones awaiting action',
+        value: `${pendingMilestones.length}`,
+        caption: 'Check & close approvals',
+        hint: 'Submitted/pending milestones waiting on your sign-off',
+        Icon: CheckCircle,
+        iconColor: 'text-emerald-300',
+        onClick: () => goToSection('projects'),
+        iconAction: () => goToSection('projects'),
+        accent: pendingMilestones.length > 0
+          ? 'from-emerald-500/80 to-cyan-400/80'
+          : 'from-slate-500/60 to-slate-400/60',
+        badgeLabel: pendingMilestones.length > 0 ? `${pendingMilestones.length} need review` : 'All clear',
+        badgeTone: pendingMilestones.length > 0 ? 'warn' : 'ok',
+        delta: pendingMilestones.length > 0 ? '+1 submitted' : 'All caught up',
+        secondaryValue: 'Milestone check'
+      },
+      {
+        id: 'deadlines',
+        title: 'Upcoming deadlines',
+        value: `${upcomingDeadlinesCount}`,
+        caption: 'Due in the next 7 days',
+          hint: 'Projects or milestones closing within a week',
+        Icon: Calendar,
+          iconColor: 'text-amber-200',
+          onClick: () => goToSection('projects'),
+          iconAction: () => goToSection('projects'),
+          accent: hasUrgentDeadline
+            ? 'from-amber-500/80 to-orange-500/80'
+            : 'from-emerald-500/70 to-teal-500/70',
+          badgeLabel: hasUrgentDeadline ? '3 DAYS' : undefined,
+          badgeTone: deadlinesBadgeTone,
+          delta: deltas[2],
+          secondaryValue: hasUrgentDeadline ? 'SLA 48h' : 'No alerts'
+        },
+        {
+          id: 'budget',
+          title: 'Budget remaining',
+          value: formatCurrency(budgetStats.remaining),
+          caption: 'Total budget left across active projects',
+          hint: 'Calculated from budgets minus estimated burn across open work',
+          Icon: DollarSign,
+          iconColor: 'text-amber-300',
+          onClick: () => goToSection('overview'),
+          iconAction: () => goToSection('overview'),
+          accent: budgetAccentMap[budgetTone],
+          badgeLabel: budgetTone === 'warn' ? 'LOW' : budgetTone === 'danger' ? 'CRITICAL' : undefined,
+          badgeTone: budgetBadgeTone,
+          tooltip:
+            'Sum of remaining budget across active projects. Alerts at 25% and 10% to give you a head start.',
+          delta: 'SLA 24h',
+          secondaryValue: `${formatCurrency(budgetStats.remaining)} • ${budgetTone === 'danger' ? 'Critical' : 'Watchful'}`,
+          footerAction: {
+            label: 'Add funds',
+            onClick: () => router.push('/billing'),
+            tone: 'primary'
+          }
+        }
+      ];
+    },
+    [
+      approvalsCount,
+      metrics.unreadMessages,
+      projects,
+      upcomingDeadlinesCount,
+      budgetStats.remaining,
+      budgetTone,
+      hasUrgentDeadline,
+      selectedProject,
+      router
+    ]
+  );
+
+  const renderKpiTile = (tile: KpiTile, extraClass = '') => (
+    <button
+      type="button"
+      key={tile.id}
+      title={tile.hint}
+      onClick={tile.onClick}
+      className={cn(
+        'group flex flex-col gap-3 min-h-[140px] p-4 text-left border border-white/10 bg-gradient-to-br transition hover:shadow-[0_20px_45px_rgba(5,5,15,0.6)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400',
+        cardRadius,
+        cardShadow,
+        tile.accent,
+        extraClass
+      )}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[11px] uppercase tracking-[0.35em] text-white/60">{tile.title}</span>
+        <div className="flex items-center gap-2">
+          {tile.tooltip && (
+            <span title={tile.tooltip} className="text-white/60">
+              <Info className="w-4 h-4" aria-hidden />
+            </span>
+          )}
+          {tile.Icon && (tile.iconAction ? (
+            <button
+              type="button"
+              onClick={tile.iconAction}
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-white/70 transition hover:border-white/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+              aria-label={`${tile.title} shortcut`}
+            >
+              <tile.Icon className={cn('w-5 h-5', tile.iconColor)} aria-hidden />
+            </button>
+          ) : (
+            <tile.Icon className={cn('w-5 h-5', tile.iconColor)} aria-hidden />
+          ))}
+        </div>
+      </div>
+      <span className="text-4xl font-semibold text-white">{tile.value}</span>
+      {tile.secondaryValue && (
+        <span className="text-sm uppercase tracking-[0.4em] text-white/60">{tile.secondaryValue}</span>
+      )}
+      {tile.delta && (
+        <span className="text-[10px] text-cyan-300">{tile.delta}</span>
+      )}
+      <span className="text-xs text-white/70">{tile.caption}</span>
+      <p className="text-[10px] text-white/40">{tile.hint}</p>
+      {tile.badgeLabel && <Pill tone={tile.badgeTone}>{tile.badgeLabel}</Pill>}
+      {tile.footerAction && (
+        <button
+          type="button"
+          onClick={tile.footerAction.onClick}
+          className={cn(
+            'mt-2 rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400',
+            tile.footerAction.tone === 'primary'
+              ? 'bg-cyan-500/30 text-cyan-200 border border-cyan-500/50'
+              : 'border border-white/20 text-white/70 hover:border-white/40'
+          )}
+        >
+          {tile.footerAction.label}
+        </button>
+      )}
+    </button>
+  );
+
+  function getRelativeTime(value: Date | null) {
+    if (!value) return null;
+    const diffMinutes = Math.round((Date.now() - value.getTime()) / 1000 / 60);
+    if (diffMinutes < 60) {
+      return `${diffMinutes}m`;
+    }
+    if (diffMinutes < 60 * 24) {
+      return `${Math.round(diffMinutes / 60)}h`;
+    }
+    return `${Math.round(diffMinutes / 60 / 24)}d`;
+  }
+
+  const threadCandidates = useMemo(() => {
+    const threads = projects
+      .map((project) => {
+        const lastMessage = project.messages[project.messages.length - 1];
+        if (!lastMessage) return null;
+        return {
+          projectId: project.id,
+          title: project.title,
+          lastMessage
+        };
+      })
+      .filter(Boolean) as Array<{
+      projectId: string;
+      title: string;
+      lastMessage: Project['messages'][number];
+    }>;
+    return threads
+      .sort(
+        (a, b) =>
+          new Date(b.lastMessage.timestamp).getTime() - new Date(a.lastMessage.timestamp).getTime()
+      )
+      .slice(0, 4);
+  }, [projects]);
+
+
 
   useEffect(() => {
     // Wait for auth to finish loading and verifying before checking user
@@ -159,14 +653,29 @@ export default function ClientDashboard() {
     };
   }, [user, router, isClient, authLoading, authVerified]);
 
-  // Auto-scroll messages to bottom
+  const currentProjectIdRef = useRef<string | null>(null);
+  const lastMessageIdRef = useRef<string | null>(null);
+
+  // Auto-scroll messages to bottom when a new thread or new message appears
   useEffect(() => {
-    if (selectedProject && messagesEndRef.current) {
-      setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
+    if (!selectedProject || !messagesEndRef.current) {
+      return;
     }
-  }, [selectedProject?.messages]);
+
+    if (currentProjectIdRef.current !== selectedProject.id) {
+      currentProjectIdRef.current = selectedProject.id;
+      lastMessageIdRef.current = null;
+    }
+
+    const latestMessageId = selectedProject.messages?.[selectedProject.messages.length - 1]?.id ?? null;
+    const shouldScroll = latestMessageId && latestMessageId !== lastMessageIdRef.current;
+    if (!shouldScroll) return;
+
+    const heroMessage =
+      selectedProject.messages[selectedProject.messages.length - 1];
+    lastMessageIdRef.current = latestMessageId;
+    messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, [selectedProject?.id, selectedProject?.messages.length]);
 
   // Refresh data when switching to messages tab if no project is selected
   useEffect(() => {
@@ -204,6 +713,58 @@ export default function ClientDashboard() {
     return () => clearInterval(interval);
   }, [user?.id, authLoading, authVerified, selectedProject?.id]);
 
+  useEffect(() => {
+    const selectedProjectId = selectedProject?.id;
+    if (activeTab !== 'messages' || !selectedProjectId || !user?.id) {
+      return;
+    }
+
+    const controller = new AbortController();
+    let isActive = true;
+
+    const refreshThread = async () => {
+      try {
+        const response = await fetch(
+          `/api/clients/messages?projectId=${selectedProjectId}&userId=${user.id}`,
+          { signal: controller.signal }
+        );
+        if (!isActive || !response.ok) return;
+        const payload = await response.json();
+        if (!Array.isArray(payload.messages)) return;
+
+        if (!isActive) return;
+
+        setSelectedProject((prev) =>
+          prev && prev.id === selectedProjectId ? { ...prev, messages: payload.messages } : prev
+        );
+        setProjects((prev) => {
+          const next = prev.map((project) =>
+            project.id === selectedProjectId ? { ...project, messages: payload.messages } : project
+          );
+          const unread = calculateUnread(next);
+          setMetrics((prevMetrics) =>
+            prevMetrics.unreadMessages === unread
+              ? prevMetrics
+              : { ...prevMetrics, unreadMessages: unread }
+          );
+          return next;
+        });
+      } catch (err) {
+        if ((err as any)?.name === 'AbortError') return;
+        console.error('Error refreshing message thread:', err);
+      }
+    };
+
+    refreshThread();
+    const threadInterval = setInterval(refreshThread, 5000);
+
+    return () => {
+      isActive = false;
+      controller.abort();
+      clearInterval(threadInterval);
+    };
+  }, [activeTab, selectedProject?.id, user?.id]);
+
   const fetchClientData = async (signal?: AbortSignal) => {
     setError(null);
     try {
@@ -212,27 +773,45 @@ export default function ClientDashboard() {
         fetch(`/api/clients/dashboard-metrics?userId=${user?.id}`, { signal })
       ]);
 
-      // Projects
       const projectsRes = results[0].status === 'fulfilled' ? results[0].value : null;
+      const metricsRes = results[1].status === 'fulfilled' ? results[1].value : null;
+      let unreadFromProjects: number | undefined;
+
       if (projectsRes && projectsRes.ok) {
         const data = await projectsRes.json();
-        setProjects(Array.isArray(data.projects) ? data.projects : []);
+        const projectList = Array.isArray(data.projects) ? data.projects : [];
+        unreadFromProjects = calculateUnread(projectList);
+        setProjects(projectList);
+        handleMilestoneNotifications(projectList);
+        if (!metricsRes || !metricsRes.ok) {
+          setMetrics((prev) =>
+            typeof unreadFromProjects === 'number' && prev.unreadMessages !== unreadFromProjects
+              ? { ...prev, unreadMessages: unreadFromProjects }
+              : prev
+          );
+        }
       } else if (projectsRes && !projectsRes.ok) {
         setProjects([]);
       }
 
-      // Metrics
-      const metricsRes = results[1].status === 'fulfilled' ? results[1].value : null;
       if (metricsRes && metricsRes.ok) {
         const data = await metricsRes.json();
         if (data?.metrics) {
-          setMetrics(data.metrics);
+          setMetrics({
+            ...data.metrics,
+            unreadMessages:
+              typeof unreadFromProjects === 'number'
+                ? unreadFromProjects
+                : data.metrics.unreadMessages ?? metrics.unreadMessages
+          });
         }
       }
     } catch (e: any) {
       if (e?.name === 'AbortError') return;
       console.error('Error fetching client data:', e);
       setError('Unable to load your dashboard right now. Please try again shortly.');
+    } finally {
+      setLastUpdated(new Date());
     }
   };
 
@@ -725,10 +1304,381 @@ export default function ClientDashboard() {
         <Header />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold mb-2">Welcome back, {user?.name || 'Client'}!</h1>
-            <p className="text-white/60">Manage your projects and collaborate with freelancers</p>
+          <div className="max-w-[1200px] mx-auto space-y-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold mb-2">
+                  Welcome back, {user?.name || 'Client'}!
+                </h1>
+                <p className="text-white/60">
+                  Track budgets, approvals, and milestones across all projects—without switching tools.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  onClick={() => {
+                    setActiveTab('projects');
+                    setCreatingProject(true);
+                  }}
+                  className="px-4 py-2 rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 text-sm font-semibold text-slate-900 shadow-lg shadow-cyan-500/40 transition hover:shadow-cyan-500/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+                >
+                  Start a new project
+                </button>
+                <button
+                  onClick={() => setActiveTab('messages')}
+                  className="px-4 py-2 rounded-2xl border border-white/20 text-sm font-semibold text-white/80 transition hover:border-white/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 flex items-center gap-2"
+                >
+                  Review messages
+                  {metrics.unreadMessages > 0 && (
+                    <span className="rounded-full bg-emerald-400/20 px-2 py-0.5 text-[10px] font-semibold tracking-[0.2em] uppercase text-emerald-300">
+                      {metrics.unreadMessages}
+                    </span>
+                  )}
+                </button>
+              </div>
+            </div>
+            <div className="space-y-4">
+              <div className="hidden md:grid md:grid-cols-2 xl:grid-cols-4 gap-4">
+                {kpiTiles.map((tile) => renderKpiTile(tile))}
+              </div>
+              <div className="md:hidden">
+                <div className="flex gap-4 overflow-x-auto pb-2 pr-2">
+                  {kpiTiles.map((tile) => renderKpiTile(tile, 'min-w-[220px] flex-shrink-0'))}
+                </div>
+              </div>
+              <div
+                role="status"
+                aria-live="polite"
+                className="flex items-center justify-between text-xs text-white/50"
+              >
+                <span>{lastUpdated ? `Synced ${lastUpdated.toLocaleTimeString()}` : 'Syncing metrics…'}</span>
+                <span className="flex items-center gap-2">
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-400/40" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-cyan-400" />
+                  </span>
+                  <RefreshCw className="h-3 w-3 text-white/60 animate-spin" aria-hidden />
+                  Auto-refresh every 30s
+                </span>
+              </div>
+            </div>
+
+          {/* Insight Hero */}
+          <div className="relative overflow-hidden rounded-[32px] border border-white/10 bg-gradient-to-br from-[#141a2a] via-[#0b0d15] to-[#050607] shadow-[0_35px_60px_rgba(0,0,0,0.65)] mb-8">
+            <div className="pointer-events-none absolute inset-0 opacity-70">
+              <div className="absolute -top-12 right-4 h-48 w-48 rounded-full bg-cyan-400/20 blur-[120px]" />
+              <div className="absolute bottom-0 left-12 h-32 w-32 rounded-full bg-purple-500/25 blur-[110px]" />
+            </div>
+            <div className="relative p-6 md:p-10 space-y-6">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="space-y-1 max-w-2xl">
+                  <p className="text-xs uppercase tracking-[0.4em] text-white/50">Command Center</p>
+                  <h2 className="text-2xl md:text-3xl font-semibold">Elevate your collaborations</h2>
+                  <p className="text-sm text-white/70">
+                    Track budgets, approvals, and milestones across all projects—without switching tools.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    onClick={() => {
+                      setActiveTab('messages');
+                    }}
+                    className="px-4 py-2 rounded-2xl border border-white/20 text-sm font-semibold text-white/80 transition hover:border-white/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                  >
+                    Open inbox
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                <label className="space-y-1 text-[10px] uppercase tracking-[0.3em] text-white/50">
+                  Project
+                  <select
+                    value={commandProjectFilter}
+                    onChange={(e) => setCommandProjectFilter(e.target.value)}
+                    className="w-full rounded-xl bg-[#0f1117] px-3 py-2 text-sm text-white border border-white/10 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
+                  >
+                    <option value="all">All projects</option>
+                    <option value="design">Website redesign</option>
+                    <option value="mobile">Mobile app</option>
+                    <option value="automation">Automation</option>
+                  </select>
+                </label>
+                <label className="space-y-1 text-[10px] uppercase tracking-[0.3em] text-white/50">
+                  Vendor
+                  <select
+                    value={commandVendorFilter}
+                    onChange={(e) => setCommandVendorFilter(e.target.value)}
+                    className="w-full rounded-xl bg-[#0f1117] px-3 py-2 text-sm text-white border border-white/10 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
+                  >
+                    <option value="all">All vendors</option>
+                    <option value="studio">Studio A</option>
+                    <option value="freelancer">Freelancer B</option>
+                  </select>
+                </label>
+                <label className="space-y-1 text-[10px] uppercase tracking-[0.3em] text-white/50">
+                  Time window
+                  <select
+                    value={commandTimeFilter}
+                    onChange={(e) => setCommandTimeFilter(e.target.value)}
+                    className="w-full rounded-xl bg-[#0f1117] px-3 py-2 text-sm text-white border border-white/10 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
+                  >
+                    <option value="7d">Last 7 days</option>
+                    <option value="30d">Last 30 days</option>
+                    <option value="90d">Last 90 days</option>
+                  </select>
+                </label>
+              </div>
+
+              <div className="grid gap-4 lg:grid-cols-[1.25fr_0.75fr]">
+                <div className="rounded-[28px] border border-white/10 bg-gradient-to-br from-white/10 via-white/5 to-transparent p-6 shadow-[0_25px_55px_rgba(0,0,0,0.45)] backdrop-blur-sm">
+                  <div className="flex items-start justify-between gap-4 flex-wrap">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.35em] text-white/50">Focus project</p>
+                      <p className="text-[10px] text-white/60">
+                        {heroLastUpdatedLabel || 'Updated just now'}
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <Pill tone={heroHealthTone}>{heroHealth}</Pill>
+                      <div className="flex items-center gap-1 text-white/50 text-[10px]">
+                        {confidenceIndicators.map((indicator) => (
+                    <span
+                            key={indicator.label}
+                            title={`${indicator.label}: ${indicator.reason}`}
+                            className={cn(
+                              'text-lg select-none leading-none',
+                              indicator.strength === 'strong'
+                                ? 'text-emerald-300'
+                                : indicator.strength === 'caution'
+                                  ? 'text-amber-300'
+                                  : 'text-rose-300'
+                            )}
+                          >
+                            ●
+                    </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  {heroProject ? (
+                    <>
+                      <div className="space-y-3 mt-3">
+                        <h3 className="text-2xl md:text-3xl font-semibold text-white">{heroProject.title}</h3>
+                        <div className="flex items-center gap-3 text-sm text-white/70 flex-wrap">
+                          <span className="px-2 py-1 rounded-full border border-white/15 text-white/70 text-xs uppercase tracking-[0.2em]">
+                            {formatStatusLabel(heroProject.status)}
+                          </span>
+                          <span className="text-white/50">
+                            {heroProject.freelancer || 'Freelancer pending assignment'}
+                          </span>
+                        </div>
+                        {heroProject.description && (
+                          <p className="text-sm text-white/60 leading-relaxed">{heroProject.description}</p>
+                        )}
+                      </div>
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {focusToolbarOptions.map((option) => (
+                          <button
+                            key={option}
+                            type="button"
+                            className="rounded-full border border-white/15 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-white/70 transition hover:border-white/40"
+                          >
+                            {option}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="mt-4 grid gap-4 lg:grid-cols-[1.1fr_0.5fr]">
+                        <div>
+                          <p className="text-[10px] uppercase tracking-[0.3em] text-white/50">Budget stack</p>
+                          <div
+                            className="mt-2 relative h-3 w-full overflow-hidden rounded-full bg-white/10"
+                            title={stackTooltip}
+                          >
+                            {stackedSegmentData.map((segment) => (
+                              <div
+                                key={segment.label}
+                                className={cn(
+                                  'absolute inset-y-0 rounded-full transition-all duration-500',
+                                  `bg-gradient-to-r ${segment.color}`
+                                )}
+                                style={{
+                                  width: `${Math.max(segment.widthPct, 0)}%`,
+                                  left: `${segment.offsetPct}%`
+                                }}
+                              />
+                            ))}
+                          </div>
+                          <div className="mt-2 flex flex-wrap items-center gap-3 text-[10px] text-white/60">
+                            <span>Funded {formatCurrency(fundedAmount)}</span>
+                            <span>Committed {formatCurrency(committedAmount)}</span>
+                            <span>Remaining {formatCurrency(heroRemainingBudget)}</span>
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-[10px] uppercase tracking-[0.3em] text-white/50">Days left</p>
+                          <p className="text-base font-semibold text-white">
+                            {heroDaysLeft !== null ? `${heroDaysLeft} days` : 'TBD'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-white/60">
+                        <span className="rounded-full border border-white/15 px-3 py-1">
+                          Scope change {heroScopeChange > 0 ? `+${heroScopeChange}` : 'stable'}
+                        </span>
+                        <span className="text-[10px] flex items-center gap-1">
+                          Auto-approves in 3d 4h
+                          <Link
+                            href="/docs/MILESTONE_WORKFLOW"
+                            className="inline-flex items-center justify-center rounded-full p-1 text-cyan-300 hover:text-cyan-200"
+                          >
+                            <Info className="w-3.5 h-3.5" aria-hidden />
+                            <span className="sr-only">View auto-approval policy</span>
+                          </Link>
+                        </span>
+                      </div>
+                      <div
+                        className="mt-4"
+                        title={`${heroAcceptedMilestones} of ${heroTotalMilestones} milestones approved`}
+                      >
+                        <div className="relative h-3 w-full rounded-full bg-white/10">
+                          <div
+                            className="absolute inset-0 rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 transition-all duration-500"
+                            style={{ width: `${heroProgressFraction}%` }}
+                          />
+                          {Array.from({ length: heroTotalMilestones }).map((_, index) => (
+                              <span
+                                key={`tick-${index}`}
+                              className="absolute top-1/2 h-3 w-px -translate-y-1/2 bg-white/20"
+                              style={{ left: `${((index + 1) / heroTotalMilestones) * 100}%` }}
+                              />
+                            ))}
+                          </div>
+                        <p className="mt-2 text-xs text-white/60">
+                          {heroAcceptedMilestones}/{heroTotalMilestones} milestones approved ({heroProgressFraction}
+                          %)
+                        </p>
+                      </div>
+                      {milestoneChecklist.length > 0 && (
+                        <div className="mt-4 space-y-2">
+                          {milestoneChecklist.map((milestone) => {
+                            const isApproved = ['approved', 'released'].includes(milestone.status || '');
+                            const iconColor = isApproved ? 'text-emerald-400' : 'text-white/50';
+                            const dueDate = milestone.due_at
+                              ? new Date(milestone.due_at).toLocaleDateString()
+                              : 'TBD';
+                            const amount =
+                              milestone.amount_cents && Number(milestone.amount_cents) > 0
+                                ? formatCurrency(Number(milestone.amount_cents) / 100)
+                                : null;
+                            return (
+                              <div
+                                key={milestone.id}
+                                className="flex items-center justify-between gap-4 rounded-2xl border border-white/5 bg-white/5 px-4 py-2 text-sm"
+                              >
+                                <div className="min-w-0">
+                                  <p className="font-semibold text-white truncate">{milestone.title}</p>
+                                  <p className="text-[11px] text-white/60">
+                                    {dueDate} {amount ? `· ${amount}` : ''}
+                                  </p>
+                                </div>
+                                <span
+                                  className={`flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full ${
+                                    isApproved
+                                      ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/30'
+                                      : 'bg-white/5 text-white/70 border border-white/10'
+                                  }`}
+                                >
+                                  {isApproved ? (
+                                    <CheckCircle className={`w-3 h-3 ${iconColor}`} />
+                                  ) : (
+                                    <Clock className={`w-3 h-3 ${iconColor}`} />
+                                  )}
+                                  {formatStatusLabel(milestone.status || 'pending')}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                      <div className="mt-5 flex flex-wrap gap-3">
+                        {focusPrimaryAction && (
+                          <button
+                            type="button"
+                            onClick={focusPrimaryAction.onClick}
+                            className="rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-slate-900 shadow-lg shadow-cyan-500/30 transition hover:shadow-cyan-500/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+                          >
+                            {focusPrimaryAction.label}
+                          </button>
+                        )}
+                        {focusSecondaryActions.map((action) => (
+                          <button
+                            key={action.label}
+                            type="button"
+                            onClick={action.onClick}
+                            className="rounded-full border border-white/20 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-white/70 transition hover:border-white/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+                          >
+                            {action.label}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <p className="mt-3 text-sm text-white/60">
+                      Launch your first project to unlock a live pulse on delivery and milestones.
+                    </p>
+                  )}
+                </div>
+                <div className="rounded-[28px] border border-white/10 bg-gradient-to-br from-[#05060a] via-[#151827] to-[#05060a] p-6 shadow-[0_25px_55px_rgba(0,0,0,0.45)] backdrop-blur-sm">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.35em] text-white/50">Milestone Pulse</p>
+                      <p className="text-[10px] text-white/50">Pending approvals & funding</p>
+                    </div>
+                  </div>
+                  <div className="mt-4 space-y-3">
+                    {pendingMilestones.length === 0 ? (
+                      <p className="text-sm text-white/60">
+                        No pending milestones—everything is funded or approved.
+                      </p>
+                    ) : (
+                      <div className="space-y-2 rounded-2xl border border-white/10 bg-white/5 p-3">
+                        <p className="text-xs uppercase tracking-[0.3em] text-white/40">
+                          Milestones needing action
+                        </p>
+                        {pendingMilestones.map((milestone) => (
+                          <div
+                            key={milestone.id}
+                            className="flex items-center justify-between gap-3 text-sm text-white/80"
+                          >
+                            <div className="min-w-0">
+                              <p className="font-semibold text-white truncate">{milestone.title}</p>
+                              <p className="text-[10px] text-white/60">
+                                {milestone.projectTitle} ·{' '}
+                                {milestone.due_at
+                                  ? new Date(milestone.due_at).toLocaleDateString()
+                                  : 'TBD'}
+                              </p>
+                            </div>
+                            <button
+                              onClick={() =>
+                                milestone.status === 'submitted'
+                                  ? updateMilestoneStatus(milestone.id, 'approved', milestone.projectId)
+                                  : updateMilestoneStatus(milestone.id, 'funded', milestone.projectId)
+                              }
+                              className="text-[10px] font-semibold uppercase tracking-[0.3em] rounded-full border border-white/20 px-3 py-1 transition hover:border-white/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+                            >
+                              {milestone.status === 'submitted' ? 'Approve' : 'Fund'}
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+            </div>
           </div>
 
           {/* Tabs */}
@@ -787,35 +1737,35 @@ export default function ClientDashboard() {
                     <span className="text-white/60 text-sm">Total Projects</span>
                     <Briefcase className="w-5 h-5 text-cyan-400" />
                   </div>
-                  <p className="text-3xl font-bold">{metrics.totalProjects}</p>
+                  <p className="text-2xl md:text-3xl font-bold">{metrics.totalProjects}</p>
                 </div>
                 <div className="bg-white/5 rounded-lg border border-white/10 p-6">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-white/60 text-sm">Active Projects</span>
                     <Activity className="w-5 h-5 text-emerald-400" />
                   </div>
-                  <p className="text-3xl font-bold">{metrics.activeProjects}</p>
+                  <p className="text-2xl md:text-3xl font-bold">{metrics.activeProjects}</p>
                 </div>
                 <div className="bg-white/5 rounded-lg border border-white/10 p-6">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-white/60 text-sm">Completed</span>
                     <CheckCircle className="w-5 h-5 text-blue-400" />
                   </div>
-                  <p className="text-3xl font-bold">{metrics.completedProjects}</p>
+                  <p className="text-2xl md:text-3xl font-bold">{metrics.completedProjects}</p>
                 </div>
                 <div className="bg-white/5 rounded-lg border border-white/10 p-6">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-white/60 text-sm">Total Spent</span>
                     <DollarSign className="w-5 h-5 text-amber-400" />
                   </div>
-                  <p className="text-3xl font-bold">${metrics.totalSpent.toLocaleString()}</p>
+                  <p className="text-2xl md:text-3xl font-bold">${metrics.totalSpent.toLocaleString()}</p>
                 </div>
               </div>
 
               {/* Quick Actions */}
-              <div className="bg-white/5 rounded-lg border border-white/10 p-6">
+              <div className="rounded-[28px] border border-white/10 bg-gradient-to-br from-white/5 via-white/0 to-transparent p-6 shadow-xl backdrop-blur-sm">
                 <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <Link
                 href="/freelancers"
                     className="p-4 bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 rounded-lg hover:from-cyan-500/30 hover:to-blue-500/30 transition"
@@ -843,6 +1793,17 @@ export default function ClientDashboard() {
                     <h3 className="font-semibold mb-1">Request Quote</h3>
                     <p className="text-sm text-white/60">Get custom quotes</p>
               </Link>
+                  <button
+                    onClick={() => {
+                      setActiveTab('projects');
+                      setProjectFilter('in_review');
+                    }}
+                    className="p-4 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border border-blue-500/30 rounded-lg hover:from-blue-500/30 hover:to-cyan-500/30 transition text-left"
+                  >
+                    <Target className="w-6 h-6 text-blue-400 mb-2" />
+                    <h3 className="font-semibold mb-1">Approve invoices & milestones</h3>
+                    <p className="text-sm text-white/60">Keep approvals moving</p>
+                  </button>
                 </div>
             </div>
 
@@ -928,9 +1889,26 @@ export default function ClientDashboard() {
                               </div>
                             )}
                           </div>
-                          <span className={`px-3 py-1.5 rounded-full text-xs font-semibold border shrink-0 ${getStatusColor(project.status)}`}>
-                            {formatStatusLabel(project.status)}
+                          {(() => {
+                            const daysLeft =
+                              project.deadline !== null && project.deadline !== undefined
+                                ? Math.max(
+                                    0,
+                                    Math.ceil(
+                                      (new Date(project.deadline).getTime() - Date.now()) /
+                                        (1000 * 60 * 60 * 24)
+                                    )
+                                  )
+                                : null;
+                            const etaLabel = daysLeft !== null ? `${daysLeft}d left` : 'TBD';
+                            return (
+                              <span
+                                className={`px-3 py-1.5 rounded-full text-[10px] font-semibold border shrink-0 ${getStatusColor(project.status)}`}
+                              >
+                                {`${formatStatusLabel(project.status)} • ${project.progress}% • ${etaLabel}`}
                           </span>
+                            );
+                          })()}
                         </div>
                       </div>
                     ))}
@@ -1558,6 +2536,7 @@ export default function ClientDashboard() {
               </div>
             </div>
           )}
+          </div>
         </div>
       </div>
     </>

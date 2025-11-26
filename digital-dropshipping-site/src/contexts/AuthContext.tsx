@@ -1,6 +1,23 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 
+const CLIENT_SESSION_FLAG = 'auth_session_initialized';
+
+const isFreshClientSession = () => {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  const sessionSeen = sessionStorage.getItem(CLIENT_SESSION_FLAG);
+
+  if (!sessionSeen) {
+    sessionStorage.setItem(CLIENT_SESSION_FLAG, 'true');
+    return true;
+  }
+
+  return false;
+};
+
 export interface User {
   id: string;
   email: string;
@@ -50,7 +67,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     const initialize = async () => {
-      const cachedUser = hydrateUser();
+      let cachedUser = hydrateUser();
+      const shouldResetClientSession = isFreshClientSession() && cachedUser?.role === 'CLIENT';
+
+      if (shouldResetClientSession) {
+        localStorage.removeItem('user');
+        cachedUser = null;
+      }
+
       if (active) {
         setUser(cachedUser);
       }

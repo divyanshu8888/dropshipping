@@ -6,11 +6,96 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  if (req.method === 'GET') {
+    return handleGet(req, res);
+  }
+
   if (req.method === 'POST') {
     return handlePost(req, res);
   }
 
   return res.status(405).json({ error: 'Method not allowed' });
+}
+
+async function handleGet(req: NextApiRequest, res: NextApiResponse) {
+  try {
+    const projectId = req.query.projectId || req.body.projectId;
+    const userId = req.query.userId || req.headers['x-user-id'];
+
+    if (!projectId || !userId) {
+      return res.status(400).json({ error: 'Missing projectId or userId' });
+    }
+
+    const client = await queryOne<{ id: number }>(
+      `SELECT id FROM clients WHERE owner_id = ? LIMIT 1`,
+      [Number(userId)]
+    );
+
+    if (!client) {
+      return res.status(404).json({ error: 'Client account not found' });
+    }
+
+    const project = await queryOne<{ id: number; client_id: number }>(
+      `SELECT id, client_id FROM projects WHERE id = ? AND client_id = ? LIMIT 1`,
+      [Number(projectId), client.id]
+    );
+
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    const conversation = await queryOne<{ id: number }>(
+      `SELECT id FROM conversations WHERE project_id = ? LIMIT 1`,
+      [Number(projectId)]
+    );
+
+    if (!conversation) {
+      return res.status(200).json({ success: true, messages: [] });
+    }
+
+    const rows = await query<{
+      id: number;
+      body: string;
+      created_at: string;
+      is_read: 'TRUE' | 'FALSE' | '1' | '0' | 1 | 0;
+      sender_id: number;
+      message_type: string | null;
+    }>(
+      `SELECT id, body, created_at, is_read, sender_id, message_type
+       FROM messages
+       WHERE conversation_id = ?
+       ORDER BY created_at ASC`,
+      [conversation.id]
+    );
+
+    const messages = rows.map((row) => ({
+      id: String(row.id),
+      sender: row.sender_id === Number(userId) ? 'client' : 'freelancer',
+      content: row.body || '',
+      timestamp: new Date(row.created_at).toISOString(),
+      read:
+        String(row.is_read).toUpperCase() === 'TRUE' ||
+        String(row.is_read) === '1',
+      messageType: row.message_type || 'text'
+    }));
+
+    await query(
+      `UPDATE messages
+       SET is_read = 'TRUE'
+       WHERE conversation_id = ?
+         AND sender_id != ?
+         AND is_read != 'TRUE'`,
+      [conversation.id, Number(userId)]
+    );
+
+    return res.status(200).json({ success: true, messages });
+  } catch (error) {
+    console.error('Error fetching client messages:', error);
+    return res.status(500).json({
+      error: 'Failed to load messages',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
 }
 
 async function handlePost(req: NextApiRequest, res: NextApiResponse) {
