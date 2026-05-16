@@ -16,7 +16,7 @@ interface TabData {
 
 export default function EntityDrawer({ open, onClose, entity, entityType }: EntityDrawerProps) {
   const [activeTab, setActiveTab] = useState('summary');
-  const [isEditing, setIsEditing] = useState(false);
+  const [_isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<any>({});
   const [notes, setNotes] = useState('');
   const [history, setHistory] = useState<any[]>([]);

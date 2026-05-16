@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react'
-import { GetServerSideProps } from 'next'
 import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
@@ -256,81 +255,90 @@ export default function ProductsManagement() {
       <div className="min-h-screen bg-bg-base">
         <Header />
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-28">
-          <div className="flex justify-between items-center mb-8">
-            <div>
-              <h1 className="text-3xl font-bold text-white">Products Management</h1>
-              <p className="text-text-soft mt-2">Manage your freelancer services and products</p>
-            </div>
-            <div className="flex space-x-3">
-              <button
-                onClick={() => setShowAddModal(true)}
-                className="px-6 py-3 bg-gradient-to-r from-accent-blue to-accent-cyan text-white rounded-xl font-medium hover:from-blue-600 hover:to-cyan-600 transition-all duration-200 shadow-lg hover:shadow-xl"
-              >
-                Add New Product
-              </button>
+        {/* Hero Header */}
+        <section className="relative overflow-hidden border-b border-white/10 bg-[radial-gradient(120%_150%_at_50%_-20%,rgba(6,182,212,0.15)_0%,rgba(15,15,20,1)_65%)] pt-28 pb-12">
+          <div className="mx-auto max-w-6xl px-6">
+            <div className="flex items-end justify-between gap-6">
+              <div className="space-y-2">
+                <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-white/60">
+                  Products
+                </span>
+                <h1 className="font-display text-3xl text-white">Manage <span className="bg-gradient-to-r from-cyan-300 to-blue-300 bg-clip-text text-transparent">Products</span></h1>
+                <p className="text-sm text-white/60">Manage your freelancer services and products</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setShowAddModal(true)}
+                  className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 px-5 py-2.5 text-sm font-semibold text-slate-900 hover:from-cyan-300 hover:to-blue-400 transition-all shadow-lg"
+                >
+                  + Add New Product
+                </button>
+                <Link href="/admin" className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70 hover:bg-white/10 transition">
+                  ← Back to Dashboard
+                </Link>
+              </div>
             </div>
           </div>
+        </section>
 
-          <div className="bg-bg-surface rounded-2xl border border-white/10 overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="bg-bg-surface rounded-2xl border border-white/10 overflow-hidden shadow-2xl">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-white/5">
                   <tr>
-                    <th className="px-6 py-4 text-left text-sm font-medium text-white">Image</th>
-                    <th className="px-6 py-4 text-left text-sm font-medium text-white">Name</th>
-                    <th className="px-6 py-4 text-left text-sm font-medium text-white">Category</th>
-                    <th className="px-6 py-4 text-left text-sm font-medium text-white">Price</th>
-                    <th className="px-6 py-4 text-left text-sm font-medium text-white">Stock</th>
-                    <th className="px-6 py-4 text-left text-sm font-medium text-white">Status</th>
-                    <th className="px-6 py-4 text-left text-sm font-medium text-white">Actions</th>
+                    <th className="text-xs uppercase tracking-widest text-white/40 py-3 px-4 text-left font-medium">Image</th>
+                    <th className="text-xs uppercase tracking-widest text-white/40 py-3 px-4 text-left font-medium">Name</th>
+                    <th className="text-xs uppercase tracking-widest text-white/40 py-3 px-4 text-left font-medium">Category</th>
+                    <th className="text-xs uppercase tracking-widest text-white/40 py-3 px-4 text-left font-medium">Price</th>
+                    <th className="text-xs uppercase tracking-widest text-white/40 py-3 px-4 text-left font-medium">Stock</th>
+                    <th className="text-xs uppercase tracking-widest text-white/40 py-3 px-4 text-left font-medium">Status</th>
+                    <th className="text-xs uppercase tracking-widest text-white/40 py-3 px-4 text-left font-medium">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/10">
+                <tbody>
                   {products.map((product) => (
-                    <tr key={product.id} className="hover:bg-white/5 transition-colors">
-                      <td className="px-6 py-4">
+                    <tr key={product.id} className="border-t border-white/5 hover:bg-white/[0.02] transition-colors">
+                      <td className="px-4 py-4 text-sm text-white/80">
                         <img
                           src={product.image_url}
                           alt={product.name}
-                          className="w-16 h-16 object-cover rounded-lg"
+                          className="w-14 h-14 object-cover rounded-xl border border-white/10"
                         />
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-4 text-sm text-white/80">
                         <div className="text-white font-medium">{product.name}</div>
-                        <div className="text-text-soft text-sm line-clamp-2">{product.description}</div>
+                        <div className="text-white/40 text-xs line-clamp-2 max-w-xs">{product.description}</div>
                       </td>
-                      <td className="px-6 py-4">
-                        <span className="px-3 py-1 bg-accent-blue/20 text-accent-blue text-xs rounded-full">
+                      <td className="px-4 py-4 text-sm text-white/80">
+                        <span className="rounded-full bg-cyan-500/10 border border-cyan-500/20 px-2.5 py-0.5 text-xs font-semibold text-cyan-300">
                           {product.category}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-white font-medium">
+                      <td className="px-4 py-4 text-sm font-semibold text-white">
                         ${(product.price / 100).toFixed(2)}
                       </td>
-                      <td className="px-6 py-4 text-white">
+                      <td className="px-4 py-4 text-sm text-white/80">
                         {product.stock}
                       </td>
-                      <td className="px-6 py-4">
-                        <span className={`px-3 py-1 text-xs rounded-full ${
-                          product.is_active 
-                            ? 'bg-green-500/20 text-green-400' 
-                            : 'bg-red-500/20 text-red-400'
-                        }`}>
-                          {product.is_active ? 'Active' : 'Inactive'}
-                        </span>
+                      <td className="px-4 py-4 text-sm text-white/80">
+                        {product.is_active ? (
+                          <span className="rounded-full bg-emerald-500/15 border border-emerald-500/20 px-2.5 py-0.5 text-xs font-semibold text-emerald-300">Active</span>
+                        ) : (
+                          <span className="rounded-full bg-rose-500/15 border border-rose-500/20 px-2.5 py-0.5 text-xs font-semibold text-rose-300">Inactive</span>
+                        )}
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex space-x-2">
+                      <td className="px-4 py-4 text-sm text-white/80">
+                        <div className="flex gap-2">
                           <button
                             onClick={() => handleEdit(product)}
-                            className="px-3 py-1 bg-blue-500/20 text-blue-400 text-sm rounded-lg hover:bg-blue-500/30 transition-colors"
+                            className="inline-flex items-center gap-1 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 px-3 py-1.5 text-xs font-semibold text-slate-900 hover:from-cyan-300 hover:to-blue-400 transition-all"
                           >
                             Edit
                           </button>
                           <button
                             onClick={() => handleDelete(product.id)}
-                            className="px-3 py-1 bg-red-500/20 text-red-400 text-sm rounded-lg hover:bg-red-500/30 transition-colors"
+                            className="inline-flex items-center gap-1 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-1.5 text-xs font-semibold text-rose-300 hover:bg-rose-500/20 transition-all"
                           >
                             Delete
                           </button>
@@ -344,23 +352,24 @@ export default function ProductsManagement() {
           </div>
 
           {products.length === 0 && (
-            <div className="text-center py-16">
-              <div className="text-text-soft text-lg">No products found</div>
-              <p className="text-text-mute mt-2">Set up your database to get started</p>
-              
-              <div className="mt-6 p-6 bg-bg-surface rounded-xl border border-white/10 max-w-lg mx-auto">
-                <h3 className="text-white font-semibold mb-3">Database Setup Required</h3>
-                <p className="text-sm text-text-mute mb-4">
-                  You need to create the products table and insert sample data first.
-                </p>
-                <Link href="/admin/setup">
-                  <button className="w-full px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-medium hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl">
-                    Go to Database Setup
-                  </button>
-                </Link>
-                <p className="text-xs text-text-mute mt-3">
-                  This will create the products table and insert 10 sample products
-                </p>
+            <div className="mt-6">
+              <div className="rounded-2xl border border-dashed border-white/10 p-12 text-center text-sm text-white/40">
+                <div className="text-base font-medium text-white/50 mb-1">No products found</div>
+                <p className="text-white/30 mb-6">Set up your database to get started</p>
+                <div className="max-w-sm mx-auto rounded-2xl border border-white/10 bg-white/[0.04] p-5">
+                  <h3 className="text-white font-semibold mb-2 text-left">Database Setup Required</h3>
+                  <p className="text-xs text-white/40 mb-4 text-left">
+                    You need to create the products table and insert sample data first.
+                  </p>
+                  <Link href="/admin/setup">
+                    <button className="w-full rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 px-6 py-2.5 text-sm font-semibold text-slate-900 hover:from-cyan-300 hover:to-blue-400 transition-all shadow-lg">
+                      Go to Database Setup
+                    </button>
+                  </Link>
+                  <p className="text-xs text-white/30 mt-3">
+                    This will create the products table and insert 10 sample products
+                  </p>
+                </div>
               </div>
             </div>
           )}
@@ -368,8 +377,8 @@ export default function ProductsManagement() {
 
         {/* Add/Edit Product Modal */}
         {(showAddModal || showEditModal) && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <div className="bg-bg-surface rounded-2xl border border-white/10 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="bg-[#0F1115] rounded-2xl border border-white/10 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
               <div className="p-6">
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-2xl font-bold text-white">
@@ -391,7 +400,7 @@ export default function ProductsManagement() {
                       })
                       setErrors({})
                     }}
-                    className="text-text-mute hover:text-white transition-colors"
+                    className="text-white/40 hover:text-white transition-colors p-2 rounded-xl hover:bg-white/5"
                   >
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -402,51 +411,51 @@ export default function ProductsManagement() {
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-sm font-medium text-white mb-2">Product Name</label>
+                      <label className="block text-sm font-medium text-white/70 mb-2">Product Name</label>
                       <input
                         type="text"
                         name="name"
                         value={formData.name}
                         onChange={handleInputChange}
-                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-text-mute focus:border-accent-blue focus:outline-none"
+                        className="bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
                         placeholder="Enter product name"
                       />
-                      {errors.name && <p className="text-red-400 text-sm mt-1">{errors.name}</p>}
+                      {errors.name && <p className="text-rose-400 text-xs mt-1">{errors.name}</p>}
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-white mb-2">Category</label>
+                      <label className="block text-sm font-medium text-white/70 mb-2">Category</label>
                       <select
                         name="category"
                         value={formData.category}
                         onChange={handleInputChange}
-                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:border-accent-blue focus:outline-none"
+                        className="bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
                       >
                         <option value="">Select category</option>
                         {categories.map(cat => (
                           <option key={cat} value={cat}>{cat}</option>
                         ))}
                       </select>
-                      {errors.category && <p className="text-red-400 text-sm mt-1">{errors.category}</p>}
+                      {errors.category && <p className="text-rose-400 text-xs mt-1">{errors.category}</p>}
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-white mb-2">Description</label>
+                    <label className="block text-sm font-medium text-white/70 mb-2">Description</label>
                     <textarea
                       name="description"
                       value={formData.description}
                       onChange={handleInputChange}
                       rows={3}
-                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-text-mute focus:border-accent-blue focus:outline-none"
+                      className="bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
                       placeholder="Enter product description"
                     />
-                    {errors.description && <p className="text-red-400 text-sm mt-1">{errors.description}</p>}
+                    {errors.description && <p className="text-rose-400 text-xs mt-1">{errors.description}</p>}
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-sm font-medium text-white mb-2">Price ($)</label>
+                      <label className="block text-sm font-medium text-white/70 mb-2">Price ($)</label>
                       <input
                         type="number"
                         name="price"
@@ -454,29 +463,29 @@ export default function ProductsManagement() {
                         onChange={handleInputChange}
                         step="0.01"
                         min="0"
-                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-text-mute focus:border-accent-blue focus:outline-none"
+                        className="bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
                         placeholder="0.00"
                       />
-                      {errors.price && <p className="text-red-400 text-sm mt-1">{errors.price}</p>}
+                      {errors.price && <p className="text-rose-400 text-xs mt-1">{errors.price}</p>}
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-white mb-2">Stock</label>
+                      <label className="block text-sm font-medium text-white/70 mb-2">Stock</label>
                       <input
                         type="number"
                         name="stock"
                         value={formData.stock}
                         onChange={handleInputChange}
                         min="0"
-                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-text-mute focus:border-accent-blue focus:outline-none"
+                        className="bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
                         placeholder="0"
                       />
-                      {errors.stock && <p className="text-red-400 text-sm mt-1">{errors.stock}</p>}
+                      {errors.stock && <p className="text-rose-400 text-xs mt-1">{errors.stock}</p>}
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-white mb-2">Product Image</label>
+                    <label className="block text-sm font-medium text-white/70 mb-2">Product Image</label>
                     <div className="space-y-4">
                       {formData.image_url && (
                         <div className="relative">
@@ -499,27 +508,27 @@ export default function ProductsManagement() {
                           type="button"
                           onClick={() => fileInputRef.current?.click()}
                           disabled={uploadingImage}
-                          className="px-4 py-2 bg-accent-blue/20 text-accent-blue rounded-lg hover:bg-accent-blue/30 transition-colors disabled:opacity-50"
+                          className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70 hover:bg-white/10 transition disabled:opacity-50"
                         >
                           {uploadingImage ? 'Uploading...' : 'Upload Image'}
                         </button>
                       </div>
-                      {errors.image_url && <p className="text-red-400 text-sm mt-1">{errors.image_url}</p>}
+                      {errors.image_url && <p className="text-rose-400 text-xs mt-1">{errors.image_url}</p>}
                     </div>
                   </div>
 
-                  <div className="flex items-center">
+                  <div className="flex items-center gap-2">
                     <input
                       type="checkbox"
                       name="is_active"
                       checked={formData.is_active}
                       onChange={handleInputChange}
-                      className="w-4 h-4 text-accent-blue bg-white/5 border-white/10 rounded focus:ring-accent-blue"
+                      className="w-4 h-4 accent-cyan-400 bg-white/5 border-white/10 rounded"
                     />
-                    <label className="ml-2 text-sm text-white">Active Product</label>
+                    <label className="text-sm text-white/70">Active Product</label>
                   </div>
 
-                  <div className="flex justify-end space-x-4 pt-6">
+                  <div className="flex justify-end gap-3 pt-6 border-t border-white/10">
                     <button
                       type="button"
                       onClick={() => {
@@ -537,14 +546,14 @@ export default function ProductsManagement() {
                         })
                         setErrors({})
                       }}
-                      className="px-6 py-3 text-text-mute hover:text-white transition-colors"
+                      className="inline-flex items-center rounded-xl border border-white/10 bg-white/5 px-5 py-2.5 text-sm font-semibold text-white/70 hover:bg-white/10 transition"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
                       disabled={loadingAction}
-                      className="px-6 py-3 bg-gradient-to-r from-accent-blue to-accent-cyan text-white rounded-xl font-medium hover:from-blue-600 hover:to-cyan-600 transition-all duration-200 disabled:opacity-50"
+                      className="inline-flex items-center rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 px-6 py-2.5 text-sm font-semibold text-slate-900 hover:from-cyan-300 hover:to-blue-400 transition-all shadow-lg disabled:opacity-50"
                     >
                       {loadingAction ? 'Saving...' : (selectedProduct ? 'Update Product' : 'Add Product')}
                     </button>

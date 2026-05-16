@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Divyanshu\\\\OneDrive\\\\Documents\\\\GitHub\\\\dropshipping\" -Recurse -Force)",
+      "Bash(Select-Object FullName)",
+      "Bash(npm run *)",
+      "Bash(node -e ' *)",
+      "Bash(node)",
+      "Bash(npx tsc *)",
+      "Bash(npx eslint *)",
+      "Bash(cat .eslintrc.json)",
+      "Bash(cat .eslintrc.js)",
+      "Bash(cat .eslintrc.cjs)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('eslintConfig',{}\\), indent=2\\)\\); print\\('scripts:', list\\(d.get\\('scripts',{}\\).keys\\(\\)\\)\\)\")",
+      "Bash(npx next *)",
+      "Bash(awk 'NR>=840 && NR<=1150 && /industries/' pages/freelancers/index.tsx)",
+      "Bash(awk 'NR>=821 && NR<=1150 && /overlapHours/' pages/freelancers/index.tsx)",
+      "Bash(Select-String -Path \"C:\\\\Users\\\\Divyanshu\\\\OneDrive\\\\Documents\\\\GitHub\\\\dropshipping\\\\digital-dropshipping-site\\\\pages\\\\admin.tsx\" -Pattern \"getServerSideProps\")",
+      "Bash(Select-Object LineNumber, Line)",
+      "Bash(grep -v \"^$\")",
+      "Bash(tasklist *)",
+      "PowerShell(Get-Process *)"
+    ]
+  }
+}

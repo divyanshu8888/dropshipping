@@ -8,7 +8,6 @@ import { useAuth } from '../../src/contexts/AuthContext';
 import { useToast } from '../../src/components/Toast';
 import {
   AlertCircle,
-  Award,
   BarChart3,
   Calendar,
   CheckCircle,
@@ -17,31 +16,18 @@ import {
   Clock,
   Code,
   Download,
-  Edit3,
-  Eye,
   FileText,
-  Filter,
-  Globe,
   Info,
-  MapPin,
   MessageCircle,
   MessageSquare,
-  MoreVertical,
-  Pause,
-  Paperclip,
-  Play,
   Plus,
   RefreshCw,
-  Save,
   Search,
   Send,
-  Settings,
   Star,
   Target,
-  TrendingUp,
   Upload,
   User,
-  Zap,
   DollarSign,
   Activity,
   Briefcase,
@@ -171,7 +157,6 @@ export default function ClientDashboard() {
       project.milestones.forEach((milestone) => {
         const key = `${project.id}-${milestone.id}`;
         const currentStatus = milestone.status || 'pending';
-        const previousStatus = milestoneSnapshotRef.current.get(key);
         nextSnapshot.set(key, currentStatus);
 
       });
@@ -180,14 +165,6 @@ export default function ClientDashboard() {
     milestoneSnapshotRef.current = nextSnapshot;
   };
 
-  const handleReplyProject = (projectId: string) => {
-    const project = projects.find((p) => p.id === projectId);
-    if (!project) return;
-    setSelectedProject(project);
-    setActiveTab('messages');
-  };
-
-  
   const heroProject =
     projects.find((p) => p.status === 'in_progress') ||
     projects.find((p) => p.status === 'open') ||
@@ -245,10 +222,6 @@ export default function ClientDashboard() {
       )
     : null;
   const heroScopeChange = heroProject ? Math.max(heroProject.milestones.length - 4, 0) : 0;
-  const heroNextMilestone = heroProject?.milestones.find(
-    (milestone) => ['pending', 'submitted'].includes(milestone.status || 'pending')
-  );
-  const nextActionLabel = heroNextMilestone ? `Approve ${heroNextMilestone.title}` : 'Plan next milestone';
   const heroAcceptedMilestones = heroProject
     ? heroProject.milestones.filter((m) =>
         ['approved', 'completed', 'released'].includes(m.status || '')
@@ -529,13 +502,14 @@ export default function ClientDashboard() {
       title={tile.hint}
       onClick={tile.onClick}
       className={cn(
-        'group flex flex-col gap-3 min-h-[140px] p-4 text-left border border-white/10 bg-gradient-to-br transition hover:shadow-[0_20px_45px_rgba(5,5,15,0.6)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400',
+        'premium-card group flex flex-col gap-3 min-h-[140px] p-4 text-left border border-white/10 bg-gradient-to-br transition hover:shadow-[0_20px_45px_rgba(5,5,15,0.6)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 relative overflow-hidden',
         cardRadius,
         cardShadow,
         tile.accent,
         extraClass
       )}
     >
+      <div className="metric-bar" />
       <div className="flex items-center justify-between gap-2">
         <span className="text-[11px] uppercase tracking-[0.35em] text-white/60">{tile.title}</span>
         <div className="flex items-center gap-2">
@@ -597,32 +571,6 @@ export default function ClientDashboard() {
     return `${Math.round(diffMinutes / 60 / 24)}d`;
   }
 
-  const threadCandidates = useMemo(() => {
-    const threads = projects
-      .map((project) => {
-        const lastMessage = project.messages[project.messages.length - 1];
-        if (!lastMessage) return null;
-        return {
-          projectId: project.id,
-          title: project.title,
-          lastMessage
-        };
-      })
-      .filter(Boolean) as Array<{
-      projectId: string;
-      title: string;
-      lastMessage: Project['messages'][number];
-    }>;
-    return threads
-      .sort(
-        (a, b) =>
-          new Date(b.lastMessage.timestamp).getTime() - new Date(a.lastMessage.timestamp).getTime()
-      )
-      .slice(0, 4);
-  }, [projects]);
-
-
-
   useEffect(() => {
     // Wait for auth to finish loading and verifying before checking user
     if (authLoading || !authVerified) {
@@ -671,8 +619,6 @@ export default function ClientDashboard() {
     const shouldScroll = latestMessageId && latestMessageId !== lastMessageIdRef.current;
     if (!shouldScroll) return;
 
-    const heroMessage =
-      selectedProject.messages[selectedProject.messages.length - 1];
     lastMessageIdRef.current = latestMessageId;
     messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [selectedProject?.id, selectedProject?.messages.length]);
@@ -1245,16 +1191,18 @@ export default function ClientDashboard() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'draft': return 'bg-gray-500/15 text-gray-300 border-gray-500/30';
-      case 'open': return 'bg-blue-500/15 text-blue-300 border-blue-500/30';
-      case 'in_review': return 'bg-purple-500/15 text-purple-300 border-purple-500/30';
-      case 'contracted': return 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30';
-      case 'in_progress': return 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30';
-      case 'delivered': return 'bg-amber-500/15 text-amber-300 border-amber-500/30';
-      case 'completed': return 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30';
-      case 'cancelled': return 'bg-red-500/15 text-red-300 border-red-500/30';
-      case 'disputed': return 'bg-orange-500/15 text-orange-300 border-orange-500/30';
-      default: return 'bg-gray-500/15 text-gray-300 border-gray-500/30';
+      case 'draft': return 'bg-slate-500/15 text-slate-300 border-slate-500/20';
+      case 'open': return 'bg-slate-500/15 text-slate-300 border-slate-500/20';
+      case 'in_review': return 'bg-amber-500/15 text-amber-300 border-amber-500/20';
+      case 'contracted': return 'bg-emerald-500/15 text-emerald-300 border-emerald-500/20';
+      case 'in_progress': return 'bg-emerald-500/15 text-emerald-300 border-emerald-500/20';
+      case 'delivered': return 'bg-blue-500/15 text-blue-300 border-blue-500/20';
+      case 'completed': return 'bg-blue-500/15 text-blue-300 border-blue-500/20';
+      case 'cancelled': return 'bg-rose-500/15 text-rose-300 border-rose-500/20';
+      case 'disputed': return 'bg-rose-500/15 text-rose-300 border-rose-500/20';
+      case 'on_hold': return 'bg-amber-500/15 text-amber-300 border-amber-500/20';
+      case 'pending': return 'bg-slate-500/15 text-slate-300 border-slate-500/20';
+      default: return 'bg-slate-500/15 text-slate-300 border-slate-500/20';
     }
   };
 
@@ -1278,20 +1226,6 @@ export default function ClientDashboard() {
     };
     return statusMap[status] || status;
   };
-
-  const getMilestoneStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending': return 'bg-gray-500/15 text-gray-300 border-gray-500/30';
-      case 'funded': return 'bg-blue-500/15 text-blue-300 border-blue-500/30';
-      case 'in_progress': return 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30';
-      case 'submitted': return 'bg-purple-500/15 text-purple-300 border-purple-500/30';
-      case 'approved': return 'bg-green-500/15 text-green-300 border-green-500/30';
-      case 'released': return 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30';
-      case 'rejected': return 'bg-red-500/15 text-red-300 border-red-500/30';
-      default: return 'bg-gray-500/15 text-gray-300 border-gray-500/30';
-    }
-  };
-
 
   return (
     <>
@@ -1396,12 +1330,12 @@ export default function ClientDashboard() {
                   <select
                     value={commandProjectFilter}
                     onChange={(e) => setCommandProjectFilter(e.target.value)}
-                    className="w-full rounded-xl bg-[#0f1117] px-3 py-2 text-sm text-white border border-white/10 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
+                    className="bg-white/5 border border-white/10 rounded-xl text-white px-3 py-2 text-sm focus:border-cyan-400/70 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 transition w-full"
                   >
-                    <option value="all">All projects</option>
-                    <option value="design">Website redesign</option>
-                    <option value="mobile">Mobile app</option>
-                    <option value="automation">Automation</option>
+                    <option value="all" className="bg-[#0B0D10]">All projects</option>
+                    <option value="design" className="bg-[#0B0D10]">Website redesign</option>
+                    <option value="mobile" className="bg-[#0B0D10]">Mobile app</option>
+                    <option value="automation" className="bg-[#0B0D10]">Automation</option>
                   </select>
                 </label>
                 <label className="space-y-1 text-[10px] uppercase tracking-[0.3em] text-white/50">
@@ -1409,11 +1343,11 @@ export default function ClientDashboard() {
                   <select
                     value={commandVendorFilter}
                     onChange={(e) => setCommandVendorFilter(e.target.value)}
-                    className="w-full rounded-xl bg-[#0f1117] px-3 py-2 text-sm text-white border border-white/10 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
+                    className="bg-white/5 border border-white/10 rounded-xl text-white px-3 py-2 text-sm focus:border-cyan-400/70 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 transition w-full"
                   >
-                    <option value="all">All vendors</option>
-                    <option value="studio">Studio A</option>
-                    <option value="freelancer">Freelancer B</option>
+                    <option value="all" className="bg-[#0B0D10]">All vendors</option>
+                    <option value="studio" className="bg-[#0B0D10]">Studio A</option>
+                    <option value="freelancer" className="bg-[#0B0D10]">Freelancer B</option>
                   </select>
                 </label>
                 <label className="space-y-1 text-[10px] uppercase tracking-[0.3em] text-white/50">
@@ -1421,11 +1355,11 @@ export default function ClientDashboard() {
                   <select
                     value={commandTimeFilter}
                     onChange={(e) => setCommandTimeFilter(e.target.value)}
-                    className="w-full rounded-xl bg-[#0f1117] px-3 py-2 text-sm text-white border border-white/10 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
+                    className="bg-white/5 border border-white/10 rounded-xl text-white px-3 py-2 text-sm focus:border-cyan-400/70 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 transition w-full"
                   >
-                    <option value="7d">Last 7 days</option>
-                    <option value="30d">Last 30 days</option>
-                    <option value="90d">Last 90 days</option>
+                    <option value="7d" className="bg-[#0B0D10]">Last 7 days</option>
+                    <option value="30d" className="bg-[#0B0D10]">Last 30 days</option>
+                    <option value="90d" className="bg-[#0B0D10]">Last 90 days</option>
                   </select>
                 </label>
               </div>
@@ -1682,7 +1616,7 @@ export default function ClientDashboard() {
           </div>
 
           {/* Tabs */}
-          <div className="flex gap-2 mb-6 border-b border-white/10">
+          <div className="flex gap-1.5 mb-6 border-b border-white/10 pb-2">
             {[
               { id: 'overview', label: 'Overview', icon: BarChart3 },
               { id: 'projects', label: 'Projects', icon: Briefcase },
@@ -1693,13 +1627,13 @@ export default function ClientDashboard() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`px-4 py-2 flex items-center gap-2 border-b-2 transition-colors ${
+                  className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition-all border ${
                     activeTab === tab.id
-                      ? 'border-cyan-400 text-cyan-400'
-                      : 'border-transparent text-white/60 hover:text-white/80'
+                      ? 'border-cyan-400/40 bg-gradient-to-r from-cyan-500/10 to-blue-500/15 text-cyan-300'
+                      : 'border-transparent text-white/50 hover:text-white/80 hover:bg-white/5'
                   }`}
                 >
-                  <Icon className="w-4 h-4" />
+                  <Icon className="w-3.5 h-3.5" />
                   {tab.label}
                 </button>
               );
@@ -1732,30 +1666,34 @@ export default function ClientDashboard() {
             <div className="space-y-6">
               {/* Metrics Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-white/5 rounded-lg border border-white/10 p-6">
+                <div className="premium-card relative overflow-hidden bg-white/[0.04] rounded-2xl border border-white/10 p-6">
+                  <div className="metric-bar" />
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-white/60 text-sm">Total Projects</span>
+                    <span className="text-xs uppercase tracking-widest text-white/40">Total Projects</span>
                     <Briefcase className="w-5 h-5 text-cyan-400" />
                   </div>
                   <p className="text-2xl md:text-3xl font-bold">{metrics.totalProjects}</p>
                 </div>
-                <div className="bg-white/5 rounded-lg border border-white/10 p-6">
+                <div className="premium-card relative overflow-hidden bg-white/[0.04] rounded-2xl border border-white/10 p-6">
+                  <div className="metric-bar" />
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-white/60 text-sm">Active Projects</span>
+                    <span className="text-xs uppercase tracking-widest text-white/40">Active Projects</span>
                     <Activity className="w-5 h-5 text-emerald-400" />
                   </div>
                   <p className="text-2xl md:text-3xl font-bold">{metrics.activeProjects}</p>
                 </div>
-                <div className="bg-white/5 rounded-lg border border-white/10 p-6">
+                <div className="premium-card relative overflow-hidden bg-white/[0.04] rounded-2xl border border-white/10 p-6">
+                  <div className="metric-bar" />
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-white/60 text-sm">Completed</span>
+                    <span className="text-xs uppercase tracking-widest text-white/40">Completed</span>
                     <CheckCircle className="w-5 h-5 text-blue-400" />
                   </div>
                   <p className="text-2xl md:text-3xl font-bold">{metrics.completedProjects}</p>
                 </div>
-                <div className="bg-white/5 rounded-lg border border-white/10 p-6">
+                <div className="premium-card relative overflow-hidden bg-white/[0.04] rounded-2xl border border-white/10 p-6">
+                  <div className="metric-bar" />
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-white/60 text-sm">Total Spent</span>
+                    <span className="text-xs uppercase tracking-widest text-white/40">Total Spent</span>
                     <DollarSign className="w-5 h-5 text-amber-400" />
                   </div>
                   <p className="text-2xl md:text-3xl font-bold">${metrics.totalSpent.toLocaleString()}</p>
@@ -1764,7 +1702,7 @@ export default function ClientDashboard() {
 
               {/* Quick Actions */}
               <div className="rounded-[28px] border border-white/10 bg-gradient-to-br from-white/5 via-white/0 to-transparent p-6 shadow-xl backdrop-blur-sm">
-                <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
+                <h2 className="text-lg font-semibold text-white mb-4">Quick Actions</h2>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <Link
                 href="/freelancers"
@@ -1814,7 +1752,7 @@ export default function ClientDashboard() {
                     <div className="p-2 bg-cyan-500/10 rounded-lg">
                       <Briefcase className="w-5 h-5 text-cyan-400" />
                     </div>
-                    <h2 className="text-xl font-bold">Recent Projects</h2>
+                    <h2 className="text-lg font-semibold text-white">Recent Projects</h2>
                   </div>
                   <button
                     onClick={() => setActiveTab('projects')}
@@ -1903,7 +1841,7 @@ export default function ClientDashboard() {
                             const etaLabel = daysLeft !== null ? `${daysLeft}d left` : 'TBD';
                             return (
                               <span
-                                className={`px-3 py-1.5 rounded-full text-[10px] font-semibold border shrink-0 ${getStatusColor(project.status)}`}
+                                className={`rounded-full px-2.5 py-0.5 text-xs font-semibold border shrink-0 ${getStatusColor(project.status)}`}
                               >
                                 {`${formatStatusLabel(project.status)} • ${project.progress}% • ${etaLabel}`}
                           </span>
@@ -1914,18 +1852,18 @@ export default function ClientDashboard() {
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-12 text-white/60">
+                  <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-sm text-white/40">
                     <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/5 mb-4">
                       <Briefcase className="w-8 h-8 opacity-50" />
                     </div>
-                    <p className="text-base font-medium mb-1">No projects yet</p>
-                    <p className="text-sm text-white/40 mb-6">Get started by creating your first project</p>
+                    <p className="text-base font-medium mb-1 text-white/60">No projects yet</p>
+                    <p className="mb-6">Get started by creating your first project</p>
                     <button
                       onClick={() => {
                         setActiveTab('projects');
                         setCreatingProject(true);
                       }}
-                      className="px-6 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-lg hover:from-cyan-400 hover:to-blue-500 transition-all shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/30 flex items-center gap-2 mx-auto"
+                      className="rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold px-4 py-2 text-sm flex items-center gap-2 mx-auto"
                     >
                       <Plus className="w-4 h-4" />
                       Create Your First Project
@@ -1948,26 +1886,26 @@ export default function ClientDashboard() {
                     placeholder="Search projects..."
                     value={projectSearch}
                     onChange={(e) => setProjectSearch(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500/50 text-white placeholder:text-white/40"
+                    className="bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 pl-10 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
                   />
                 </div>
                 <select
                   value={projectFilter}
                   onChange={(e) => setProjectFilter(e.target.value)}
-                  className="px-4 py-2 bg-[#1a1d24] border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500/50 text-white appearance-none cursor-pointer"
+                  className="bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition appearance-none cursor-pointer"
                   style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3E%3Cpath stroke=\'%23ffffff\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M6 8l4 4 4-4\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.5rem center', backgroundSize: '1.5em 1.5em', paddingRight: '2.5rem' }}
                 >
-                  <option value="all" className="bg-[#1a1d24] text-white">All Status</option>
-                  <option value="open" className="bg-[#1a1d24] text-white">Open</option>
-                  <option value="in_review" className="bg-[#1a1d24] text-white">In Review</option>
-                  <option value="contracted" className="bg-[#1a1d24] text-white">Contracted</option>
-                  <option value="in_progress" className="bg-[#1a1d24] text-white">In Progress</option>
-                  <option value="delivered" className="bg-[#1a1d24] text-white">Delivered</option>
-                  <option value="completed" className="bg-[#1a1d24] text-white">Completed</option>
+                  <option value="all" className="bg-[#0B0D10]">All Status</option>
+                  <option value="open" className="bg-[#0B0D10]">Open</option>
+                  <option value="in_review" className="bg-[#0B0D10]">In Review</option>
+                  <option value="contracted" className="bg-[#0B0D10]">Contracted</option>
+                  <option value="in_progress" className="bg-[#0B0D10]">In Progress</option>
+                  <option value="delivered" className="bg-[#0B0D10]">Delivered</option>
+                  <option value="completed" className="bg-[#0B0D10]">Completed</option>
                 </select>
                 <button
                   onClick={() => setCreatingProject(true)}
-                  className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-lg hover:from-cyan-400 hover:to-blue-500 transition flex items-center gap-2"
+                  className="rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold px-4 py-2 text-sm flex items-center gap-2"
                 >
                   <Plus className="w-4 h-4" />
                   New Project
@@ -1975,18 +1913,34 @@ export default function ClientDashboard() {
               </div>
 
               {/* Projects List */}
-              {filteredProjects.length > 0 ? (
+              {loading ? (
+                <div className="space-y-4">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="skeleton-shimmer h-32 rounded-xl" />
+                  ))}
+                </div>
+              ) : filteredProjects.length > 0 ? (
                 <div className="space-y-4">
                   {filteredProjects.map((project) => (
                     <div
                       key={project.id}
-                      className="rounded-xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-6 hover:border-white/20 transition-all shadow-lg"
+                      className={`rounded-2xl border border-white/10 bg-white/[0.04] p-5 hover:border-white/20 transition-all cursor-pointer border-l-2 ${
+                        project.status === 'in_progress' || project.status === 'contracted'
+                          ? 'border-l-cyan-400'
+                          : project.status === 'completed' || project.status === 'delivered'
+                          ? 'border-l-emerald-400'
+                          : project.status === 'on_hold' || project.status === 'in_review'
+                          ? 'border-l-amber-400'
+                          : project.status === 'cancelled' || project.status === 'disputed'
+                          ? 'border-l-rose-400'
+                          : 'border-l-white/20'
+                      }`}
                     >
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-3 mb-2">
                             <h3 className="text-lg font-semibold text-white">{project.title}</h3>
-                            <span className={`px-2.5 py-1 rounded-md text-xs font-semibold border whitespace-nowrap ${getStatusColor(project.status)}`}>
+                            <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold border whitespace-nowrap ${getStatusColor(project.status)}`}>
                               {formatStatusLabel(project.status)}
                             </span>
                           </div>
@@ -2047,7 +2001,7 @@ export default function ClientDashboard() {
                             setSelectedProject(project);
                             setActiveTab('messages');
                           }}
-                          className="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg transition flex items-center gap-1.5 text-xs font-medium"
+                          className="rounded-xl border border-white/10 bg-white/5 text-white/70 px-4 py-2 text-sm hover:bg-white/10 transition flex items-center gap-1.5"
                         >
                           <MessageCircle className="w-3.5 h-3.5" />
                           Messages ({project.messages.length})
@@ -2055,7 +2009,7 @@ export default function ClientDashboard() {
                         {project.milestones.length > 0 && (
                           <button
                             onClick={() => toggleProjectExpanded(project.id)}
-                            className="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg transition flex items-center gap-1.5 text-xs font-medium"
+                            className="rounded-xl border border-white/10 bg-white/5 text-white/70 px-4 py-2 text-sm hover:bg-white/10 transition flex items-center gap-1.5"
                           >
                             {expandedProjects.has(project.id) ? (
                               <>
@@ -2074,20 +2028,32 @@ export default function ClientDashboard() {
                       {expandedProjects.has(project.id) && project.milestones.length > 0 && (
                         <div className="mt-5 pt-5 border-t border-white/10">
                           <div className="flex items-center justify-between mb-4">
-                            <h4 className="font-semibold text-base flex items-center gap-2">
+                            <h4 className="text-lg font-semibold text-white flex items-center gap-2">
                               <Target className="w-4 h-4 text-cyan-400" />
                               Milestones ({project.milestones.length})
                             </h4>
                           </div>
-                          <div className="space-y-3">
+                          <div className="relative pl-6 space-y-3">
+                            <div className="timeline-connector" />
                             {project.milestones.map((milestone, index) => {
                               const milestoneNumber = index + 1;
                               const isExpanded = expandedMilestones.has(milestone.id);
+                              const dotColor =
+                                milestone.status === 'approved' || milestone.status === 'released' ? 'bg-emerald-400 border-emerald-400' :
+                                milestone.status === 'submitted' ? 'bg-cyan-400 border-cyan-400' :
+                                milestone.status === 'in_progress' ? 'bg-blue-400 border-blue-400' :
+                                milestone.status === 'funded' ? 'bg-purple-400 border-purple-400' :
+                                milestone.status === 'rejected' ? 'bg-rose-400 border-rose-400' :
+                                'bg-white/30 border-white/30';
+                              const isUrgent = milestone.due_date
+                                ? (new Date(milestone.due_date).getTime() - Date.now()) < 3 * 24 * 60 * 60 * 1000
+                                : false;
                               return (
                               <div
                                 key={milestone.id}
-                                className="rounded-xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] hover:border-white/20 transition-all"
+                                className={`relative rounded-xl border bg-gradient-to-br from-white/5 to-white/[0.02] hover:border-white/20 transition-all ${isUrgent ? 'urgency-border border-amber-400/30' : 'border-white/10'}`}
                               >
+                                <span className={`absolute -left-[6px] top-1 h-3 w-3 rounded-full border-2 ${dotColor}`} />
                                 {/* Header - Clickable */}
                                 <div 
                                   onClick={() => {
@@ -2124,13 +2090,13 @@ export default function ClientDashboard() {
                                           </div>
                                         </div>
                                       )}
-                                      <span className={`px-2.5 py-1 rounded-md text-xs font-semibold whitespace-nowrap ${
-                                        milestone.status === 'approved' || milestone.status === 'released' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
-                                        milestone.status === 'submitted' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' :
-                                        milestone.status === 'in_progress' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' :
-                                        milestone.status === 'funded' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' :
-                                        milestone.status === 'rejected' ? 'bg-red-500/20 text-red-300 border border-red-500/30' :
-                                        'bg-gray-500/20 text-gray-300 border border-gray-500/30'
+                                      <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold border whitespace-nowrap ${
+                                        milestone.status === 'approved' || milestone.status === 'released' ? 'bg-emerald-500/15 border-emerald-500/20 text-emerald-300' :
+                                        milestone.status === 'submitted' ? 'bg-blue-500/15 border-blue-500/20 text-blue-300' :
+                                        milestone.status === 'in_progress' ? 'bg-emerald-500/15 border-emerald-500/20 text-emerald-300' :
+                                        milestone.status === 'funded' ? 'bg-slate-500/15 border-slate-500/20 text-slate-300' :
+                                        milestone.status === 'rejected' ? 'bg-rose-500/15 border-rose-500/20 text-rose-300' :
+                                        'bg-slate-500/15 border-slate-500/20 text-slate-300'
                                       }`}>
                                         {milestone.status.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
                                       </span>
@@ -2157,7 +2123,7 @@ export default function ClientDashboard() {
                                   {milestone.status === 'pending' && (
                                     <button
                                       onClick={() => updateMilestoneStatus(milestone.id, 'funded', project.id)}
-                                      className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white text-xs font-medium rounded-lg transition-all flex items-center gap-1.5 shadow-lg shadow-blue-600/20"
+                                      className="rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold px-4 py-2 text-sm flex items-center gap-1.5"
                                     >
                                       <DollarSign className="w-3.5 h-3.5" />
                                       Fund Milestone
@@ -2167,14 +2133,14 @@ export default function ClientDashboard() {
                                     <>
                                       <button
                                         onClick={() => updateMilestoneStatus(milestone.id, 'approved', project.id)}
-                                        className="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 text-white text-xs font-medium rounded-lg transition-all flex items-center gap-1.5 shadow-lg shadow-green-600/20"
+                                        className="rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold px-4 py-2 text-sm flex items-center gap-1.5"
                                       >
                                         <CheckCircle className="w-3.5 h-3.5" />
                                         Approve
                                       </button>
                                       <button
                                         onClick={() => updateMilestoneStatus(milestone.id, 'rejected', project.id)}
-                                        className="px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white text-xs font-medium rounded-lg transition-all flex items-center gap-1.5 shadow-lg shadow-red-600/20"
+                                        className="rounded-xl border border-rose-500/20 bg-rose-500/10 text-rose-400 px-4 py-2 text-sm flex items-center gap-1.5"
                                       >
                                         <X className="w-3.5 h-3.5" />
                                         Reject
@@ -2255,15 +2221,15 @@ export default function ClientDashboard() {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-12 bg-white/5 rounded-lg border border-white/10">
+                <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-sm text-white/40">
                   <Briefcase className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                  <p className="text-white/60 mb-4">No projects found</p>
+                  <p className="mb-4">No projects found</p>
                   <button
                     onClick={() => setCreatingProject(true)}
-                    className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-lg hover:from-cyan-400 hover:to-blue-500 transition"
+                    className="rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold px-4 py-2 text-sm"
                   >
                     Create Your First Project
-              </button>
+                  </button>
                 </div>
               )}
             </div>
@@ -2275,7 +2241,7 @@ export default function ClientDashboard() {
               {/* Projects List */}
               <div className="lg:col-span-1 space-y-2">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold">Projects</h3>
+                  <h3 className="text-lg font-semibold text-white">Projects</h3>
                   <button
                     onClick={() => fetchClientData()}
                     className="text-xs text-cyan-400 hover:text-cyan-300"
@@ -2319,7 +2285,7 @@ export default function ClientDashboard() {
                     })}
                   </div>
                 ) : (
-                  <div className="text-center py-8 text-white/60">
+                  <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-sm text-white/40">
                     <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
                     <p>No projects yet</p>
                     <button
@@ -2327,7 +2293,7 @@ export default function ClientDashboard() {
                         setActiveTab('projects');
                         setCreatingProject(true);
                       }}
-                      className="mt-4 px-4 py-2 bg-cyan-500/20 text-cyan-400 rounded-lg hover:bg-cyan-500/30 transition text-sm"
+                      className="mt-4 rounded-xl border border-white/10 bg-white/5 text-white/70 px-4 py-2 text-sm hover:bg-white/10 transition"
                     >
                       Create Project
                     </button>
@@ -2356,12 +2322,12 @@ export default function ClientDashboard() {
                                 className={`flex ${message.sender === 'client' ? 'justify-end' : 'justify-start'}`}
                               >
                                 <div
-                                  className={`max-w-[70%] p-3 rounded-lg ${
+                                  className={`px-4 py-3 ${
                                     isMilestoneMessage
-                                      ? 'bg-amber-500/20 border border-amber-500/40 shadow-lg shadow-amber-500/10'
+                                      ? 'bg-amber-500/20 border border-amber-500/40 shadow-lg shadow-amber-500/10 rounded-2xl max-w-[80%]'
                                       : message.sender === 'client'
-                                      ? 'bg-cyan-500/20 border border-cyan-500/30'
-                                      : 'bg-white/10 border border-white/20'
+                                      ? 'bg-gradient-to-br from-cyan-500/15 to-blue-500/20 border border-cyan-500/10 rounded-2xl rounded-tr-sm ml-auto max-w-[80%]'
+                                      : 'bg-white/[0.04] border border-white/[0.08] rounded-2xl rounded-tl-sm mr-auto max-w-[80%]'
                                   }`}
                                 >
                                   {isMilestoneMessage && (
@@ -2381,7 +2347,7 @@ export default function ClientDashboard() {
                           <div ref={messagesEndRef} />
                         </>
                       ) : (
-                        <div className="text-center py-8 text-white/60">
+                        <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-sm text-white/40">
                           <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
                           <p>No messages yet</p>
                         </div>
@@ -2401,12 +2367,12 @@ export default function ClientDashboard() {
                           }}
                           placeholder="Type a message..."
                           disabled={sendingMessage}
-                          className="flex-1 px-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500/50 text-white placeholder:text-white/40 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="bg-white/5 border border-white/10 rounded-xl text-white px-3 py-2 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full disabled:opacity-50 disabled:cursor-not-allowed"
                         />
                         <button
                           onClick={sendMessage}
                           disabled={!newMessage.trim() || sendingMessage || !user?.id}
-                          className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-lg hover:from-cyan-400 hover:to-blue-500 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                          className="rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center flex-shrink-0"
                         >
                           {sendingMessage ? (
                             <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
@@ -2418,8 +2384,8 @@ export default function ClientDashboard() {
                     </div>
                   </div>
                 ) : (
-                  <div className="bg-white/5 rounded-lg border border-white/10 h-[600px] flex items-center justify-center">
-                    <div className="text-center text-white/60">
+                  <div className="rounded-2xl border border-dashed border-white/10 h-[600px] flex items-center justify-center">
+                    <div className="text-center text-sm text-white/40">
                       <MessageCircle className="w-16 h-16 mx-auto mb-4 opacity-50" />
                       <p>Select a project to view messages</p>
                     </div>
@@ -2459,7 +2425,7 @@ export default function ClientDashboard() {
                       type="text"
                       value={projectForm.title}
                       onChange={(e) => setProjectForm({ ...projectForm, title: e.target.value })}
-                      className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500/50 text-white"
+                      className="bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
                       placeholder="Enter project title"
                     />
                   </div>
@@ -2468,7 +2434,7 @@ export default function ClientDashboard() {
                     <textarea
                       value={projectForm.description}
                       onChange={(e) => setProjectForm({ ...projectForm, description: e.target.value })}
-                      className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500/50 text-white min-h-[100px]"
+                      className="bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full min-h-[100px]"
                       placeholder="Describe your project..."
                     />
                   </div>
@@ -2479,7 +2445,7 @@ export default function ClientDashboard() {
                         type="number"
                         value={projectForm.budget}
                         onChange={(e) => setProjectForm({ ...projectForm, budget: e.target.value })}
-                        className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500/50 text-white"
+                        className="bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
                         placeholder="0.00"
                       />
                     </div>
@@ -2488,13 +2454,13 @@ export default function ClientDashboard() {
                       <select
                         value={projectForm.currency}
                         onChange={(e) => setProjectForm({ ...projectForm, currency: e.target.value })}
-                        className="w-full px-4 py-2 bg-[#1a1d24] border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500/50 text-white appearance-none cursor-pointer"
+                        className="bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full appearance-none cursor-pointer"
                         style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3E%3Cpath stroke=\'%23ffffff\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M6 8l4 4 4-4\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.5rem center', backgroundSize: '1.5em 1.5em', paddingRight: '2.5rem' }}
                       >
-                        <option value="AUD" className="bg-[#1a1d24] text-white">AUD</option>
-                        <option value="USD" className="bg-[#1a1d24] text-white">USD</option>
-                        <option value="EUR" className="bg-[#1a1d24] text-white">EUR</option>
-                        <option value="GBP" className="bg-[#1a1d24] text-white">GBP</option>
+                        <option value="AUD" className="bg-[#0B0D10]">AUD</option>
+                        <option value="USD" className="bg-[#0B0D10]">USD</option>
+                        <option value="EUR" className="bg-[#0B0D10]">EUR</option>
+                        <option value="GBP" className="bg-[#0B0D10]">GBP</option>
                       </select>
                     </div>
                   </div>
@@ -2504,7 +2470,7 @@ export default function ClientDashboard() {
                       type="date"
                       value={projectForm.deadline}
                       onChange={(e) => setProjectForm({ ...projectForm, deadline: e.target.value })}
-                      className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500/50 text-white"
+                      className="bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
                     />
                   </div>
                   <div className="flex gap-3 pt-2">
@@ -2520,14 +2486,14 @@ export default function ClientDashboard() {
                           freelancerId: ''
                         });
                       }}
-                      className="flex-1 px-4 py-2 border border-white/10 bg-white/5 text-white rounded-lg hover:bg-white/10 transition"
+                      className="flex-1 rounded-xl border border-white/10 bg-white/5 text-white/70 px-4 py-2 text-sm hover:bg-white/10 transition"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={createProject}
                       disabled={creatingProject || !projectForm.title.trim()}
-                      className="flex-1 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-lg hover:from-cyan-400 hover:to-blue-500 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-1 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold px-4 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {creatingProject ? 'Creating...' : 'Create Project'}
                     </button>

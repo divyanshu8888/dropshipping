@@ -5,13 +5,9 @@ import Head from 'next/head'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { buildQuoteHref } from '../../src/lib/quoteLink'
-import type { FilterControlDescriptor, UnitiFilterVariant } from '../../src/components/UnitiFilters'
+import type { FilterControlDescriptor } from '../../src/components/UnitiFilters'
 const Header = dynamic(() => import('../../src/components/Header'))
 const UnitiFilters = dynamic(() => import('../../src/components/UnitiFilters'), { ssr: false })
-const FreelancersGrid = dynamic(() => import('../../src/components/FreelancersGrid'), {
-  ssr: false,
-  loading: () => <div className="max-w-7xl mx-auto px-6 py-8 text-white/70">Loading freelancers…</div>
-})
 import { query } from '../../src/lib/mysql'
 import { parseAvailability } from '../../src/lib/availability'
 import { formatAvailabilityDisplay } from '../../src/lib/availabilityDisplay'
@@ -48,27 +44,10 @@ interface FreelancersPageProps {
   initialSearchTerm?: string;
 }
 
-// Helper to calculate timezone overlap (simplified)
-function calculateOverlapHours(timezoneOffset: number | undefined): string {
-  if (!timezoneOffset) return '4–6h';
-  // Simplified: assume most clients are in similar timezones
-  const offsetHours = Math.abs(timezoneOffset / 60);
-  if (offsetHours <= 2) return '6–8h';
-  if (offsetHours <= 4) return '4–6h';
-  if (offsetHours <= 6) return '2–4h';
-  return '1–2h';
-}
-
 type HeroTrustBadge = {
   label: string;
   icon: ReactNode;
 };
-
-const variantClasses: Record<UnitiFilterVariant, string> = {
-  outline: styles.filterVariantOutline,
-  glass: styles.filterVariantGlass,
-  underline: styles.filterVariantUnderline,
-}
 
 const numOrNull = (value: unknown): number | null => {
   const numeric = Number(value)
@@ -444,39 +423,6 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
     },
   ]
 
-  // Get active filters for summary
-  const activeFilters = useMemo(() => {
-    const filters: Array<{ key: string; label: string; onRemove: () => void }> = []
-    if (ratingFilter === '4.5+') {
-      filters.push({ key: 'rate', label: 'Rating 4.5+', onRemove: () => setRatingFilter('all') })
-    } else if (ratingFilter === '4.8+') {
-      filters.push({ key: 'rate', label: 'Rating 4.8+', onRemove: () => setRatingFilter('all') })
-    }
-    if (experienceFilter === 'intermediate') {
-      filters.push({ key: 'exp', label: 'Intermediate', onRemove: () => setExperienceFilter('all') })
-    } else if (experienceFilter === 'senior') {
-      filters.push({ key: 'exp', label: 'Senior', onRemove: () => setExperienceFilter('all') })
-    } else if (experienceFilter === 'expert') {
-      filters.push({ key: 'exp', label: 'Expert', onRemove: () => setExperienceFilter('all') })
-    }
-    if (availabilityFilter === 'available') {
-      filters.push({ key: 'avail', label: 'Available Now', onRemove: () => setAvailabilityFilter('all') })
-    } else if (availabilityFilter === 'within_1_week') {
-      filters.push({ key: 'avail', label: 'Available in 1 Week', onRemove: () => setAvailabilityFilter('all') })
-    } else if (availabilityFilter === 'within_2_weeks') {
-      filters.push({ key: 'avail', label: 'Available in 2 Weeks', onRemove: () => setAvailabilityFilter('all') })
-    }
-    if (serviceFilter !== 'all') {
-      const service = serviceCategories.find(s => s.value === serviceFilter)
-      if (service) {
-        filters.push({ key: 'service', label: service.label, onRemove: () => setServiceFilter('all') })
-      }
-    }
-    return filters
-  }, [availabilityFilter, experienceFilter, ratingFilter, serviceFilter, serviceCategories])
-
-  const activeFilterCount = activeFilters.length
-
   const clearAllFilters = () => {
     setAvailabilityFilter('all')
     setExperienceFilter('all')
@@ -516,17 +462,6 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
     }
   }
   
-  // Get unique values from database for filters
-  const uniqueIndustries = useMemo(() => {
-    const all = freelancers.flatMap(f => f.industries || []).filter(Boolean);
-    return Array.from(new Set(all)).sort();
-  }, [freelancers]);
-
-  const uniqueLanguages = useMemo(() => {
-    const all = freelancers.flatMap(f => f.languages || []).filter(Boolean);
-    return Array.from(new Set(all)).sort();
-  }, [freelancers]);
-
   // Filter freelancers
   const filteredFreelancers = useMemo(() => {
     let filtered = freelancers.filter(freelancer => {
@@ -768,9 +703,6 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
           variant="glass"
           controls={filterControls}
           onClearAll={clearAllFilters}
-          activeFilters={activeFilters}
-          filteredCount={filteredFreelancers.length}
-          totalCount={freelancers.length}
         />
 
         {/* Freelancers Grid */}
@@ -818,8 +750,7 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
             className={`${styles.resultsGridRefresh} ${viewMode === 'list' ? 'grid grid-cols-1 gap-6' : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8'}`}
           >
             {filteredFreelancers.map((freelancer) => {
-              const overlapHours = freelancer.overlap_hours || calculateOverlapHours(freelancer.timezone_offset);
-              const turnaround = freelancer.turnaround_days 
+              const turnaround = freelancer.turnaround_days
                 ? `≈${freelancer.turnaround_days * 24}h` 
                 : freelancer.response_time || '≈72h';
               const isVerified = freelancer.verification_state === 'verified';
@@ -832,9 +763,6 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
             const ratingValue = numOrNull(freelancer.rating);
             const isNewFreelancer = !projectCount || projectCount === 0;
             const hasPortfolio = portfolioImages.length > 0;
-            const industries: string[] = Array.isArray(freelancer.industries)
-              ? (freelancer.industries as string[])
-              : [];
             const isTopRated = ratingValue !== null && ratingValue >= 4.8 && (reviewCount ?? 0) >= 10;
             const availabilityInfo = availabilityMeta(freelancer.availability);
 

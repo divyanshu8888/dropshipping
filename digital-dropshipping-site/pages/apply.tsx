@@ -141,12 +141,12 @@ export default function ApplyPage() {
           <title>Apply as Freelancer - Uniti</title>
           <meta name="description" content="Join Uniti and connect with clients worldwide" />
         </Head>
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-100">
+        <div className="min-h-screen bg-[#0B0D10]">
           <Header />
           <div className="flex items-center justify-center min-h-[60vh]">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading...</p>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400 mx-auto mb-4"></div>
+              <p className="text-white/70">Loading...</p>
             </div>
           </div>
         </div>
@@ -161,103 +161,111 @@ export default function ApplyPage() {
         <meta name="description" content="Join Uniti and connect with clients worldwide" />
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-100">
+      <div className="min-h-screen bg-[#0B0D10]">
         <Header />
 
         {/* Hero */}
-        <section className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-16">
-          <div className="max-w-4xl mx-auto px-4 text-center">
-            <h1 className="text-4xl md:text-5xl font-extrabold mb-4">
-              Join Uniti
+        <section className="relative overflow-hidden border-b border-white/10 bg-[radial-gradient(120%_150%_at_50%_-20%,rgba(99,102,241,0.35)_0%,rgba(15,15,20,1)_80%)] pt-32 pb-16">
+          <div className="absolute -top-24 left-1/2 -translate-x-1/2 h-64 w-64 rounded-full bg-indigo-500/20 blur-[120px]" />
+          <div className="max-w-4xl mx-auto px-4 text-center relative">
+            <h1 className="font-display text-4xl text-white mb-4">
+              Join{' '}
+              <span className="bg-gradient-to-r from-cyan-300 to-violet-300 bg-clip-text text-transparent">
+                Uniti
+              </span>
             </h1>
-            <p className="text-xl text-indigo-100">
+            <p className="text-white/70 text-lg">
               Connect with thousands of clients and grow your freelance business
             </p>
           </div>
         </section>
 
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="bg-white rounded-2xl shadow-2xl p-8">
+          <div className="rounded-[28px] border border-white/10 bg-white/[0.04] backdrop-blur-xl p-8 shadow-2xl">
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Basic Info */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">Display Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.display_name}
-                    onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                    placeholder="Your professional name"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">Professional Title *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                    placeholder="e.g. Full Stack Developer"
-                  />
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-widest text-white/40 border-b border-white/[0.08] pb-2 mb-4">Basic Information</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-white/70 mb-1.5">Display Name *</label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.display_name}
+                      onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
+                      className="bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
+                      placeholder="Your professional name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-white/70 mb-1.5">Professional Title *</label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.title}
+                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                      className="bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
+                      placeholder="e.g. Full Stack Developer"
+                    />
+                  </div>
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Short Bio * (50-200 characters)</label>
+                <label className="block text-sm font-medium text-white/70 mb-1.5">Short Bio * (50-200 characters)</label>
                 <textarea
                   required
                   rows={2}
                   value={formData.bio}
                   onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
                   placeholder="A brief tagline about yourself"
                 />
-                <p className="text-sm text-gray-500 mt-1">{formData.bio.length}/200 characters</p>
+                <p className="text-xs text-white/40 mt-1">{formData.bio.length}/200 characters</p>
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Full Description * (200+ characters)</label>
+                <label className="block text-sm font-medium text-white/70 mb-1.5">Full Description * (200+ characters)</label>
                 <textarea
                   required
                   rows={4}
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
                   placeholder="Tell us about your experience, expertise, and what makes you unique..."
                 />
-                <p className="text-sm text-gray-500 mt-1">{formData.description.length}/200 characters minimum</p>
+                <p className="text-xs text-white/40 mt-1">{formData.description.length}/200 characters minimum</p>
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Country *</label>
+                <label className="block text-sm font-medium text-white/70 mb-1.5">Country *</label>
                 <select
                   required
                   value={formData.country}
                   onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
                 >
-                  <option value="">Select your country</option>
+                  <option value="" className="bg-[#0B0D10]">Select your country</option>
                   {countries.map(country => (
-                    <option key={country} value={country}>{country}</option>
+                    <option key={country} value={country} className="bg-[#0B0D10]">{country}</option>
                   ))}
                 </select>
               </div>
 
               {/* Skills */}
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Skills *</label>
+                <p className="text-sm font-semibold uppercase tracking-widest text-white/40 border-b border-white/[0.08] pb-2 mb-4">Skills</p>
+                <label className="block text-sm font-medium text-white/70 mb-1.5">Skills *</label>
                 {formData.skills.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-3">
                     {formData.skills.map((skill) => (
-                      <span key={skill} className="inline-flex items-center px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full font-medium">
+                      <span key={skill} className="inline-flex items-center gap-1 rounded-full bg-cyan-500/15 border border-cyan-500/25 px-2.5 py-0.5 text-xs text-cyan-300">
                         {skill}
                         <button
                           type="button"
                           onClick={() => removeSkill(skill)}
-                          className="ml-2 text-indigo-600 hover:text-indigo-800"
+                          className="text-cyan-400/60 hover:text-rose-400 ml-1"
                         >
                           ×
                         </button>
@@ -272,13 +280,13 @@ export default function ApplyPage() {
                     value={skillInput}
                     onChange={(e) => setSkillInput(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSkill())}
-                    className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    className="bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition flex-1"
                     placeholder="Add a skill"
                   />
                   <button
                     type="button"
                     onClick={addSkill}
-                    className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold"
+                    className="rounded-xl bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-500/20 text-cyan-300 px-4 py-2 text-sm hover:from-cyan-500/30 transition"
                   >
                     Add
                   </button>
@@ -291,10 +299,10 @@ export default function ApplyPage() {
                       type="button"
                       onClick={() => !formData.skills.includes(skill) && setFormData({ ...formData, skills: [...formData.skills, skill] })}
                       disabled={formData.skills.includes(skill)}
-                      className={`px-3 py-1 text-sm rounded-full border transition-all ${
+                      className={`rounded-full border px-3 py-1 text-xs transition ${
                         formData.skills.includes(skill)
-                          ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
-                          : 'bg-white text-gray-700 border-gray-300 hover:bg-indigo-50 hover:border-indigo-300'
+                          ? 'border-white/5 bg-white/5 text-white/20 cursor-not-allowed'
+                          : 'border-white/10 bg-white/5 text-white/60 hover:border-cyan-400/40 hover:text-cyan-300'
                       }`}
                     >
                       {skill}
@@ -305,204 +313,211 @@ export default function ApplyPage() {
 
               {/* Services */}
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Services You Offer</label>
-                <p className="text-sm text-gray-600 mb-4">Add the services you want to offer to clients</p>
-                
+                <p className="text-sm font-semibold uppercase tracking-widest text-white/40 border-b border-white/[0.08] pb-2 mb-4">Services</p>
+                <label className="block text-sm font-medium text-white/70 mb-1.5">Services You Offer</label>
+                <p className="text-xs text-white/40 mb-4">Add the services you want to offer to clients</p>
+
                 {formData.services.map((service, index) => (
-                  <div key={index} className="border-2 border-gray-200 rounded-xl p-4 mb-4">
+                  <div key={index} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 mb-4">
                     <div className="flex justify-between items-center mb-3">
-                      <h4 className="font-semibold text-gray-900">Service {index + 1}</h4>
+                      <h4 className="text-sm font-semibold text-white/70">Service {index + 1}</h4>
                       <button
                         type="button"
                         onClick={() => removeService(index)}
-                        className="text-red-600 hover:text-red-800 font-medium"
+                        className="text-xs text-rose-400/70 hover:text-rose-400 transition font-medium"
                       >
                         Remove
                       </button>
                     </div>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Service Title *</label>
+                        <label className="block text-sm font-medium text-white/70 mb-1.5">Service Title *</label>
                         <input
                           type="text"
                           required
                           value={service.title}
                           onChange={(e) => updateService(index, 'title', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                          className="bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
                           placeholder="e.g., Website Design"
                         />
                       </div>
-                      
+
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
+                        <label className="block text-sm font-medium text-white/70 mb-1.5">Category *</label>
                         <select
                           required
                           value={service.category}
                           onChange={(e) => updateService(index, 'category', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                          className="bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
                         >
-                          <option value="">Select Category</option>
+                          <option value="" className="bg-[#0B0D10]">Select Category</option>
                           {serviceCategories.map((category) => (
-                            <option key={category} value={category}>{category}</option>
+                            <option key={category} value={category} className="bg-[#0B0D10]">{category}</option>
                           ))}
                         </select>
                       </div>
                     </div>
-                    
+
                     <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Description *</label>
+                      <label className="block text-sm font-medium text-white/70 mb-1.5">Description *</label>
                       <textarea
                         required
                         value={service.description}
                         onChange={(e) => updateService(index, 'description', e.target.value)}
                         rows={3}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        className="bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
                         placeholder="Describe what this service includes..."
                       />
                     </div>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Price (USD) *</label>
+                        <label className="block text-sm font-medium text-white/70 mb-1.5">Price (USD) *</label>
                         <div className="relative">
-                          <span className="absolute left-3 top-2 text-gray-500">$</span>
+                          <span className="absolute left-3 top-2.5 text-white/30 text-sm">$</span>
                           <input
                             type="number"
                             min="1"
                             required
                             value={service.price || ''}
                             onChange={(e) => updateService(index, 'price', parseInt(e.target.value) || 0)}
-                            className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                            className="bg-white/5 border border-white/10 rounded-xl text-white pl-7 pr-4 py-2.5 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
                             placeholder="500"
                           />
                         </div>
                       </div>
-                      
+
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Time (Days) *</label>
+                        <label className="block text-sm font-medium text-white/70 mb-1.5">Delivery Time (Days) *</label>
                         <input
                           type="number"
                           min="1"
                           required
                           value={service.delivery_time || ''}
                           onChange={(e) => updateService(index, 'delivery_time', parseInt(e.target.value) || 1)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                          className="bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
                           placeholder="7"
                         />
                       </div>
                     </div>
                   </div>
                 ))}
-                
+
                 <button
                   type="button"
                   onClick={addService}
-                  className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-indigo-400 hover:text-indigo-600 transition-colors font-medium"
+                  className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/70 hover:bg-white/10 transition"
                 >
                   + Add Another Service
                 </button>
               </div>
 
               {/* Pricing (Private) */}
-              <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-6">
-                <h3 className="font-bold text-gray-900 mb-4 flex items-center">
-                  <svg className="w-5 h-5 mr-2 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
-                  Pricing Information (Private - Only visible to admins)
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">Hourly Rate (USD) *</label>
-                    <div className="relative">
-                      <span className="absolute left-4 top-3 text-gray-500">$</span>
-                      <input
-                        type="number"
-                        min="10"
-                        required
-                        value={formData.hourly_rate || ''}
-                        onChange={(e) => setFormData({ ...formData, hourly_rate: parseInt(e.target.value) || 0 })}
-                        className="w-full pl-8 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                        placeholder="50"
-                      />
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-widest text-white/40 border-b border-white/[0.08] pb-2 mb-4">Pricing Information</p>
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+                  <h3 className="text-sm font-semibold text-white/70 mb-4 flex items-center gap-2">
+                    <svg className="w-4 h-4 text-cyan-400/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                    Private — Only visible to admins
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-white/70 mb-1.5">Hourly Rate (USD) *</label>
+                      <div className="relative">
+                        <span className="absolute left-4 top-2.5 text-white/30 text-sm">$</span>
+                        <input
+                          type="number"
+                          min="10"
+                          required
+                          value={formData.hourly_rate || ''}
+                          onChange={(e) => setFormData({ ...formData, hourly_rate: parseInt(e.target.value) || 0 })}
+                          className="bg-white/5 border border-white/10 rounded-xl text-white pl-8 pr-4 py-2.5 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
+                          placeholder="50"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-white/70 mb-1.5">Minimum Project Fee (USD) *</label>
+                      <div className="relative">
+                        <span className="absolute left-4 top-2.5 text-white/30 text-sm">$</span>
+                        <input
+                          type="number"
+                          min="100"
+                          required
+                          value={formData.base_fee || ''}
+                          onChange={(e) => setFormData({ ...formData, base_fee: parseInt(e.target.value) || 0 })}
+                          className="bg-white/5 border border-white/10 rounded-xl text-white pl-8 pr-4 py-2.5 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
+                          placeholder="500"
+                        />
+                      </div>
                     </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">Minimum Project Fee (USD) *</label>
-                    <div className="relative">
-                      <span className="absolute left-4 top-3 text-gray-500">$</span>
-                      <input
-                        type="number"
-                        min="100"
-                        required
-                        value={formData.base_fee || ''}
-                        onChange={(e) => setFormData({ ...formData, base_fee: parseInt(e.target.value) || 0 })}
-                        className="w-full pl-8 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                        placeholder="500"
-                      />
-                    </div>
-                  </div>
+                  <p className="text-xs text-white/40 mt-3">
+                    🔒 These rates will be kept private and only shared with clients after approval
+                  </p>
                 </div>
-                <p className="text-sm text-gray-600 mt-2">
-                  🔒 These rates will be kept private and only shared with clients after approval
-                </p>
               </div>
 
               {/* Contact Info (Private) */}
-              <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-6">
-                <h3 className="font-bold text-gray-900 mb-4 flex items-center">
-                  <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                  Contact Information (Private)
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">Email *</label>
-                    <input
-                      type="email"
-                      required
-                      value={formData.contact_email}
-                      onChange={(e) => setFormData({ ...formData, contact_email: e.target.value })}
-                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                      placeholder="your.email@example.com"
-                    />
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-widest text-white/40 border-b border-white/[0.08] pb-2 mb-4">Contact Information</p>
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+                  <h3 className="text-sm font-semibold text-white/70 mb-4 flex items-center gap-2">
+                    <svg className="w-4 h-4 text-cyan-400/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    Private — Never displayed publicly
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-white/70 mb-1.5">Email *</label>
+                      <input
+                        type="email"
+                        required
+                        value={formData.contact_email}
+                        onChange={(e) => setFormData({ ...formData, contact_email: e.target.value })}
+                        className="bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
+                        placeholder="your.email@example.com"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-white/70 mb-1.5">Phone (Optional)</label>
+                      <input
+                        type="tel"
+                        value={formData.contact_phone}
+                        onChange={(e) => setFormData({ ...formData, contact_phone: e.target.value })}
+                        className="bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
+                        placeholder="+1 (555) 123-4567"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">Phone (Optional)</label>
-                    <input
-                      type="tel"
-                      value={formData.contact_phone}
-                      onChange={(e) => setFormData({ ...formData, contact_phone: e.target.value })}
-                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                      placeholder="+1 (555) 123-4567"
-                    />
-                  </div>
+                  <p className="text-xs text-white/40 mt-3">
+                    🔒 Your contact info will never be displayed publicly
+                  </p>
                 </div>
-                <p className="text-sm text-gray-600 mt-2">
-                  🔒 Your contact info will never be displayed publicly
-                </p>
               </div>
 
               {errors.submit && (
-                <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4">
-                  <p className="text-red-600 font-medium">{errors.submit}</p>
+                <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 p-4">
+                  <p className="text-rose-400 text-xs">{errors.submit}</p>
                 </div>
               )}
 
-              <div className="flex justify-end space-x-4 pt-6">
+              <div className="flex justify-end gap-4 pt-6">
                 <button
                   type="button"
                   onClick={() => router.back()}
-                  className="px-8 py-3 text-gray-600 border-2 border-gray-300 rounded-lg hover:bg-gray-50 font-semibold"
+                  className="rounded-xl border border-white/10 bg-white/5 px-8 py-3 text-sm text-white/70 hover:bg-white/10 transition font-semibold"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 font-semibold shadow-lg disabled:opacity-50"
+                  className="w-full rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold py-3 transition hover:from-cyan-300 hover:to-blue-400 shadow-lg shadow-cyan-500/25 disabled:opacity-50"
                 >
                   {loading ? 'Submitting...' : 'Submit Application'}
                 </button>

@@ -2,6 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Header from '../../src/components/Header';
+import {
+  AlertTriangle,
+  Clock,
+  Ban,
+  Eye,
+  MessageSquare,
+  ShieldAlert,
+  X,
+} from 'lucide-react';
 
 interface ModerationStats {
   total_violations_today: number;
@@ -65,7 +74,7 @@ const ModerationDashboard: React.FC = () => {
         router.push('/login');
         return;
       }
-      
+
       const user = JSON.parse(userData);
       if (user.role !== 'admin') {
         router.push('/');
@@ -82,13 +91,12 @@ const ModerationDashboard: React.FC = () => {
       try {
         setIsLoading(true);
 
-        const [servicesRes, usersRes] = await Promise.all([
+        const [servicesRes] = await Promise.all([
           fetch('/api/admin/activity-feed?type=services'),
-          fetch('/api/admin/activity-feed?type=users')
+          fetch('/api/admin/activity-feed?type=users'),
         ]);
 
         const servicesData = servicesRes.ok ? await servicesRes.json() : { activities: [] };
-        const usersData = usersRes.ok ? await usersRes.json() : { activities: [] };
 
         const recentViolations: Violation[] = (servicesData.activities || []).map((activity: any) => ({
           message_id: activity.id,
@@ -151,15 +159,15 @@ const ModerationDashboard: React.FC = () => {
   useEffect(() => {
     const loadAllMessages = async () => {
       if (selectedTab !== 'all-messages') return;
-      
+
       try {
         setLoadingMessages(true);
         const userData = localStorage.getItem('user');
         if (!userData) return;
-        
+
         const user = JSON.parse(userData);
         const response = await fetch(`/api/admin/all-messages?userId=${user.id}&limit=200`);
-        
+
         if (response.ok) {
           const data = await response.json();
           setAllMessagesData(data);
@@ -191,10 +199,10 @@ const ModerationDashboard: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-100">
+      <div className="min-h-screen bg-[#0B0D10]">
         <Header />
         <div className="flex items-center justify-center h-96 pt-28">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400"></div>
         </div>
       </div>
     );
@@ -202,17 +210,17 @@ const ModerationDashboard: React.FC = () => {
 
   if (!dashboardData) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-100">
+      <div className="min-h-screen bg-[#0B0D10]">
         <Header />
         <div className="flex items-center justify-center h-96 pt-28">
-          <div className="text-red-600">Failed to load moderation dashboard</div>
+          <div className="text-rose-400">Failed to load moderation dashboard</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-[#0B0D10]">
       <Head>
         <title>Moderation Dashboard - Admin</title>
         <meta name="description" content="Admin moderation dashboard for platform oversight" />
@@ -220,100 +228,103 @@ const ModerationDashboard: React.FC = () => {
 
       <Header />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-28">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Moderation Dashboard</h1>
-              <p className="mt-2 text-gray-600">Monitor and manage platform communications</p>
-            </div>
+      {/* Hero */}
+      <section className="relative overflow-hidden border-b border-white/10 bg-[radial-gradient(120%_150%_at_50%_-20%,rgba(239,68,68,0.25)_0%,rgba(24,24,27,0.95)_55%,rgba(11,13,16,1)_100%)] pt-28 pb-16 text-white">
+        <div className="absolute inset-x-0 -bottom-16 h-32 bg-gradient-to-b from-transparent to-black/80" />
+        <div className="mx-auto flex max-w-7xl flex-col gap-10 px-4 sm:px-6 lg:px-8 lg:flex-row lg:items-center lg:justify-between">
+          <div className="relative z-10 space-y-4">
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-white/70">
+              <ShieldAlert className="h-3.5 w-3.5" />
+              Moderation Command
+            </span>
+            <h1 className="font-display text-4xl leading-tight sm:text-5xl">
+              Moderation{' '}
+              <span className="bg-gradient-to-r from-rose-300 via-amber-300 to-orange-300 bg-clip-text text-transparent">
+                Dashboard
+              </span>
+            </h1>
+            <p className="max-w-xl text-sm text-white/70">
+              Monitor and manage platform communications, violations, and user activity in real time.
+            </p>
+          </div>
+          <div className="relative z-10 flex flex-col gap-3 text-sm">
             <button
               onClick={() => router.push('/admin')}
-              className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-4 py-2 text-white/80 transition hover:border-white/40 hover:text-white"
             >
-              Back to Dashboard
+              ← Back to Dashboard
             </button>
           </div>
         </div>
+      </section>
 
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
             <div className="flex items-center">
-              <div className="p-2 bg-red-100 rounded-lg">
-                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
+              <div className="p-2 bg-rose-500/15 rounded-xl">
+                <AlertTriangle className="w-6 h-6 text-rose-400" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Violations Today</p>
-                <p className="text-2xl font-semibold text-gray-900">
+                <p className="text-xs uppercase tracking-widest text-white/40">Violations Today</p>
+                <p className="text-2xl font-semibold text-white">
                   {dashboardData.stats.total_violations_today}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
             <div className="flex items-center">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+              <div className="p-2 bg-amber-500/15 rounded-xl">
+                <Clock className="w-6 h-6 text-amber-400" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Critical Today</p>
-                <p className="text-2xl font-semibold text-gray-900">
+                <p className="text-xs uppercase tracking-widest text-white/40">Critical Today</p>
+                <p className="text-2xl font-semibold text-white">
                   {dashboardData.stats.critical_violations_today}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
             <div className="flex items-center">
-              <div className="p-2 bg-yellow-100 rounded-lg">
-                <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728" />
-                </svg>
+              <div className="p-2 bg-orange-500/15 rounded-xl">
+                <Ban className="w-6 h-6 text-orange-400" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Blocked Today</p>
-                <p className="text-2xl font-semibold text-gray-900">
+                <p className="text-xs uppercase tracking-widest text-white/40">Blocked Today</p>
+                <p className="text-2xl font-semibold text-white">
                   {dashboardData.stats.blocked_messages_today}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
             <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
+              <div className="p-2 bg-cyan-500/15 rounded-xl">
+                <Eye className="w-6 h-6 text-cyan-400" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Muted Users</p>
-                <p className="text-2xl font-semibold text-gray-900">
+                <p className="text-xs uppercase tracking-widest text-white/40">Muted Users</p>
+                <p className="text-2xl font-semibold text-white">
                   {dashboardData.stats.muted_users_count}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
             <div className="flex items-center">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                </svg>
+              <div className="p-2 bg-emerald-500/15 rounded-xl">
+                <MessageSquare className="w-6 h-6 text-emerald-400" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Active Chats</p>
-                <p className="text-2xl font-semibold text-gray-900">
+                <p className="text-xs uppercase tracking-widest text-white/40">Active Chats</p>
+                <p className="text-2xl font-semibold text-white">
                   {dashboardData.active_conversations.length}
                 </p>
               </div>
@@ -322,9 +333,9 @@ const ModerationDashboard: React.FC = () => {
         </div>
 
         {/* Tabs */}
-        <div className="bg-white rounded-lg shadow mb-8">
-          <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8 px-6 overflow-x-auto">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.04] mb-8">
+          <div className="border-b border-white/10">
+            <nav className="-mb-px flex space-x-1 px-6 overflow-x-auto">
               {[
                 { id: 'live', name: 'Live Monitor', count: dashboardData?.active_conversations?.length || 0 },
                 { id: 'violations', name: 'Recent Violations', count: dashboardData?.recent_violations?.length || 0 },
@@ -335,23 +346,25 @@ const ModerationDashboard: React.FC = () => {
                 <button
                   key={tab.id}
                   onClick={() => setSelectedTab(tab.id as any)}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  className={`py-4 px-3 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
                     selectedTab === tab.id
-                      ? 'border-indigo-500 text-indigo-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      ? 'border-cyan-400 text-cyan-400'
+                      : 'border-transparent text-white/50 hover:text-white/80 hover:border-white/30'
                   }`}
                 >
                   {tab.name}
                   {tab.count !== null && tab.count > 0 && (
                     <span className={`ml-2 py-0.5 px-2 rounded-full text-xs ${
-                      selectedTab === tab.id ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-100 text-gray-600'
+                      selectedTab === tab.id
+                        ? 'bg-cyan-500/20 text-cyan-400'
+                        : 'bg-white/10 text-white/50'
                     }`}>
                       {tab.count}
                     </span>
                   )}
                   {tab.count === null && selectedTab === tab.id && loadingMessages && (
                     <span className="ml-2">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600 inline-block"></div>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-cyan-400 inline-block"></div>
                     </span>
                   )}
                 </button>
@@ -363,29 +376,29 @@ const ModerationDashboard: React.FC = () => {
             {/* Live Monitor Tab */}
             {selectedTab === 'live' && (
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900">Active Conversations with Violations</h3>
+                <h3 className="text-lg font-semibold text-white">Active Conversations with Violations</h3>
                 {dashboardData.active_conversations.map((conversation) => (
-                  <div key={conversation.conversation_id} className="border border-gray-200 rounded-lg p-4">
+                  <div key={conversation.conversation_id} className="border border-white/10 rounded-xl p-4 hover:bg-white/[0.03] transition-colors">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h4 className="font-medium text-gray-900">{conversation.title}</h4>
-                        <p className="text-sm text-gray-600">
+                        <h4 className="font-medium text-white">{conversation.title}</h4>
+                        <p className="text-sm text-white/60">
                           {conversation.participant_count} participants • {conversation.violation_count} violations
                         </p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-white/40">
                           Last activity: {new Date(conversation.last_message_at).toLocaleString()}
                         </p>
                       </div>
                       <div className="flex space-x-2">
                         <button
                           onClick={() => setSelectedConversation(conversation.conversation_id)}
-                          className="px-3 py-1 text-sm bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200"
+                          className="border border-white/10 bg-white/5 text-white/80 rounded-xl hover:bg-white/10 px-4 py-2 text-sm transition-colors"
                         >
                           View Chat
                         </button>
                         <button
                           onClick={() => sendSystemMessage(conversation.conversation_id, 'Please keep pricing discussions out of chat. Use the Quote system instead.')}
-                          className="px-3 py-1 text-sm bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200"
+                          className="border border-amber-500/30 bg-amber-500/10 text-amber-400 rounded-xl px-4 py-2 text-sm transition-colors hover:bg-amber-500/20"
                         >
                           Send Notice
                         </button>
@@ -399,65 +412,68 @@ const ModerationDashboard: React.FC = () => {
             {/* Violations Tab */}
             {selectedTab === 'violations' && (
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900">Recent Violations</h3>
+                <h3 className="text-lg font-semibold text-white">Recent Violations</h3>
                 <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+                  <table className="min-w-full">
+                    <thead>
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="bg-white/5 text-xs uppercase tracking-widest text-white/40 px-4 py-3 text-left rounded-tl-xl">
                           User
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="bg-white/5 text-xs uppercase tracking-widest text-white/40 px-4 py-3 text-left">
                           Rule
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="bg-white/5 text-xs uppercase tracking-widest text-white/40 px-4 py-3 text-left">
                           Severity
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="bg-white/5 text-xs uppercase tracking-widest text-white/40 px-4 py-3 text-left">
                           Action
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="bg-white/5 text-xs uppercase tracking-widest text-white/40 px-4 py-3 text-left">
                           Time
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="bg-white/5 text-xs uppercase tracking-widest text-white/40 px-4 py-3 text-left rounded-tr-xl">
                           Actions
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
+                    <tbody>
                       {dashboardData.recent_violations.map((violation) => (
-                        <tr key={violation.message_id}>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                        <tr key={violation.message_id} className="border-t border-white/5 hover:bg-white/[0.03] transition-colors">
+                          <td className="px-4 py-3 text-sm text-white/80">
                             <div>
-                              <div className="text-sm font-medium text-gray-900">{violation.sender_name}</div>
-                              <div className="text-sm text-gray-500">{violation.sender_email}</div>
+                              <div className="font-medium text-white">{violation.sender_name}</div>
+                              <div className="text-white/50 text-xs">{violation.sender_email}</div>
                             </div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                          <td className="px-4 py-3 text-sm text-white/80">
+                            <span className="rounded-full px-2.5 py-0.5 text-xs font-semibold bg-rose-500/15 text-rose-400 border border-rose-500/20">
                               {violation.rule_code}
                             </span>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              violation.severity === 'critical' ? 'bg-red-100 text-red-800' :
-                              violation.severity === 'high' ? 'bg-orange-100 text-orange-800' :
-                              violation.severity === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-blue-100 text-blue-800'
+                          <td className="px-4 py-3 text-sm text-white/80">
+                            <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                              violation.severity === 'critical'
+                                ? 'bg-rose-500/15 text-rose-400 border border-rose-500/20'
+                                : violation.severity === 'high'
+                                ? 'bg-amber-500/15 text-amber-400 border border-amber-500/20'
+                                : violation.severity === 'medium'
+                                ? 'bg-yellow-500/15 text-yellow-400 border border-yellow-500/20'
+                                : 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/20'
                             }`}>
                               {violation.severity}
                             </span>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <td className="px-4 py-3 text-sm text-white/80">
                             {violation.action_taken}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <td className="px-4 py-3 text-sm text-white/50">
                             {new Date(violation.created_at).toLocaleString()}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <td className="px-4 py-3 text-sm font-medium">
                             <button
                               onClick={() => toggleUserMute(violation.sender_email, violation.conversation_id)}
-                              className="text-indigo-600 hover:text-indigo-900"
+                              className="border border-rose-500/30 bg-rose-500/10 text-rose-400 rounded-xl px-3 py-1 text-xs transition-colors hover:bg-rose-500/20"
                             >
                               Mute User
                             </button>
@@ -473,14 +489,14 @@ const ModerationDashboard: React.FC = () => {
             {/* Muted Users Tab */}
             {selectedTab === 'muted' && (
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900">Currently Muted Users</h3>
+                <h3 className="text-lg font-semibold text-white">Currently Muted Users</h3>
                 {dashboardData.muted_users.map((user) => (
-                  <div key={user.user_id} className="border border-gray-200 rounded-lg p-4">
+                  <div key={user.user_id} className="border border-white/10 rounded-xl p-4 hover:bg-white/[0.03] transition-colors">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h4 className="font-medium text-gray-900">{user.user_name}</h4>
-                        <p className="text-sm text-gray-600">{user.user_email}</p>
-                        <p className="text-xs text-gray-500">
+                        <h4 className="font-medium text-white">{user.user_name}</h4>
+                        <p className="text-sm text-white/60">{user.user_email}</p>
+                        <p className="text-xs text-white/40">
                           Muted since: {new Date(user.muted_at).toLocaleString()}
                           {user.muted_until && (
                             <span> • Until: {new Date(user.muted_until).toLocaleString()}</span>
@@ -489,7 +505,7 @@ const ModerationDashboard: React.FC = () => {
                       </div>
                       <button
                         onClick={() => toggleUserMute(user.user_id, user.conversation_id)}
-                        className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded hover:bg-green-200"
+                        className="border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 rounded-xl px-4 py-2 text-sm transition-colors hover:bg-emerald-500/20"
                       >
                         Unmute
                       </button>
@@ -502,23 +518,23 @@ const ModerationDashboard: React.FC = () => {
             {/* All Conversations Tab */}
             {selectedTab === 'conversations' && (
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900">All Active Conversations</h3>
+                <h3 className="text-lg font-semibold text-white">All Active Conversations</h3>
                 {dashboardData.active_conversations.map((conversation) => (
-                  <div key={conversation.conversation_id} className="border border-gray-200 rounded-lg p-4">
+                  <div key={conversation.conversation_id} className="border border-white/10 rounded-xl p-4 hover:bg-white/[0.03] transition-colors">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h4 className="font-medium text-gray-900">{conversation.title}</h4>
-                        <p className="text-sm text-gray-600">
+                        <h4 className="font-medium text-white">{conversation.title}</h4>
+                        <p className="text-sm text-white/60">
                           Status: {conversation.status} • {conversation.participant_count} participants
                         </p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-white/40">
                           Last activity: {new Date(conversation.last_message_at).toLocaleString()}
                         </p>
                       </div>
                       <div className="flex space-x-2">
                         <button
                           onClick={() => setSelectedConversation(conversation.conversation_id)}
-                          className="px-3 py-1 text-sm bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200"
+                          className="border border-white/10 bg-white/5 text-white/80 rounded-xl hover:bg-white/10 px-4 py-2 text-sm transition-colors"
                         >
                           Monitor
                         </button>
@@ -533,9 +549,9 @@ const ModerationDashboard: React.FC = () => {
             {selectedTab === 'all-messages' && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900">All Messages & Milestone Descriptions</h3>
+                  <h3 className="text-lg font-semibold text-white">All Messages & Milestone Descriptions</h3>
                   {loadingMessages && (
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-600"></div>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-cyan-400"></div>
                   )}
                 </div>
 
@@ -543,36 +559,36 @@ const ModerationDashboard: React.FC = () => {
                   <>
                     {/* Messages Section */}
                     <div>
-                      <h4 className="text-md font-semibold text-gray-800 mb-3">
+                      <h4 className="text-sm font-semibold text-white/70 mb-3 uppercase tracking-widest">
                         Chat Messages ({allMessagesData.messages.length})
                       </h4>
                       <div className="space-y-3 max-h-96 overflow-y-auto">
                         {allMessagesData.messages.length === 0 ? (
-                          <p className="text-sm text-gray-500">No messages found</p>
+                          <p className="text-sm text-white/40">No messages found</p>
                         ) : (
                           allMessagesData.messages.map((message: any) => (
-                            <div key={message.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                            <div key={message.id} className="border border-white/10 rounded-xl p-4 bg-white/[0.03]">
                               <div className="flex items-start justify-between mb-2">
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2 mb-1">
-                                    <span className="text-sm font-medium text-gray-900">
+                                    <span className="text-sm font-medium text-white">
                                       {message.sender_name || message.sender_email}
                                     </span>
-                                    <span className="text-xs text-gray-500">({message.sender_role})</span>
+                                    <span className="text-xs text-white/40">({message.sender_role})</span>
                                     {message.project_title && (
-                                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+                                      <span className="text-xs bg-cyan-500/15 text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded-full">
                                         Project: {message.project_title}
                                       </span>
                                     )}
                                   </div>
-                                  <p className="text-sm text-gray-700 whitespace-pre-wrap">{message.body}</p>
+                                  <p className="text-sm text-white/70 whitespace-pre-wrap">{message.body}</p>
                                   {message.message_type && message.message_type !== 'text' && (
-                                    <span className="inline-block mt-1 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">
+                                    <span className="inline-block mt-1 text-xs bg-violet-500/15 text-violet-400 border border-violet-500/20 px-2 py-0.5 rounded-full">
                                       Type: {message.message_type}
                                     </span>
                                   )}
                                 </div>
-                                <div className="text-xs text-gray-500 ml-4">
+                                <div className="text-xs text-white/40 ml-4">
                                   {new Date(message.created_at).toLocaleString()}
                                 </div>
                               </div>
@@ -584,44 +600,47 @@ const ModerationDashboard: React.FC = () => {
 
                     {/* Milestone Descriptions Section */}
                     <div>
-                      <h4 className="text-md font-semibold text-gray-800 mb-3">
+                      <h4 className="text-sm font-semibold text-white/70 mb-3 uppercase tracking-widest">
                         Milestone Descriptions ({allMessagesData.milestones.length})
                       </h4>
                       <div className="space-y-3 max-h-96 overflow-y-auto">
                         {allMessagesData.milestones.length === 0 ? (
-                          <p className="text-sm text-gray-500">No milestone descriptions found</p>
+                          <p className="text-sm text-white/40">No milestone descriptions found</p>
                         ) : (
                           allMessagesData.milestones.map((milestone: any) => (
-                            <div key={milestone.milestone_id} className="border border-gray-200 rounded-lg p-4 bg-yellow-50">
+                            <div key={milestone.milestone_id} className="border border-white/10 rounded-xl p-4 bg-amber-500/[0.04]">
                               <div className="flex items-start justify-between mb-2">
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2 mb-1">
-                                    <span className="text-sm font-semibold text-gray-900">
+                                    <span className="text-sm font-semibold text-white">
                                       {milestone.milestone_title}
                                     </span>
-                                    <span className={`text-xs px-2 py-0.5 rounded ${
-                                      milestone.status === 'approved' || milestone.status === 'released' ? 'bg-green-100 text-green-700' :
-                                      milestone.status === 'submitted' ? 'bg-blue-100 text-blue-700' :
-                                      milestone.status === 'in_progress' ? 'bg-yellow-100 text-yellow-700' :
-                                      'bg-gray-100 text-gray-700'
+                                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                                      milestone.status === 'approved' || milestone.status === 'released'
+                                        ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'
+                                        : milestone.status === 'submitted'
+                                        ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/20'
+                                        : milestone.status === 'in_progress'
+                                        ? 'bg-amber-500/15 text-amber-400 border border-amber-500/20'
+                                        : 'bg-white/10 text-white/50 border border-white/10'
                                     }`}>
                                       {milestone.status}
                                     </span>
                                     {milestone.project_title && (
-                                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+                                      <span className="text-xs bg-cyan-500/15 text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded-full">
                                         Project: {milestone.project_title}
                                       </span>
                                     )}
                                   </div>
-                                  <div className="text-xs text-gray-600 mb-1">
-                                    Freelancer: {milestone.freelancer_name || milestone.freelancer_email || 'N/A'} • 
+                                  <div className="text-xs text-white/50 mb-1">
+                                    Freelancer: {milestone.freelancer_name || milestone.freelancer_email || 'N/A'} •{' '}
                                     Client: {milestone.client_name || milestone.client_email || 'N/A'}
                                   </div>
-                                  <p className="text-sm text-gray-800 whitespace-pre-wrap bg-white p-2 rounded border border-gray-200">
+                                  <p className="text-sm text-white/70 whitespace-pre-wrap bg-white/[0.03] p-2 rounded-lg border border-white/10">
                                     {milestone.description}
                                   </p>
                                 </div>
-                                <div className="text-xs text-gray-500 ml-4">
+                                <div className="text-xs text-white/40 ml-4">
                                   Updated: {new Date(milestone.updated_at).toLocaleString()}
                                 </div>
                               </div>
@@ -635,14 +654,14 @@ const ModerationDashboard: React.FC = () => {
 
                 {loadingMessages && (
                   <div className="flex items-center justify-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-                    <span className="ml-3 text-sm text-gray-600">Loading messages and descriptions...</span>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400"></div>
+                    <span className="ml-3 text-sm text-white/60">Loading messages and descriptions...</span>
                   </div>
                 )}
 
                 {messagesError && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                    <p className="text-sm text-red-800">{messagesError}</p>
+                  <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-4">
+                    <p className="text-sm text-rose-400">{messagesError}</p>
                     <button
                       onClick={() => {
                         setMessagesError(null);
@@ -652,10 +671,10 @@ const ModerationDashboard: React.FC = () => {
                           fetch(`/api/admin/all-messages?userId=${user.id}&limit=200`)
                             .then(res => res.json())
                             .then(data => setAllMessagesData(data))
-                            .catch(err => setMessagesError('Failed to load messages'));
+                            .catch(() => setMessagesError('Failed to load messages'));
                         }
                       }}
-                      className="mt-2 text-sm text-red-600 hover:text-red-800 underline"
+                      className="mt-2 text-sm text-rose-400 hover:text-rose-300 underline"
                     >
                       Retry
                     </button>
@@ -663,7 +682,7 @@ const ModerationDashboard: React.FC = () => {
                 )}
 
                 {!allMessagesData && !loadingMessages && !messagesError && (
-                  <p className="text-sm text-gray-500">Click the tab to load all messages and descriptions</p>
+                  <p className="text-sm text-white/40">Click the tab to load all messages and descriptions</p>
                 )}
               </div>
             )}
@@ -672,24 +691,22 @@ const ModerationDashboard: React.FC = () => {
 
         {/* Selected Conversation Modal */}
         {selectedConversation && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg w-full max-w-4xl h-96 mx-4">
-              <div className="flex items-center justify-between p-4 border-b">
-                <h3 className="text-lg font-semibold">Conversation Monitor</h3>
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="rounded-2xl border border-white/10 bg-[#0F1115] w-full max-w-4xl h-96 mx-4">
+              <div className="flex items-center justify-between p-4 border-b border-white/10">
+                <h3 className="text-lg font-semibold text-white">Conversation Monitor</h3>
                 <button
                   onClick={() => setSelectedConversation(null)}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-white/40 hover:text-white/80 transition-colors"
                 >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                  <X className="w-5 h-5" />
                 </button>
               </div>
               <div className="p-4 h-full overflow-y-auto">
-                <div className="text-center text-gray-500">
+                <div className="text-center text-white/40">
                   Conversation monitoring interface would go here
                   <br />
-                  <small>Chat ID: {selectedConversation}</small>
+                  <small className="text-white/30">Chat ID: {selectedConversation}</small>
                 </div>
               </div>
             </div>

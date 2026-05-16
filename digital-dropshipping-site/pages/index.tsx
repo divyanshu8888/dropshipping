@@ -463,7 +463,7 @@ $ uniti status
 
 const HomePage = ({ testimonials, stats }: HomePageProps) => {
   const [currentTestimonialIndex, setCurrentTestimonialIndex] = useState(0);
-  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  const [isAutoPlaying, _setIsAutoPlaying] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchSuggestions, setSearchSuggestions] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);

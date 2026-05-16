@@ -468,7 +468,7 @@ export const getProduct = async (identifier: number | string): Promise<Product |
 
 // Orders API
 // TODO: Migrate to MySQL - orders table needs to be created
-export const createOrder = async (orderData: {
+export const createOrder = async (_orderData: {
   customerName: string;
   customerEmail: string;
   customerAddress: string;
@@ -493,13 +493,13 @@ export const getOrders = async (): Promise<Order[]> => {
 };
 
 // TODO: Migrate to MySQL
-export const updateOrderStatus = async (id: number, status: string): Promise<Order> => {
+export const updateOrderStatus = async (_id: number, _status: string): Promise<Order> => {
   throw new Error('Order update not yet migrated to MySQL');
 };
 
 // Admin functions
 // TODO: Migrate to MySQL
-export const createProduct = async (productData: {
+export const createProduct = async (_productData: {
   name: string;
   description: string;
   price: number;
@@ -511,12 +511,12 @@ export const createProduct = async (productData: {
 };
 
 // TODO: Migrate to MySQL
-export const updateProduct = async (id: number, productData: Partial<Product>): Promise<Product> => {
+export const updateProduct = async (_id: number, _productData: Partial<Product>): Promise<Product> => {
   throw new Error('Product update not yet migrated to MySQL');
 };
 
 // TODO: Migrate to MySQL
-export const deleteProduct = async (id: number): Promise<void> => {
+export const deleteProduct = async (_id: number): Promise<void> => {
   throw new Error('Product deletion not yet migrated to MySQL');
 };
 

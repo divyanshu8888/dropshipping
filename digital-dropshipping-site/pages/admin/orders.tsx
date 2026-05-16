@@ -30,7 +30,7 @@ export default function OrdersManagement() {
       router.push('/login')
       return
     }
-    
+
     const userObj = JSON.parse(userData)
     if (userObj.role !== 'ADMIN' && userObj.role !== 'TEAM_MEMBER') {
       router.push('/admin')
@@ -76,24 +76,24 @@ export default function OrdersManagement() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'DELIVERED': return 'bg-green-100 text-green-800 border-green-200'
-      case 'SHIPPED': return 'bg-blue-100 text-blue-800 border-blue-200'
-      case 'PROCESSING': return 'bg-yellow-100 text-yellow-800 border-yellow-200'
-      case 'PENDING': return 'bg-orange-100 text-orange-800 border-orange-200'
-      default: return 'bg-gray-100 text-gray-800 border-gray-200'
+      case 'DELIVERED': return 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+      case 'SHIPPED': return 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30'
+      case 'PROCESSING': return 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+      case 'PENDING': return 'bg-orange-500/15 text-orange-300 border border-orange-500/30'
+      default: return 'bg-white/10 text-white/50 border border-white/10'
     }
   }
 
-  const filteredOrders = orders.filter(order => 
+  const filteredOrders = orders.filter(order =>
     filter === 'all' || order.status === filter
   )
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="min-h-screen bg-[#0B0D10] flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-cyan-400 mx-auto"></div>
+          <p className="mt-4 text-white/70">Loading...</p>
         </div>
       </div>
     )
@@ -105,20 +105,20 @@ export default function OrdersManagement() {
         <title>Orders Management - Admin Dashboard</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-100">
+      <div className="min-h-screen bg-[#0B0D10]">
         <Header />
 
         {/* Hero */}
-        <section className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-12 pt-24">
+        <section className="relative overflow-hidden border-b border-white/10 bg-[radial-gradient(120%_150%_at_50%_-20%,rgba(6,182,212,0.12)_0%,rgba(15,15,20,1)_65%)] pt-28 pb-12">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-4xl font-extrabold mb-2">🛒 Orders Management</h1>
-                <p className="text-xl text-indigo-100">Manage customer orders and fulfillment</p>
+                <h1 className="text-4xl font-extrabold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-400">Orders Management</h1>
+                <p className="text-lg text-white/70">Manage customer orders and fulfillment</p>
               </div>
               <Link
                 href="/admin"
-                className="px-4 py-2 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors"
+                className="rounded-xl border border-white/10 bg-white/5 text-white/70 px-4 py-2 hover:bg-white/10 transition"
               >
                 Back to Dashboard
               </Link>
@@ -128,16 +128,16 @@ export default function OrdersManagement() {
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Filters */}
-          <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-            <div className="flex space-x-4">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 mb-8">
+            <div className="flex flex-wrap gap-3">
               {(['all', 'PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED'] as const).map((status) => (
                 <button
                   key={status}
                   onClick={() => setFilter(status)}
-                  className={`px-6 py-3 rounded-xl font-semibold transition-all ${
+                  className={`px-5 py-2.5 rounded-2xl font-semibold transition-all ${
                     filter === status
-                      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      ? 'bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900'
+                      : 'rounded-xl border border-white/10 bg-white/5 text-white/70 hover:bg-white/10'
                   }`}
                 >
                   {status === 'all' ? 'All Orders' : status.charAt(0).toUpperCase() + status.slice(1).toLowerCase()}
@@ -147,60 +147,60 @@ export default function OrdersManagement() {
           </div>
 
           {/* Orders Table */}
-          <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-2xl font-bold text-gray-900">Orders ({filteredOrders.length})</h2>
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] overflow-hidden">
+            <div className="px-6 py-4 border-b border-white/10">
+              <h2 className="text-2xl font-bold text-white">Orders ({filteredOrders.length})</h2>
             </div>
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full">
+                <thead>
                   <tr>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Order</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Customer</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Total</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Date</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
+                    <th className="bg-white/5 text-xs uppercase tracking-widest text-white/40 px-4 py-3 text-left">Order</th>
+                    <th className="bg-white/5 text-xs uppercase tracking-widest text-white/40 px-4 py-3 text-left">Customer</th>
+                    <th className="bg-white/5 text-xs uppercase tracking-widest text-white/40 px-4 py-3 text-left">Total</th>
+                    <th className="bg-white/5 text-xs uppercase tracking-widest text-white/40 px-4 py-3 text-left">Status</th>
+                    <th className="bg-white/5 text-xs uppercase tracking-widest text-white/40 px-4 py-3 text-left">Date</th>
+                    <th className="bg-white/5 text-xs uppercase tracking-widest text-white/40 px-4 py-3 text-left">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody>
                   {filteredOrders.map((order) => (
-                    <tr key={order.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
+                    <tr key={order.id} className="border-t border-white/5 hover:bg-white/[0.02] transition-colors">
+                      <td className="px-4 py-4 whitespace-nowrap">
                         <div>
-                          <div className="text-sm font-bold text-gray-900">#{order.id}</div>
-                          <div className="text-sm text-gray-500">{order.customerAddress}</div>
+                          <div className="text-sm font-bold text-white">#{order.id}</div>
+                          <div className="text-sm text-white/50">{order.customerAddress}</div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-4 py-4 whitespace-nowrap">
                         <div>
-                          <div className="text-sm font-medium text-gray-900">{order.customerName}</div>
-                          <div className="text-sm text-gray-500">{order.customerEmail}</div>
+                          <div className="text-sm font-medium text-white">{order.customerName}</div>
+                          <div className="text-sm text-white/50">{order.customerEmail}</div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+                      <td className="px-4 py-4 whitespace-nowrap text-sm font-semibold text-white">
                         ${order.totalAmount.toLocaleString()}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-3 py-1 text-xs font-bold rounded-full border-2 ${getStatusColor(order.status)}`}>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <span className={`px-3 py-1 text-xs font-bold rounded-full ${getStatusColor(order.status)}`}>
                           {order.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-white/70">
                         {new Date(order.createdAt).toLocaleDateString()}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <td className="px-4 py-4 whitespace-nowrap text-sm">
                         <div className="flex space-x-2">
                           <button
                             onClick={() => setSelectedOrder(order)}
-                            className="text-indigo-600 hover:text-indigo-900 font-semibold"
+                            className="rounded-xl border border-white/10 bg-white/5 text-white/70 px-3 py-1.5 text-xs font-semibold hover:bg-white/10 transition"
                           >
                             View
                           </button>
                           {order.status === 'PENDING' && (
                             <button
                               onClick={() => updateOrderStatus(order.id, 'PROCESSING')}
-                              className="text-yellow-600 hover:text-yellow-900 font-semibold"
+                              className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/30 hover:bg-amber-500/25 transition"
                             >
                               Process
                             </button>
@@ -208,7 +208,7 @@ export default function OrdersManagement() {
                           {order.status === 'PROCESSING' && (
                             <button
                               onClick={() => updateOrderStatus(order.id, 'SHIPPED')}
-                              className="text-blue-600 hover:text-blue-900 font-semibold"
+                              className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/25 transition"
                             >
                               Ship
                             </button>
@@ -216,7 +216,7 @@ export default function OrdersManagement() {
                           {order.status === 'SHIPPED' && (
                             <button
                               onClick={() => updateOrderStatus(order.id, 'DELIVERED')}
-                              className="text-green-600 hover:text-green-900 font-semibold"
+                              className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25 transition"
                             >
                               Deliver
                             </button>
@@ -233,8 +233,8 @@ export default function OrdersManagement() {
           {filteredOrders.length === 0 && (
             <div className="text-center py-12">
               <div className="text-6xl mb-4">🛒</div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">No Orders Found</h3>
-              <p className="text-gray-600">No orders match your current filter.</p>
+              <h3 className="text-xl font-semibold text-white mb-2">No Orders Found</h3>
+              <p className="text-white/50">No orders match your current filter.</p>
             </div>
           )}
         </div>
@@ -242,13 +242,13 @@ export default function OrdersManagement() {
         {/* Order Detail Modal */}
         {selectedOrder && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="rounded-2xl border border-white/10 bg-[#0B0D10] max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
               <div className="p-8">
                 <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-3xl font-bold text-gray-900">Order #{selectedOrder.id}</h2>
+                  <h2 className="text-3xl font-bold text-white">Order #{selectedOrder.id}</h2>
                   <button
                     onClick={() => setSelectedOrder(null)}
-                    className="text-gray-400 hover:text-gray-600 text-2xl"
+                    className="text-white/40 hover:text-white/70 text-2xl transition"
                   >
                     ✕
                   </button>
@@ -257,31 +257,31 @@ export default function OrdersManagement() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-bold text-gray-700">Customer Name</label>
-                      <p className="text-gray-900 text-lg">{selectedOrder.customerName}</p>
+                      <label className="block text-sm font-medium text-white/70 mb-1.5">Customer Name</label>
+                      <p className="text-white text-lg">{selectedOrder.customerName}</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-bold text-gray-700">Email</label>
-                      <p className="text-gray-900">{selectedOrder.customerEmail}</p>
+                      <label className="block text-sm font-medium text-white/70 mb-1.5">Email</label>
+                      <p className="text-white">{selectedOrder.customerEmail}</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-bold text-gray-700">Shipping Address</label>
-                      <p className="text-gray-900">{selectedOrder.customerAddress}</p>
+                      <label className="block text-sm font-medium text-white/70 mb-1.5">Shipping Address</label>
+                      <p className="text-white">{selectedOrder.customerAddress}</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-bold text-gray-700">Order Date</label>
-                      <p className="text-gray-900">{new Date(selectedOrder.createdAt).toLocaleString()}</p>
+                      <label className="block text-sm font-medium text-white/70 mb-1.5">Order Date</label>
+                      <p className="text-white">{new Date(selectedOrder.createdAt).toLocaleString()}</p>
                     </div>
                   </div>
 
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-bold text-gray-700">Total Amount</label>
-                      <p className="text-2xl font-bold text-green-600">${selectedOrder.totalAmount.toLocaleString()}</p>
+                      <label className="block text-sm font-medium text-white/70 mb-1.5">Total Amount</label>
+                      <p className="text-2xl font-bold text-emerald-400">${selectedOrder.totalAmount.toLocaleString()}</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-bold text-gray-700">Status</label>
-                      <span className={`px-3 py-1 text-sm font-bold rounded-full border-2 ${getStatusColor(selectedOrder.status)}`}>
+                      <label className="block text-sm font-medium text-white/70 mb-1.5">Status</label>
+                      <span className={`px-3 py-1 text-sm font-bold rounded-full ${getStatusColor(selectedOrder.status)}`}>
                         {selectedOrder.status}
                       </span>
                     </div>
@@ -292,7 +292,7 @@ export default function OrdersManagement() {
                   {selectedOrder.status === 'PENDING' && (
                     <button
                       onClick={() => { updateOrderStatus(selectedOrder.id, 'PROCESSING'); setSelectedOrder(null); }}
-                      className="px-6 py-3 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 font-bold"
+                      className="px-5 py-2.5 rounded-2xl bg-amber-500/15 text-amber-300 border border-amber-500/30 font-bold hover:bg-amber-500/25 transition"
                     >
                       Mark as Processing
                     </button>
@@ -300,7 +300,7 @@ export default function OrdersManagement() {
                   {selectedOrder.status === 'PROCESSING' && (
                     <button
                       onClick={() => { updateOrderStatus(selectedOrder.id, 'SHIPPED'); setSelectedOrder(null); }}
-                      className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold"
+                      className="px-5 py-2.5 rounded-2xl bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-bold hover:bg-cyan-500/25 transition"
                     >
                       Mark as Shipped
                     </button>
@@ -308,14 +308,14 @@ export default function OrdersManagement() {
                   {selectedOrder.status === 'SHIPPED' && (
                     <button
                       onClick={() => { updateOrderStatus(selectedOrder.id, 'DELIVERED'); setSelectedOrder(null); }}
-                      className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-bold"
+                      className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold"
                     >
                       Mark as Delivered
                     </button>
                   )}
                   <button
                     onClick={() => setSelectedOrder(null)}
-                    className="px-6 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-50 font-bold"
+                    className="rounded-xl border border-white/10 bg-white/5 text-white/70 px-5 py-2.5 hover:bg-white/10 transition font-bold"
                   >
                     Close
                   </button>

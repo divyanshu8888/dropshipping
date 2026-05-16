@@ -4,15 +4,15 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useAuth } from '../src/contexts/AuthContext';
-import { Eye, CheckCircle, X, FileText, ExternalLink, User, Hash, Shield, Star, Calendar, Mail, FileCheck, Download, Eye as EyeIcon, Lock, Award, Clock } from 'lucide-react';
+import { Eye, CheckCircle, X, FileText, ExternalLink, User, Shield, Star, Calendar, Mail, FileCheck, Download, Eye as EyeIcon, Award, Clock, LayoutDashboard, ClipboardList, Activity, GitBranch, Users, UserCheck, ShoppingCart, Package, UsersRound, ShieldAlert, Settings, AlertTriangle, Zap, LogOut, RefreshCw } from 'lucide-react';
 import dynamic from 'next/dynamic';
 const Header = dynamic(() => import('../src/components/Header'));
-const EntityDrawer = dynamic(() => import('../src/components/admin').then(m => m.EntityDrawer));
-const CommandBar = dynamic(() => import('../src/components/admin').then(m => m.CommandBar));
+const EntityDrawer = dynamic(() => import('../src/components/admin').then(m => m.EntityDrawer), { ssr: false, loading: () => null });
+const CommandBar = dynamic(() => import('../src/components/admin').then(m => m.CommandBar), { ssr: false, loading: () => null });
 const DataGrid = dynamic(() => import('../src/components/admin').then(m => m.DataGrid));
 const EditableCard = dynamic(() => import('../src/components/admin').then(m => m.EditableCard));
-const KanbanPipeline = dynamic(() => import('../src/components/admin').then(m => m.KanbanPipeline), { ssr: false });
-const EventStream = dynamic(() => import('../src/components/admin').then(m => m.EventStream), { ssr: false });
+const KanbanPipeline = dynamic(() => import('../src/components/admin').then(m => m.KanbanPipeline), { ssr: false, loading: () => null });
+const EventStream = dynamic(() => import('../src/components/admin').then(m => m.EventStream), { ssr: false, loading: () => null });
 import { useToast } from '../src/components/Toast';
 import { query } from '../src/lib/mysql';
 
@@ -111,9 +111,6 @@ interface ActivityFeedItem {
 
 interface AdminProps {
   freelancers: any[];
-  pendingCount: number;
-  approvedCount: number;
-  unverifiedCount: number;
   quoteRequests: number;
 }
 
@@ -247,9 +244,6 @@ const EMPTY_METRICS: DashboardMetrics = {
 
 export default function AdminDashboard({
   freelancers,
-  pendingCount,
-  approvedCount,
-  unverifiedCount,
   quoteRequests,
 }: AdminProps) {
   const router = useRouter();
@@ -713,7 +707,6 @@ export default function AdminDashboard({
     fetchActivityData(activityTab);
   };
 
-  const metricsReady = Boolean(metrics) && !metricsLoading;
   const displayMetrics = metrics ?? EMPTY_METRICS;
 
   const firstName = user?.name ? String(user.name).split(' ')[0] : null;
@@ -880,7 +873,6 @@ export default function AdminDashboard({
 
   const pendingKYCRows = workQueueData.pendingKYC || [];
   const refundRows = workQueueData.refundRequests || [];
-  const topFreelancers = useMemo(() => freelancers.slice(0, 4), [freelancers]);
 
   return (
     <>
@@ -897,79 +889,103 @@ export default function AdminDashboard({
           entityType={selectedEntityType}
         />
 
-        <main className="mx-auto max-w-7xl px-6 pb-24 pt-28 space-y-10">
-          <section className="rounded-[32px] border border-white/10 bg-white/5 p-8 backdrop-blur-lg shadow-card sm:p-10">
-            <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <p className="text-xs uppercase tracking-[0.35em] text-text-mute mb-3">
-                  Command Center
-                </p>
-                <h1 className="font-display text-3xl text-text-base sm:text-4xl">{heroGreeting}</h1>
-                <p className="mt-3 max-w-2xl text-sm text-text-soft">
-                  Track revenue, service delivery, and trust signals in real-time. Surface the work
-                  that needs human judgement and keep Uniti moving.
-                </p>
-                <div className="mt-5 flex flex-wrap items-center gap-3 text-sm text-text-mute">
-                  <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1">
-                    <span className="h-2 w-2 rounded-full bg-brand-a"></span>
-                    Updated {lastUpdatedLabel}
-                  </span>
-                  {isRefreshing && (
-                    <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1">
-                      <span className="h-2 w-2 animate-ping rounded-full bg-brand-b"></span>
-                      Refreshing data…
-                    </span>
-                  )}
+        <div className="flex pt-28">
+          {/* ── Sidebar ── */}
+          <aside className="fixed top-28 left-0 z-40 flex h-[calc(100vh-7rem)] w-56 flex-col border-r border-white/8 bg-black/50 backdrop-blur-xl">
+            {/* User info */}
+            <div className="border-b border-white/8 p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-a to-brand-b text-xs font-bold text-white">
+                  {user?.name?.[0]?.toUpperCase() ?? 'A'}
                 </div>
-                <div className="mt-6 flex flex-wrap gap-2">
-                  {[
-                    { id: 'overview', label: 'Snapshot' },
-                    { id: 'work', label: 'Work Queue' },
-                    { id: 'events', label: 'Events & Activity' },
-                    { id: 'pipeline', label: 'Delivery Pipeline' },
-                    { id: 'freelancers', label: 'Freelancers' },
-                    { id: 'clients', label: 'Clients' },
-                    { id: 'orders', label: 'Orders' },
-                    { id: 'products', label: 'Products' },
-                    { id: 'team', label: 'Team' },
-                    { id: 'moderation', label: `Moderation${unreadModerationCount > 0 ? ` (${unreadModerationCount})` : ''}` },
-                    { id: 'settings', label: 'Settings' },
-                  ].map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                      className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition border ${
-                        activeTab === (tab.id as any)
-                          ? 'border-brand-b/60 bg-brand-b/15 text-brand-b'
-                          : 'border-white/10 bg-white/5 text-text-mute hover:border-white/20 hover:text-text-base'
-                      }`}
-                      aria-pressed={activeTab === (tab.id as any)}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
+                <div className="min-w-0">
+                  <p className="truncate text-xs font-semibold text-text-base">{user?.name ?? 'Admin'}</p>
+                  <p className="text-[10px] capitalize text-text-mute">{user?.role?.toLowerCase() ?? 'admin'}</p>
                 </div>
-              </div>
-              <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
-                <button
-                  onClick={handleManualRefresh}
-                  className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/10 px-4 py-2 text-sm font-semibold text-text-base transition hover:border-brand-b hover:text-brand-b"
-                >
-                  <span className="h-2 w-2 rounded-full bg-brand-b"></span>
-                  Refresh Metrics
-                </button>
-                <button
-                  onClick={() => {
-                    localStorage.removeItem('user');
-                    router.push('/login');
-                  }}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-rose-500 to-red-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-rose-500/30 transition hover:from-rose-400 hover:to-red-400"
-                >
-                  Logout
-                </button>
               </div>
             </div>
-          </section>
+
+            {/* Nav items */}
+            <nav className="flex-1 overflow-y-auto px-2 py-3">
+              {([
+                { id: 'overview',    label: 'Snapshot',    Icon: LayoutDashboard },
+                { id: 'work',        label: 'Work Queue',  Icon: ClipboardList },
+                { id: 'events',      label: 'Events',      Icon: Activity },
+                { id: 'pipeline',    label: 'Pipeline',    Icon: GitBranch },
+                { id: 'freelancers', label: 'Freelancers', Icon: UserCheck },
+                { id: 'clients',     label: 'Clients',     Icon: Users },
+                { id: 'orders',      label: 'Orders',      Icon: ShoppingCart },
+                { id: 'products',    label: 'Products',    Icon: Package },
+                { id: 'team',        label: 'Team',        Icon: UsersRound },
+                { id: 'moderation',  label: 'Moderation',  Icon: ShieldAlert, badge: unreadModerationCount > 0 ? unreadModerationCount : undefined },
+                { id: 'settings',    label: 'Settings',    Icon: Settings },
+              ] as Array<{ id: string; label: string; Icon: React.ElementType; badge?: number }>).map((tab) => {
+                const isActive = activeTab === (tab.id as typeof activeTab);
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id as typeof activeTab)}
+                    aria-pressed={isActive}
+                    className={`mb-0.5 flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold transition-all ${
+                      isActive
+                        ? 'border border-brand-b/30 bg-gradient-to-r from-brand-a/15 to-brand-b/20 text-brand-b'
+                        : 'text-text-mute hover:bg-white/5 hover:text-text-soft'
+                    }`}
+                  >
+                    <tab.Icon size={13} className={isActive ? 'text-brand-b' : 'text-text-mute'} />
+                    <span className="flex-1 text-left">{tab.label}</span>
+                    {tab.badge !== undefined && (
+                      <span className="notif-badge">{tab.badge > 9 ? '9+' : tab.badge}</span>
+                    )}
+                  </button>
+                );
+              })}
+            </nav>
+
+            {/* Bottom actions */}
+            <div className="flex flex-col gap-1.5 border-t border-white/8 p-3">
+              <button
+                onClick={handleManualRefresh}
+                className="flex w-full items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-text-soft transition hover:border-brand-b/50 hover:text-brand-b"
+              >
+                <RefreshCw size={12} className={isRefreshing ? 'animate-spin text-brand-b' : ''} />
+                {isRefreshing ? 'Refreshing…' : 'Refresh'}
+              </button>
+              <button
+                onClick={async () => {
+                  try { await fetch('/api/auth/logout', { method: 'POST' }); } catch {}
+                  localStorage.removeItem('user');
+                  router.push('/login');
+                }}
+                className="flex w-full items-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-xs font-semibold text-rose-400 transition hover:bg-rose-500/20"
+              >
+                <LogOut size={12} />
+                Logout
+              </button>
+            </div>
+          </aside>
+
+          {/* ── Main content ── */}
+          <main className="ml-56 flex-1 space-y-6 px-6 pb-24 pt-4">
+            {/* Slim top bar */}
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-[0.35em] text-text-mute">Command Center</p>
+                <h1 className="font-display text-2xl text-text-base">{heroGreeting}</h1>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-text-mute">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 py-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-brand-a"></span>
+                  {lastUpdatedLabel}
+                </span>
+                {isRefreshing && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 py-1">
+                    <span className="h-1.5 w-1.5 animate-ping rounded-full bg-brand-b"></span>
+                    Refreshing…
+                  </span>
+                )}
+              </div>
+            </div>
 
           {/* Work Queue tab */}
           <section className={`rounded-3xl border border-white/10 bg-white/5 p-6 shadow-card ${activeTab === 'work' ? 'block' : 'hidden'}`}>
@@ -1129,28 +1145,30 @@ export default function AdminDashboard({
               </span>
             </div>
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {primaryHighlights.map((metric) => (
+              {metricsLoading
+                ? Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="premium-card p-6 h-[148px] skeleton-shimmer" />
+                  ))
+                : primaryHighlights.map((metric) => (
                 <div
                   key={metric.title}
-                  className="group rounded-3xl border border-white/10 bg-white/5 p-6 shadow-card transition hover:-translate-y-1 hover:border-brand-b/60"
+                  className="premium-card relative p-6 overflow-hidden"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-lg">{metric.icon}</span>
-                    <span className="rounded-full bg-white/5 px-3 py-1 text-xs font-medium text-text-mute">
+                    <span className="text-xl">{metric.icon}</span>
+                    <span className="rounded-full bg-white/5 border border-white/8 px-2.5 py-0.5 text-[10px] font-medium text-text-mute">
                       {metric.caption}
                     </span>
                   </div>
-                  <h3 className="mt-4 text-sm font-semibold text-text-soft">{metric.title}</h3>
-                  <p className="mt-2 text-2xl font-semibold text-text-base">{metric.value}</p>
+                  <h3 className="mt-4 text-xs font-semibold uppercase tracking-widest text-text-mute">{metric.title}</h3>
+                  <p className="mt-1.5 text-2xl font-bold text-text-base count-animate">{metric.value}</p>
                   {typeof metric.delta === 'number' && (
-                    <p
-                      className={`mt-3 text-xs font-semibold ${
-                        metric.delta >= 0 ? 'text-emerald-400' : 'text-rose-400'
-                      }`}
-                    >
-                      {metric.delta >= 0 ? '▲' : '▼'} {Math.abs(metric.delta).toFixed(1)}% vs. last month
+                    <p className={`mt-2 text-xs font-semibold flex items-center gap-1 ${metric.delta >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      <span>{metric.delta >= 0 ? '▲' : '▼'}</span>
+                      {Math.abs(metric.delta).toFixed(1)}% vs. last month
                     </p>
                   )}
+                  <div className={`metric-bar bg-gradient-to-r ${metric.accent}`} />
                 </div>
               ))}
             </div>
@@ -1328,42 +1346,59 @@ export default function AdminDashboard({
             </div>
 
             <aside className={`space-y-6 ${activeTab === 'overview' ? 'block' : 'hidden'}`}>
-              <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-card">
-                <h3 className="text-sm font-semibold text-text-base">Urgent tasks</h3>
-                <div className="mt-4 space-y-3">
-                  {workQueueHighlights.map((item) => (
+              <div className="premium-card p-6">
+                <h3 className="text-sm font-semibold text-text-base flex items-center gap-2">
+                  <AlertTriangle size={13} className="text-amber-400" /> Urgent tasks
+                </h3>
+                <div className="mt-4 space-y-2.5">
+                  {workQueueHighlights.map((item, idx) => {
+                    const borderColors = ['border-l-amber-400', 'border-l-rose-400', 'border-l-slate-400'];
+                    const badgeColors = ['bg-amber-500/15 text-amber-300', 'bg-rose-500/15 text-rose-300', 'bg-white/10 text-text-soft'];
+                    return (
                     <div
                       key={item.label}
-                      className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-3 py-3"
+                      className={`flex items-center justify-between rounded-2xl border border-white/8 bg-white/[0.03] pl-3 pr-4 py-3 border-l-2 ${borderColors[idx] ?? 'border-l-white/20'}`}
                     >
-                      <div className="flex items-center gap-3">
-                        <span className="text-lg">{item.icon}</span>
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-base">{item.icon}</span>
                         <div>
-                          <p className="text-sm font-medium text-text-base">{item.label}</p>
-                          <p className="text-xs text-text-mute">{item.helper}</p>
+                          <p className="text-xs font-semibold text-text-base">{item.label}</p>
+                          <p className="text-[10px] text-text-mute">{item.helper}</p>
                         </div>
                       </div>
-                      <span className="text-lg font-semibold text-text-base">{item.value}</span>
+                      <span className={`rounded-full px-2.5 py-0.5 text-sm font-bold ${badgeColors[idx] ?? 'bg-white/5 text-text-base'}`}>{item.value}</span>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-card">
-                <h3 className="text-sm font-semibold text-text-base">System health</h3>
-                <ul className="mt-4 space-y-3 text-sm text-text-soft">
-                  {healthHighlights.map((item) => (
+              <div className="premium-card p-6">
+                <h3 className="text-sm font-semibold text-text-base flex items-center gap-2">
+                  <Zap size={13} className="text-brand-a" /> System health
+                </h3>
+                <ul className="mt-4 space-y-2.5 text-sm text-text-soft">
+                  {healthHighlights.map((item) => {
+                    const val = String(item.value).toLowerCase();
+                    const isOk = val === 'online' || val === 'healthy' || val.includes('100') || (parseFloat(val) < 100 && val.endsWith('ms'));
+                    const isDeg = val === 'offline' || val === 'degraded' || val === 'investigate';
+                    const dotColor = isDeg ? 'bg-rose-400' : isOk ? 'bg-emerald-400' : 'bg-amber-400';
+                    return (
                     <li
                       key={item.label}
-                      className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-3 py-2"
+                      className="flex items-center justify-between rounded-2xl border border-white/8 bg-white/[0.03] px-3 py-2.5"
                     >
-                      <div>
-                        <p className="font-medium text-text-base">{item.label}</p>
-                        <p className="text-xs text-text-mute">{item.status}</p>
+                      <div className="flex items-center gap-2.5">
+                        <span className={`pulse-dot h-2 w-2 rounded-full ${dotColor} ${isDeg ? 'animate-pulse' : ''}`} />
+                        <div>
+                          <p className="text-xs font-medium text-text-base">{item.label}</p>
+                          <p className="text-[10px] text-text-mute">{item.status}</p>
+                        </div>
                       </div>
-                      <span className="text-sm font-semibold text-text-base">{item.value}</span>
+                      <span className={`text-xs font-bold ${isDeg ? 'text-rose-400' : isOk ? 'text-emerald-400' : 'text-amber-400'}`}>{item.value}</span>
                     </li>
-                  ))}
+                    );
+                  })}
                 </ul>
               </div>
 
@@ -1411,7 +1446,7 @@ export default function AdminDashboard({
                 <EventStream
                   events={eventStream}
                   onEventClick={handleEventClick}
-                  onAssign={(eventId, assignee) => {
+                  onAssign={(_eventId, assignee) => {
                     addToast(`Assigned event to ${assignee}`, 'success');
                     fetchEventStream();
                   }}
@@ -1604,32 +1639,6 @@ export default function AdminDashboard({
                   } catch (e) {
                     addToast('Error loading freelancer details', 'error');
                   }
-                }}
-                rowActions={(row: any) => {
-                  const actions: Array<{ label: string; action: string; icon?: React.ReactNode; variant?: 'default' | 'destructive' | 'warning' }> = [
-                    { label: 'View Details', action: 'view', icon: <Eye className="w-4 h-4" /> },
-                    { label: 'View Profile', action: 'profile', icon: <ExternalLink className="w-4 h-4" /> },
-                  ];
-                  if (row.status !== 'approved') {
-                    actions.push({ label: 'Approve', action: 'approve', icon: <CheckCircle className="w-4 h-4" /> });
-                  }
-                  if (row.status !== 'rejected') {
-                    actions.push({ label: 'Reject', action: 'reject', variant: 'destructive', icon: <X className="w-4 h-4" /> });
-                  }
-                  if (row.status === 'rejected') {
-                    actions.push({ label: 'Reopen', action: 'reopen', icon: <FileText className="w-4 h-4" /> });
-                  }
-                  if (row.status !== 'pending') {
-                    actions.push({ label: 'Set Status to Pending', action: 'set-status-pending', icon: <Clock className="w-4 h-4" />, variant: 'warning' });
-                  }
-                  const verificationState = String(row.verification_state || '').toLowerCase();
-                  if (verificationState !== 'verified') {
-                    actions.push({ label: 'Verify', action: 'verify', icon: <CheckCircle className="w-4 h-4" /> });
-                  }
-                  if (verificationState !== 'pending') {
-                    actions.push({ label: 'Set to Pending', action: 'set-pending', icon: <Clock className="w-4 h-4" /> });
-                  }
-                  return actions;
                 }}
                 onRowAction={async (action, row) => {
                   if (action === 'view') {
@@ -1953,7 +1962,8 @@ export default function AdminDashboard({
               )}
             </div>
           </section>
-        </main>
+          </main>
+        </div>
       </div>
 
       {/* Freelancer Detail Modal */}
@@ -2278,7 +2288,7 @@ export default function AdminDashboard({
                                           body: JSON.stringify({ status: 'approved' })
                                         });
                                         if (res.ok) {
-                                          const result = await res.json();
+                                          await res.json();
                                           // Refresh freelancer data
                                           const freelancerRes = await fetch(`/api/admin/freelancers/${selectedFreelancer.id}`);
                                           if (freelancerRes.ok) {
@@ -2476,10 +2486,6 @@ export const getServerSideProps: GetServerSideProps = async () => {
         }))
       : [];
 
-    let pendingCount = serializedFreelancers.filter((f) => f.status === 'pending').length;
-    let approvedCount = serializedFreelancers.filter((f) => f.status === 'approved').length;
-    let unverifiedCount = serializedFreelancers.filter((f) => String(f.verification_state || 'unverified').toLowerCase() !== 'verified').length;
-
     try {
       const [row] = await query<{ count: number }>(
         `SELECT COUNT(*) as count FROM quote_requests WHERE status = 'pending'`,
@@ -2494,9 +2500,6 @@ export const getServerSideProps: GetServerSideProps = async () => {
     return {
       props: {
         freelancers: serializedFreelancers,
-        pendingCount,
-        approvedCount,
-        unverifiedCount,
         quoteRequests,
       },
     };
@@ -2505,9 +2508,6 @@ export const getServerSideProps: GetServerSideProps = async () => {
     return {
       props: {
         freelancers: [],
-        pendingCount: 0,
-        approvedCount: 0,
-        unverifiedCount: 0,
         quoteRequests: 0,
       },
     };

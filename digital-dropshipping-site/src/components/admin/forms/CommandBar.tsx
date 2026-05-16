@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Command, ArrowRight, User, ShoppingCart, Package, AlertTriangle } from 'lucide-react';
+import { Search, ArrowRight, User, ShoppingCart, Package, AlertTriangle } from 'lucide-react';
 
 interface CommandItem {
   id: string;

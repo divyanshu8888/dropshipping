@@ -1,18 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Check, X, MoreHorizontal, Filter, Download, Eye, Edit, Ban, CheckCircle, FileText, ExternalLink } from 'lucide-react';
+import { Filter, Download } from 'lucide-react';
 
 interface Column {
   field: string;
   headerName: string;
   width?: number;
   renderCell?: (params: any) => React.ReactNode;
-}
-
-interface RowAction {
-  label: string;
-  action: string;
-  icon?: React.ReactNode;
-  variant?: 'default' | 'destructive' | 'warning';
 }
 
 interface DataGridProps {
@@ -27,7 +20,6 @@ interface DataGridProps {
     variant?: 'default' | 'destructive' | 'warning';
   }>;
   onBulkAction?: (action: string, selectedRows: any[]) => void;
-  rowActions?: (row: any) => RowAction[];
   onRowAction?: (action: string, row: any) => void;
   filters?: Array<{
     field: string;
@@ -47,7 +39,6 @@ export default function DataGrid({
   onRowClick,
   bulkActions = [],
   onBulkAction,
-  rowActions,
   onRowAction,
   filters = [],
   onFilterChange,
@@ -126,12 +117,6 @@ export default function DataGrid({
       return String(row[field]).toLowerCase().includes(value.toLowerCase());
     });
   });
-
-  const handleRowActionClick = (action: string, row: any, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setOpenActionMenu(null);
-    onRowAction?.(action, row);
-  };
 
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-lg shadow-card">

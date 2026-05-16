@@ -30,7 +30,6 @@ export default async function handler(
 
     const thirtyDaysAgo = new Date(now - 30 * DAYS);
     const twentyEightDaysAgo = new Date(now - 28 * DAYS);
-    const sixtyDaysAgo = new Date(now - 60 * DAYS);
     const thirtyToSixty = {
       start: new Date(now - 60 * DAYS),
       end: new Date(now - 30 * DAYS)
@@ -40,7 +39,7 @@ export default async function handler(
       end: new Date(now - 7 * DAYS)
     };
 
-    const [hasOrdersTable, hasProductsTable, hasQuoteRequestsTable, hasProjectsTable] = await Promise.all([
+    const [hasOrdersTable, hasProductsTable, _hasQuoteRequestsTable, hasProjectsTable] = await Promise.all([
       tableExists('orders'),
       tableExists('products'),
       tableExists('quote_requests'),
@@ -64,9 +63,6 @@ export default async function handler(
           'orders-last-30d'
         )
       : [];
-    const recentUsers = await safeCount('users', 'created_at >= ?', [thirtyDaysAgo], 'users-last-30d');
-    const quoteRequests = hasQuoteRequestsTable ? await safeCount('quote_requests') : 0;
-
     const todayOrders = hasOrdersTable
       ? await safeQuery<OrderAmountRow>(
           `SELECT total_amount FROM orders WHERE created_at >= ?`,

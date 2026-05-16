@@ -255,11 +255,9 @@ export default async function handler(
     );
 
     if (allMilestones && allMilestones.length > 0) {
-      const totalMilestones = allMilestones.length;
-      const completedMilestones = allMilestones.filter(m => 
+      const completedMilestones = allMilestones.filter(m =>
         ['approved', 'released'].includes(m.status)
       ).length;
-      const allCompleted = completedMilestones === totalMilestones;
       const hasApproved = completedMilestones > 0;
 
       const project = await queryOne<{

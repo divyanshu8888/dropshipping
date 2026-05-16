@@ -6,25 +6,20 @@ const Header = dynamic(() => import('../../src/components/Header'));
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useToast } from '../../src/components/Toast';
 import { 
-  Calendar, 
-  MessageCircle, 
-  Upload, 
-  CheckCircle, 
-  Clock, 
-  User, 
-  FileText, 
-  Code, 
-  Settings,
-  Bell,
+  Calendar,
+  MessageCircle,
+  Upload,
+  CheckCircle,
+  Clock,
+  User,
+  FileText,
+  Code,
   TrendingUp,
   DollarSign,
-  Star,
   Eye,
   Send,
-  Paperclip,
   Download,
   Play,
-  Pause,
   Edit3,
   Save,
   X,
@@ -36,10 +31,8 @@ import {
   Zap,
   Award,
   Target,
-  BarChart3,
   Activity,
   Plus,
-  MoreVertical,
   Globe,
   MapPin,
   Lock,
@@ -333,6 +326,7 @@ export default function FreelancerDashboard() {
   const [totalReviews, setTotalReviews] = useState<number | null>(null);
   const [profileName, setProfileName] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [uploadingFile, setUploadingFile] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const [editingMilestone, setEditingMilestone] = useState<{ id: string; field: 'description' | 'dueDate' } | null>(null);
   const [milestoneEditForm, setMilestoneEditForm] = useState({ description: '', dueDate: '' });
@@ -369,7 +363,6 @@ export default function FreelancerDashboard() {
   
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [newMessage, setNewMessage] = useState('');
-  const [uploadingFile, setUploadingFile] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [milestones, setMilestones] = useState<Record<string, Milestone[]>>({});
   const [creatingMilestone, setCreatingMilestone] = useState(false);
@@ -690,10 +683,9 @@ export default function FreelancerDashboard() {
       const match = extractMatch(pattern, originalContent);
       if (match) {
         // Mask phone number for privacy
-        const masked = match.length > 4 ? match.slice(0, 2) + '***' + match.slice(-2) : '***';
-        return { 
-          valid: false, 
-          error: `Phone numbers cannot be shared. Keep communication within Uniti.` 
+        return {
+          valid: false,
+          error: `Phone numbers cannot be shared. Keep communication within Uniti.`
         };
       }
     }
@@ -701,12 +693,9 @@ export default function FreelancerDashboard() {
     // Check for email addresses
     const emailMatch = extractMatch(emailPattern, originalContent);
     if (emailMatch) {
-      // Mask email for privacy
-      const [local, domain] = emailMatch.split('@');
-      const maskedEmail = local.length > 2 ? local.slice(0, 2) + '***@' + domain : '***@' + domain;
-      return { 
-        valid: false, 
-        error: `Email addresses cannot be shared. Keep communication within Uniti.` 
+      return {
+        valid: false,
+        error: `Email addresses cannot be shared. Keep communication within Uniti.`
       };
     }
 
@@ -854,33 +843,6 @@ export default function FreelancerDashboard() {
     }
   };
 
-  const uploadDeliverable = async (projectId: string, file: File, description: string) => {
-    setUploadingFile(true);
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('projectId', projectId);
-    formData.append('description', description);
-
-    try {
-      const response = await fetch('/api/freelancers/upload-deliverable', {
-        method: 'POST',
-        body: formData
-      });
-
-      if (response.ok) {
-        addToast('Deliverable uploaded successfully', 'success');
-        await fetchFreelancerData();
-      } else {
-        addToast('Failed to upload deliverable', 'error');
-      }
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      addToast('Failed to upload deliverable', 'error');
-    } finally {
-      setUploadingFile(false);
-    }
-  };
-
   const updateProjectProgress = async (projectId: string, progress: number) => {
     try {
       const response = await fetch('/api/freelancers/update-progress', {
@@ -901,7 +863,7 @@ export default function FreelancerDashboard() {
     }
   };
 
-  const updateMilestoneStatus = async (milestoneId: string, status: string, projectId: string) => {
+  const updateMilestoneStatus = async (milestoneId: string, status: string, _projectId: string) => {
     if (!user?.id) return;
 
     try {
@@ -1047,7 +1009,7 @@ export default function FreelancerDashboard() {
     }
   };
 
-  const updateMilestoneDescription = async (milestoneId: string, description: string, projectId: string) => {
+  const updateMilestoneDescription = async (milestoneId: string, description: string, _projectId: string) => {
     setSaving(true);
     try {
       const response = await fetch(`/api/freelancers/milestones/${milestoneId}/description?freelancerId=${user?.id}`, {
@@ -1082,7 +1044,7 @@ export default function FreelancerDashboard() {
     }
   };
 
-  const updateMilestoneDueDate = async (milestoneId: string, dueDate: string, projectId: string) => {
+  const updateMilestoneDueDate = async (milestoneId: string, dueDate: string, _projectId: string) => {
     setSaving(true);
     try {
       // Use the same endpoint but with dueDate instead of status
@@ -1425,7 +1387,8 @@ export default function FreelancerDashboard() {
         <Header />
 
         {/* Hero Row */}
-        <div className="border-b border-white/10 bg-gradient-to-b from-white/5 to-transparent backdrop-blur-sm">
+        <div className="relative border-b border-white/10 bg-[radial-gradient(120%_200%_at_60%_-10%,rgba(6,182,212,0.12)_0%,rgba(15,15,20,1)_65%)] backdrop-blur-sm overflow-hidden">
+          <div className="absolute -top-20 right-0 h-48 w-48 rounded-full bg-cyan-400/10 blur-[100px] pointer-events-none" />
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between py-6 gap-4">
               <div>
@@ -1450,13 +1413,13 @@ export default function FreelancerDashboard() {
               <div className="flex items-center space-x-3">
                 <button
                   onClick={() => router.push('/products')}
-                  className="px-4 py-2 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition-all duration-200 hover:border-white/20 text-sm font-medium"
+                  className="rounded-xl border border-white/10 bg-white/5 text-white/70 px-4 py-2 text-sm hover:bg-white/10 transition"
                 >
                   New Proposal
                 </button>
                 <button
                   onClick={() => router.push('/products')}
-                  className="px-4 py-2.5 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-400 hover:to-blue-500 transition-all duration-200 text-sm font-medium flex items-center space-x-2"
+                  className="rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold px-4 py-2 text-sm flex items-center space-x-2 transition"
                 >
                   <Plus className="w-4 h-4" />
                   <span>Create Playbook</span>
@@ -1475,9 +1438,8 @@ export default function FreelancerDashboard() {
           )}
 
           {/* Navigation Tabs */}
-          <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm mb-8 shadow-xl">
-            <div className="border-b border-white/10">
-              <nav className="-mb-px flex space-x-1 px-6 overflow-x-auto">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-sm mb-6">
+            <nav className="flex gap-1 px-4 py-3 overflow-x-auto">
                 {[
                   { id: 'overview', label: 'Overview', icon: TrendingUp, badge: null },
                   { id: 'pipeline', label: 'Pipeline', icon: FileText, badge: metrics.activeProjects > 0 ? metrics.activeProjects : null },
@@ -1487,155 +1449,156 @@ export default function FreelancerDashboard() {
                   { id: 'deliverables', label: 'Deliverables', icon: Upload, badge: null },
                   { id: 'earnings', label: 'Earnings', icon: DollarSign, badge: null },
                   { id: 'profile', label: 'Profile & Settings', icon: User, badge: null }
-                ].map(tab => (
+                ].map(tab => {
+                  const isActive = activeTab === tab.id;
+                  return (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`py-4 px-3 border-b-2 font-medium text-sm flex items-center space-x-2 whitespace-nowrap transition-all duration-200 relative ${
-                      activeTab === tab.id
-                        ? 'border-cyan-400 text-white'
-                        : 'border-transparent text-white/60 hover:text-white hover:border-white/30'
+                    className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold whitespace-nowrap transition-all ${
+                      isActive
+                        ? 'bg-gradient-to-r from-cyan-500/15 to-blue-500/20 border border-cyan-400/30 text-cyan-300'
+                        : 'text-white/50 hover:text-white/80 hover:bg-white/5 border border-transparent'
                     }`}
                   >
-                    {activeTab === tab.id && (
-                      <div className="absolute inset-x-0 -bottom-px h-px bg-gradient-to-r from-transparent via-cyan-400 to-transparent opacity-50"></div>
-                    )}
-                    <tab.icon className="w-4 h-4" />
-                    <span>{tab.label}</span>
-                    {tab.badge && (
-                      <span className="ml-1 px-1.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 text-xs font-semibold">
-                        {tab.badge}
-                      </span>
-                    )}
+                    <tab.icon className={`w-3.5 h-3.5 ${isActive ? 'text-cyan-400' : 'text-white/40'}`} />
+                    {tab.label}
+                    {tab.badge && <span className="ml-0.5 rounded-full bg-cyan-500/25 px-1.5 py-0.5 text-[10px] text-cyan-300">{tab.badge}</span>}
                   </button>
-                ))}
-              </nav>
-            </div>
+                  );
+                })}
+            </nav>
           </div>
 
           {/* Tab Content */}
           {activeTab === 'overview' && (
             <div className="space-y-6">
-              {/* New KPI Metrics Grid */}
+              {/* KPI Metrics Grid — premium cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+
                 {/* Open Milestones */}
                 <button
                   onClick={() => setActiveTab('pipeline')}
-                  className="rounded-xl border border-white/10 bg-gradient-to-br from-cyan-500/10 to-blue-500/5 p-5 backdrop-blur-sm hover:border-cyan-500/30 transition-all duration-200 text-left cursor-pointer"
+                  className="premium-card relative p-5 text-left overflow-hidden"
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-gradient-to-br from-cyan-500/20 to-blue-500/10">
-                      <Target className="w-5 h-5 text-cyan-300" />
+                  <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-cyan-500/15 mb-3">
+                    <Target className="w-4 h-4 text-cyan-300" />
                   </div>
-                  </div>
-                  <p className="text-2xl font-bold text-white mb-0.5">
+                  <p className="text-xl font-bold text-white mb-0.5 count-animate">
                     {dashboardMetrics ? formatCurrency((dashboardMetrics.openMilestones.totalCents || 0) / 100) : '$0'}
                   </p>
-                  <p className="text-xs font-medium text-white/70 mb-1">Open Milestones</p>
-                  <p className="text-xs text-white/50">{dashboardMetrics?.openMilestones.dueIn7Days || 0} due in 7 days</p>
+                  <p className="text-[11px] font-medium text-white/60 mb-1">Open Milestones</p>
+                  <p className="text-[10px] text-white/40">{dashboardMetrics?.openMilestones.dueIn7Days || 0} due in 7 days</p>
+                  <div className="metric-bar bg-gradient-to-r from-cyan-400 to-blue-500" />
                 </button>
 
-                {/* Unbilled / In Escrow */}
+                {/* Earnings — with split bar */}
                 <button
                   onClick={() => setActiveTab('earnings')}
-                  className="rounded-xl border border-white/10 bg-gradient-to-br from-emerald-500/10 to-teal-500/5 p-5 backdrop-blur-sm hover:border-emerald-500/30 transition-all duration-200 text-left cursor-pointer"
+                  className="premium-card relative p-5 text-left overflow-hidden"
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-gradient-to-br from-emerald-500/20 to-teal-500/10">
-                      <DollarSign className="w-5 h-5 text-emerald-300" />
+                  <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-emerald-500/15 mb-3">
+                    <DollarSign className="w-4 h-4 text-emerald-300" />
                   </div>
-                </div>
-                  <p className="text-2xl font-bold text-white mb-0.5">
+                  <p className="text-xl font-bold text-white mb-0.5 count-animate">
                     {dashboardMetrics ? formatCurrency((dashboardMetrics.earnings.unbilledCents || 0) / 100) : '$0'}
                   </p>
-                  <p className="text-xs font-medium text-white/70 mb-1">Unbilled / In Escrow</p>
-                  <p className="text-xs text-white/50">
-                    {dashboardMetrics ? formatCurrency((dashboardMetrics.earnings.escrowCents || 0) / 100) : '$0'} escrow
-                  </p>
+                  <p className="text-[11px] font-medium text-white/60 mb-2">Unbilled / In Escrow</p>
+                  {/* Earnings split bar */}
+                  {dashboardMetrics && (() => {
+                    const total = (dashboardMetrics.earnings.unbilledCents || 0) + (dashboardMetrics.earnings.escrowCents || 0) + (dashboardMetrics.earnings.pendingCents || 0) || 1;
+                    const unbilledW = ((dashboardMetrics.earnings.unbilledCents || 0) / total * 100).toFixed(1);
+                    const escrowW = ((dashboardMetrics.earnings.escrowCents || 0) / total * 100).toFixed(1);
+                    return (
+                      <div className="budget-bar mt-1">
+                        <div className="budget-bar-funded" style={{ width: `${unbilledW}%` }} />
+                        <div className="budget-bar-committed" style={{ width: `${escrowW}%` }} />
+                        <div className="budget-bar-remaining flex-1" />
+                      </div>
+                    );
+                  })()}
+                  <div className="metric-bar bg-gradient-to-r from-emerald-400 to-teal-500" />
                 </button>
 
                 {/* Avg Response Time */}
-                <div className="rounded-xl border border-white/10 bg-gradient-to-br from-purple-500/10 to-pink-500/5 p-5 backdrop-blur-sm hover:border-purple-500/30 transition-all duration-200">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-gradient-to-br from-purple-500/20 to-pink-500/10">
-                      <Clock className="w-5 h-5 text-purple-300" />
-                    </div>
+                <div className="premium-card relative p-5 overflow-hidden">
+                  <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-purple-500/15 mb-3">
+                    <Clock className="w-4 h-4 text-purple-300" />
                   </div>
-                  <p className="text-2xl font-bold text-white mb-0.5">
+                  <p className="text-xl font-bold text-white mb-0.5">
                     {dashboardMetrics ? (Number(dashboardMetrics.avgResponseTime.hours) || 0).toFixed(1) : '0'}h
                   </p>
-                  <p className="text-xs font-medium text-white/70 mb-1">Avg Response Time</p>
-                  <p className="text-xs text-white/50">Last 7 days (Goal: &lt;4h)</p>
-              </div>
+                  <p className="text-[11px] font-medium text-white/60 mb-1">Avg Response</p>
+                  <p className="text-[10px] text-white/40">Goal: &lt;4h</p>
+                  <div className="metric-bar bg-gradient-to-r from-purple-400 to-pink-500" />
+                </div>
 
                 {/* On-time Delivery */}
-                <div className="rounded-xl border border-white/10 bg-gradient-to-br from-amber-500/10 to-orange-500/5 p-5 backdrop-blur-sm hover:border-amber-500/30 transition-all duration-200">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-gradient-to-br from-amber-500/20 to-orange-500/10">
-                      <CheckCircle className="w-5 h-5 text-amber-300" />
+                <div className="premium-card relative p-5 overflow-hidden">
+                  <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-amber-500/15 mb-3">
+                    <CheckCircle className="w-4 h-4 text-amber-300" />
                   </div>
-                  </div>
-                  <p className="text-2xl font-bold text-white mb-0.5">
+                  <p className="text-xl font-bold text-white mb-0.5">
                     {dashboardMetrics ? dashboardMetrics.onTimeDelivery.percentage : 0}%
                   </p>
-                  <p className="text-xs font-medium text-white/70 mb-1">On-time Delivery</p>
-                  <p className="text-xs text-white/50">Last 30 days</p>
+                  <p className="text-[11px] font-medium text-white/60 mb-1">On-time Delivery</p>
+                  {/* Mini progress bar */}
+                  <div className="h-1.5 rounded-full bg-white/10 mt-1 overflow-hidden">
+                    <div className="h-full rounded-full bg-gradient-to-r from-amber-400 to-orange-400 transition-all" style={{ width: `${dashboardMetrics?.onTimeDelivery.percentage ?? 0}%` }} />
                   </div>
+                  <div className="metric-bar bg-gradient-to-r from-amber-400 to-orange-500" />
+                </div>
 
                 {/* Profile Strength */}
                 <button
                   onClick={() => setActiveTab('profile')}
-                  className="rounded-xl border border-white/10 bg-gradient-to-br from-fuchsia-500/10 to-purple-500/5 p-5 backdrop-blur-sm hover:border-fuchsia-500/30 transition-all duration-200 text-left cursor-pointer"
+                  className="premium-card relative p-5 text-left overflow-hidden"
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-gradient-to-br from-fuchsia-500/20 to-purple-500/10">
-                      <Award className="w-5 h-5 text-fuchsia-300" />
-                </div>
-              </div>
-                  <p className="text-2xl font-bold text-white mb-0.5">
+                  <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-fuchsia-500/15 mb-3">
+                    <Award className="w-4 h-4 text-fuchsia-300" />
+                  </div>
+                  <p className="text-xl font-bold text-white mb-0.5">
                     {dashboardMetrics ? dashboardMetrics.profileStrength.percentage : 0}%
                   </p>
-                  <p className="text-xs font-medium text-white/70 mb-1">Profile Strength</p>
-                  <p className="text-xs text-white/50">
-                    {dashboardMetrics && dashboardMetrics.profileStrength.percentage < 100 
-                      ? `${Math.ceil((100 - dashboardMetrics.profileStrength.percentage) / 12.5)} steps left`
-                      : 'Complete'}
-                  </p>
+                  <p className="text-[11px] font-medium text-white/60 mb-1">Profile Strength</p>
+                  <div className="h-1.5 rounded-full bg-white/10 mt-1 overflow-hidden">
+                    <div className="h-full rounded-full bg-gradient-to-r from-fuchsia-400 to-purple-500 transition-all" style={{ width: `${dashboardMetrics?.profileStrength.percentage ?? 0}%` }} />
+                  </div>
+                  <div className="metric-bar bg-gradient-to-r from-fuchsia-400 to-purple-500" />
                 </button>
 
                 {/* Win Rate */}
-                <div className="rounded-xl border border-white/10 bg-gradient-to-br from-indigo-500/10 to-blue-500/5 p-5 backdrop-blur-sm hover:border-indigo-500/30 transition-all duration-200">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-gradient-to-br from-indigo-500/20 to-blue-500/10">
-                      <TrendingUp className="w-5 h-5 text-indigo-300" />
+                <div className="premium-card relative p-5 overflow-hidden">
+                  <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-indigo-500/15 mb-3">
+                    <TrendingUp className="w-4 h-4 text-indigo-300" />
                   </div>
-                  </div>
-                  <p className="text-2xl font-bold text-white mb-0.5">
+                  <p className="text-xl font-bold text-white mb-0.5">
                     {dashboardMetrics ? dashboardMetrics.winRate.percentage : 0}%
                   </p>
-                  <p className="text-xs font-medium text-white/70 mb-1">Win Rate</p>
-                  <p className="text-xs text-white/50">
-                    {dashboardMetrics ? `${dashboardMetrics.winRate.won}/${dashboardMetrics.winRate.total} proposals` : '0/0 proposals'}
-                    </p>
-                  </div>
+                  <p className="text-[11px] font-medium text-white/60 mb-1">Win Rate</p>
+                  <p className="text-[10px] text-white/40">
+                    {dashboardMetrics ? `${dashboardMetrics.winRate.won}/${dashboardMetrics.winRate.total} proposals` : '0/0'}
+                  </p>
+                  <div className="metric-bar bg-gradient-to-r from-indigo-400 to-blue-500" />
+                </div>
               </div>
 
               {/* Recent Activity & Quick Stats */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm p-6">
+                <div className="lg:col-span-2 rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-sm p-6">
                   <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-semibold flex items-center space-x-2">
+                    <h2 className="text-lg font-semibold text-white flex items-center space-x-2">
                       <Activity className="w-5 h-5 text-cyan-400" />
                       <span>Recent Activity</span>
                     </h2>
                   </div>
                   <div className="space-y-4">
                     {projects.length === 0 ? (
-                      <div className="text-center py-8 text-white/50">
-                        <FileText className="w-12 h-12 text-white/20 mx-auto mb-3" />
+                      <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-sm text-white/40 space-y-2">
+                        <FileText className="w-10 h-10 text-white/20 mx-auto" />
                         <p>No recent activity</p>
-                        <p className="text-sm mt-1">Projects will appear here once assigned</p>
-                  </div>
+                        <p>Projects will appear here once assigned</p>
+                      </div>
                     ) : (
                       projects.slice(0, 5).map(project => (
                         <div key={project.id} className="flex items-center justify-between p-3 rounded-lg border border-white/5 bg-white/5 hover:bg-white/10 transition-colors">
@@ -1671,8 +1634,8 @@ export default function FreelancerDashboard() {
                 </div>
               </div>
 
-                <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm p-6">
-                  <h2 className="text-lg font-semibold mb-4 flex items-center space-x-2">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-sm p-6">
+                  <h2 className="text-lg font-semibold text-white mb-4 flex items-center space-x-2">
                     <Zap className="w-5 h-5 text-cyan-400" />
                     <span>Quick Stats</span>
                   </h2>
@@ -1704,7 +1667,7 @@ export default function FreelancerDashboard() {
           {(activeTab === 'pipeline' || activeTab === 'projects') && (
             <div className="space-y-6">
               {/* Filters */}
-              <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm p-4">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-sm p-4">
                 <div className="flex flex-col sm:flex-row gap-4">
                   <div className="flex-1 relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/40" />
@@ -1713,7 +1676,7 @@ export default function FreelancerDashboard() {
                       placeholder="Search projects..."
                       value={projectSearch}
                       onChange={(e) => setProjectSearch(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 border border-white/10 bg-black/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-white placeholder:text-white/40"
+                      className="w-full pl-10 pr-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition"
                     />
               </div>
                   <div className="relative">
@@ -1721,7 +1684,7 @@ export default function FreelancerDashboard() {
                     <select
                       value={projectFilter}
                       onChange={(e) => setProjectFilter(e.target.value)}
-                      className="pl-10 pr-8 py-2 border border-white/10 bg-[#1a1d24] rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-white appearance-none cursor-pointer"
+                      className="pl-10 pr-8 py-2 bg-white/5 border border-white/10 rounded-xl text-white appearance-none cursor-pointer focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition"
                       style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3E%3Cpath stroke=\'%23ffffff\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M6 8l4 4 4-4\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.5rem center', backgroundSize: '1.5em 1.5em', paddingRight: '2.5rem' }}
                     >
                       <option value="all" className="bg-[#1a1d24] text-white">All Status</option>
@@ -1740,25 +1703,19 @@ export default function FreelancerDashboard() {
               </div>
 
               {/* Projects List */}
-              <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm overflow-hidden">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-sm overflow-hidden">
                 {filteredProjects.length === 0 ? (
-                  <div className="p-12 text-center text-white/70">
-                    <FileText className="w-16 h-16 text-white/20 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-white mb-2">
-                      {projectSearch || projectFilter !== 'all' ? 'No projects found' : 'No projects yet'}
-                    </h3>
-                    <p className="text-sm">
-                      {projectSearch || projectFilter !== 'all' 
-                        ? 'Try adjusting your filters' 
-                        : 'Projects assigned by admins will appear here'}
-                    </p>
+                  <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-sm text-white/40 space-y-2 m-4">
+                    <FileText className="w-12 h-12 text-white/20 mx-auto" />
+                    <p className="text-white/50 font-medium">{projectSearch || projectFilter !== 'all' ? 'No projects found' : 'No projects yet'}</p>
+                    <p>{projectSearch || projectFilter !== 'all' ? 'Try adjusting your filters' : 'Projects assigned by admins will appear here'}</p>
                   </div>
                 ) : (
                   <div className="divide-y divide-white/10">
                     {filteredProjects.map(project => {
                       const isExpanded = expandedProjects.has(project.id);
                       return (
-                        <div key={project.id} className="rounded-xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-6 hover:border-white/20 transition-all shadow-lg">
+                        <div key={project.id} className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 hover:border-white/20 transition-all">
                           <div className="flex items-start justify-between mb-4">
                         <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-3 mb-3">
@@ -1799,9 +1756,9 @@ export default function FreelancerDashboard() {
                                 <span>Progress</span>
                                     <span className="font-semibold">{project.progress}%</span>
                               </div>
-                                  <div className="w-full bg-white/10 rounded-full h-2.5 overflow-hidden">
+                                  <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
                                 <div 
-                                      className="bg-gradient-to-r from-cyan-400 to-blue-500 h-full rounded-full transition-all duration-500 shadow-lg shadow-cyan-500/50"
+                                      className="bg-gradient-to-r from-cyan-400 to-blue-500 h-1.5 rounded-full transition-all duration-500"
                                   style={{ width: `${project.progress}%` }}
                                 ></div>
                               </div>
@@ -1919,7 +1876,7 @@ export default function FreelancerDashboard() {
                           {/* Milestones Section */}
                           <div className="space-y-4 pt-4 border-t border-white/10">
                             <div className="flex items-center justify-between">
-                              <h4 className="text-sm font-semibold text-white/90 flex items-center space-x-2">
+                              <h4 className="text-sm font-semibold text-white flex items-center space-x-2">
                                 <Target className="w-4 h-4" />
                                 <span>Milestones</span>
                               </h4>
@@ -1956,12 +1913,24 @@ export default function FreelancerDashboard() {
                             </div>
 
                             {milestones[project.id] && milestones[project.id].length > 0 ? (
-                              <div className="space-y-3">
+                              <div className="relative space-y-3 pl-6">
+                                <div className="timeline-connector" />
                                 {milestones[project.id].map((milestone, index) => {
                                   const milestoneNumber = index + 1;
                                   const isExpanded = expandedMilestones.has(milestone.id);
+                                  const isUrgent = milestone.due_date
+                                    ? (new Date(milestone.due_date).getTime() - Date.now()) < 3 * 24 * 60 * 60 * 1000 &&
+                                      !['approved', 'released', 'completed'].includes(milestone.status)
+                                    : false;
+                                  const dotColor =
+                                    milestone.status === 'approved' || milestone.status === 'released' ? 'bg-emerald-400' :
+                                    milestone.status === 'submitted' ? 'bg-cyan-400' :
+                                    milestone.status === 'in_progress' ? 'bg-blue-400' :
+                                    milestone.status === 'funded' ? 'bg-purple-400' :
+                                    milestone.status === 'rejected' ? 'bg-rose-400' : 'bg-white/30';
                                   return (
-                                  <div key={milestone.id} className="rounded-xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] hover:border-white/20 transition-all">
+                                  <div key={milestone.id} className={`relative rounded-xl border bg-gradient-to-br from-white/5 to-white/[0.02] hover:border-white/20 transition-all ${isUrgent ? 'urgency-border border-amber-400/30' : 'border-white/10'}`}>
+                                    <span className={`absolute -left-[22px] top-4 h-3 w-3 rounded-full border-2 border-[#0B0D10] ${dotColor}`} />
                                     {/* Header Row - Clickable */}
                                     <div 
                                       onClick={() => {
@@ -2022,10 +1991,10 @@ export default function FreelancerDashboard() {
                                               <textarea
                                                 value={milestoneEditForm.description}
                                                 onChange={(e) => setMilestoneEditForm({ ...milestoneEditForm, description: e.target.value })}
-                                                className={`w-full px-2 py-1 text-xs border rounded text-white resize-none ${
+                                                className={`w-full px-3 py-2 text-xs rounded-xl text-white resize-none focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-400/70 transition ${
                                                   detectRestrictedWords(milestoneEditForm.description).hasRestricted
-                                                    ? 'border-red-500/50 bg-red-500/5'
-                                                    : 'border-white/20 bg-black/30'
+                                                    ? 'border border-red-500/50 bg-red-500/5'
+                                                    : 'border border-white/10 bg-white/5'
                                                 }`}
                                                 rows={3}
                                                 placeholder="Describe what this milestone includes..."
@@ -2124,7 +2093,7 @@ export default function FreelancerDashboard() {
                                                   type="date"
                                                   value={milestoneEditForm.dueDate ? new Date(milestoneEditForm.dueDate).toISOString().split('T')[0] : ''}
                                                   onChange={(e) => setMilestoneEditForm({ ...milestoneEditForm, dueDate: e.target.value })}
-                                                  className="px-2 py-1 text-xs border border-white/20 bg-black/30 rounded text-white"
+                                                  className="px-3 py-2 text-xs bg-white/5 border border-white/10 rounded-xl text-white focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition"
                                                 />
                                                 <button
                                                   onClick={() => {
@@ -2199,7 +2168,7 @@ export default function FreelancerDashboard() {
                                       />
                                       <label
                                         htmlFor={`milestone-file-${milestone.id}`}
-                                            className="px-4 py-2 text-xs font-medium rounded-lg border border-purple-400/40 bg-purple-400/10 text-purple-200 hover:bg-purple-400/20 transition-all cursor-pointer flex items-center gap-1.5"
+                                            className="rounded-xl border border-white/10 bg-white/5 text-white/70 px-4 py-2 text-xs font-medium hover:bg-white/10 transition cursor-pointer flex items-center gap-1.5"
                                       >
                                             <Upload className="w-3.5 h-3.5" />
                                             Upload File
@@ -2291,10 +2260,10 @@ export default function FreelancerDashboard() {
                                 })}
                               </div>
                             ) : (
-                              <div className="text-center py-6 text-white/50 border border-white/10 rounded-lg bg-white/5">
-                                <Target className="w-8 h-8 text-white/20 mx-auto mb-2" />
-                                <p className="text-xs">No milestones yet</p>
-                                <p className="text-xs mt-1">Create milestones to organize your work</p>
+                              <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-sm text-white/40 space-y-2">
+                                <Target className="w-8 h-8 text-white/20 mx-auto" />
+                                <p>No milestones yet</p>
+                                <p>Create milestones to organize your work</p>
                               </div>
                             )}
                           </div>
@@ -2307,7 +2276,7 @@ export default function FreelancerDashboard() {
                               <select
                                 value={project.status}
                                 onChange={(e) => updateProjectStatus(project.id, e.target.value)}
-                                className="w-full px-3 py-2 border border-white/10 bg-black/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-white text-sm"
+                                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition"
                               >
                                 <option value="open">New</option>
                                 <option value="draft">Draft</option>
@@ -2352,14 +2321,14 @@ export default function FreelancerDashboard() {
           {(activeTab === 'inbox' || activeTab === 'messages') && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Project List */}
-              <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm overflow-hidden">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-sm overflow-hidden">
                 <div className="px-6 py-4 border-b border-white/10 bg-white/5">
-                  <h2 className="text-lg font-semibold">Projects with Messages</h2>
+                  <h2 className="text-lg font-semibold text-white">Projects with Messages</h2>
                 </div>
                 <div className="divide-y divide-white/10 max-h-[600px] overflow-y-auto">
                   {projects.filter(p => p.messages && p.messages.length > 0).length === 0 ? (
-                    <div className="p-8 text-center text-white/50">
-                      <MessageCircle className="w-12 h-12 text-white/20 mx-auto mb-3" />
+                    <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-sm text-white/40 space-y-2 m-4">
+                      <MessageCircle className="w-10 h-10 text-white/20 mx-auto" />
                       <p>No messages yet</p>
                     </div>
                   ) : (
@@ -2399,11 +2368,11 @@ export default function FreelancerDashboard() {
               </div>
 
               {/* Chat Area */}
-              <div className="lg:col-span-2 rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm overflow-hidden flex flex-col">
+              <div className="lg:col-span-2 rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-sm overflow-hidden flex flex-col">
                 {selectedProject ? (
                   <>
                     <div className="px-6 py-4 border-b border-white/10 bg-white/5">
-                      <h2 className="text-lg font-semibold">{selectedProject.client}</h2>
+                      <h2 className="text-lg font-semibold text-white">{selectedProject.client}</h2>
                       <p className="text-sm text-white/70">{selectedProject.title}</p>
                     </div>
                     <div className="flex-1 overflow-y-auto p-6 space-y-4 min-h-[400px] max-h-[600px]">
@@ -2416,12 +2385,12 @@ export default function FreelancerDashboard() {
                             className={`flex ${message.sender === 'freelancer' ? 'justify-end' : 'justify-start'}`}
                         >
                           <div
-                              className={`max-w-[75%] rounded-2xl px-4 py-2.5 ${
+                              className={`max-w-[75%] px-4 py-3 ${
                                   isMilestoneMessage
-                                    ? 'bg-gradient-to-br from-amber-500/20 to-amber-600/20 text-amber-100 border border-amber-500/40 shadow-lg shadow-amber-500/10'
+                                    ? 'bg-gradient-to-br from-amber-500/20 to-amber-600/20 text-amber-100 border border-amber-500/40 shadow-lg shadow-amber-500/10 rounded-2xl'
                                     : message.sender === 'freelancer'
-                                  ? 'bg-gradient-to-br from-cyan-500 to-blue-600 text-white'
-                                  : 'bg-white/10 text-white border border-white/20'
+                                  ? 'bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/10 rounded-2xl rounded-tr-sm text-white'
+                                  : 'bg-white/[0.04] border border-white/10 rounded-2xl rounded-tl-sm text-white/80'
                               }`}
                             >
                                 {isMilestoneMessage && (
@@ -2445,29 +2414,29 @@ export default function FreelancerDashboard() {
                           );
                         })
                       ) : (
-                        <div className="text-center py-12 text-white/50">
-                          <MessageCircle className="w-12 h-12 text-white/20 mx-auto mb-3" />
+                        <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-sm text-white/40 space-y-2 mx-4">
+                          <MessageCircle className="w-10 h-10 text-white/20 mx-auto" />
                           <p>No messages yet</p>
-                          <p className="text-sm mt-1">Start the conversation</p>
-                    </div>
+                          <p>Start the conversation</p>
+                        </div>
                       )}
                       <div ref={messagesEndRef} />
                     </div>
-                    <div className="px-6 py-4 border-t border-white/10 bg-white/5">
+                    <div className="bg-white/[0.03] border-t border-white/10 p-4">
                       <div className="flex space-x-2">
                         <input
                           type="text"
                           value={newMessage}
                           onChange={(e) => setNewMessage(e.target.value)}
                           placeholder="Type your message..."
-                          className="flex-1 px-4 py-2.5 border border-white/10 bg-black/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-white placeholder:text-white/40"
+                          className="flex-1 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition"
                           onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage(selectedProject.id)}
                           disabled={sendingMessage}
                         />
                         <button
                           onClick={() => sendMessage(selectedProject.id)}
                           disabled={!newMessage.trim() || sendingMessage}
-                          className="px-4 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-lg hover:from-cyan-400 hover:to-blue-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                          className="rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold px-4 py-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
                         >
                           {sendingMessage ? (
                             <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
@@ -2492,8 +2461,8 @@ export default function FreelancerDashboard() {
           )}
 
           {(activeTab === 'calendar' || activeTab === 'availability') && (
-            <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm p-6">
-              <h2 className="text-lg font-semibold mb-6 flex items-center space-x-2">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-sm p-6">
+              <h2 className="text-lg font-semibold text-white mb-6 flex items-center space-x-2">
                 <Calendar className="w-5 h-5 text-cyan-400" />
                 <span>Availability Settings</span>
               </h2>
@@ -2544,7 +2513,7 @@ export default function FreelancerDashboard() {
                       onClick={() => (nextDateRef.current as any)?.showPicker?.()}
                       inputMode="none"
                       onKeyDown={(e) => e.preventDefault()}
-                      className="w-full pl-11 pr-3 py-2.5 border border-white/10 bg-black/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 placeholder:text-white/40 cursor-pointer caret-transparent"
+                      className="w-full pl-11 pr-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition cursor-pointer caret-transparent"
                     />
                     <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-white/50">
                       <Calendar className="w-4 h-4" />
@@ -2570,7 +2539,7 @@ export default function FreelancerDashboard() {
                           onClick={() => (timeFromRef.current as any)?.showPicker?.()}
                           inputMode="none"
                           onKeyDown={(e) => e.preventDefault()}
-                          className="w-full pl-11 pr-3 py-2.5 border border-white/10 bg-black/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 cursor-pointer caret-transparent"
+                          className="w-full pl-11 pr-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition cursor-pointer caret-transparent"
                         />
                         <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-white/50">
                           <Clock className="w-4 h-4" />
@@ -2590,7 +2559,7 @@ export default function FreelancerDashboard() {
                           onClick={() => (timeToRef.current as any)?.showPicker?.()}
                           inputMode="none"
                           onKeyDown={(e) => e.preventDefault()}
-                          className="w-full pl-11 pr-3 py-2.5 border border-white/10 bg-black/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 cursor-pointer caret-transparent"
+                          className="w-full pl-11 pr-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition cursor-pointer caret-transparent"
                         />
                         <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-white/50">
                           <Clock className="w-4 h-4" />
@@ -2612,7 +2581,7 @@ export default function FreelancerDashboard() {
                       setAvailability(newState);
                       updateAvailability(newState);
                     }}
-                    className="w-full px-3 py-2.5 border border-white/10 bg-black/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-white"
+                    className="bg-white/5 border border-white/10 rounded-xl text-white px-3 py-2.5 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
                   >
                     {TIMEZONES.map(tz => (
                       <option key={tz.value} value={tz.value}>{tz.label}</option>
@@ -2624,7 +2593,7 @@ export default function FreelancerDashboard() {
                 <button
                     onClick={() => updateAvailability()}
                     disabled={saving}
-                    className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-lg hover:from-cyan-400 hover:to-blue-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center space-x-2"
+                    className="rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold px-6 py-3 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
                   >
                     {saving ? (
                       <>
@@ -2644,31 +2613,31 @@ export default function FreelancerDashboard() {
           )}
 
           {activeTab === 'playbooks' && (
-            <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm overflow-hidden">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-sm overflow-hidden">
               <div className="px-6 py-4 border-b border-white/10 bg-white/5 flex items-center justify-between">
-                <h2 className="text-lg font-semibold">Your Playbooks</h2>
+                <h2 className="text-lg font-semibold text-white">Your Playbooks</h2>
                 <button
                   onClick={() => router.push('/products')}
-                  className="px-4 py-2 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-400 hover:to-blue-500 transition-all duration-200 text-sm font-medium flex items-center space-x-2"
+                  className="rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold px-4 py-2 text-sm flex items-center space-x-2 transition"
                 >
                   <Plus className="w-4 h-4" />
                   <span>Create Playbook</span>
                 </button>
               </div>
-              <div className="p-12 text-center text-white/70">
-                <Code className="w-16 h-16 text-white/20 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-white mb-2">No playbooks yet</h3>
-                <p className="text-sm mb-6">Create reusable service templates to streamline proposals and sales.</p>
+              <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-sm text-white/40 space-y-2 m-4">
+                <Code className="w-12 h-12 text-white/20 mx-auto" />
+                <p className="text-white/50 font-medium text-base">No playbooks yet</p>
+                <p>Create reusable service templates to streamline proposals and sales.</p>
                 <div className="flex items-center justify-center gap-3">
                   <button
                     onClick={() => router.push('/products')}
-                    className="px-6 py-2.5 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-400 hover:to-blue-500 transition-all duration-200 font-medium"
+                    className="rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold px-6 py-2.5 transition"
                   >
                     Create Playbook
                   </button>
                   <button
                     onClick={() => setActiveTab('pipeline')}
-                    className="px-6 py-2.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition-all duration-200 font-medium"
+                    className="rounded-xl border border-white/10 bg-white/5 text-white/70 px-6 py-2.5 hover:bg-white/10 transition"
                   >
                     New Proposal
                   </button>
@@ -2680,7 +2649,7 @@ export default function FreelancerDashboard() {
           {activeTab === 'earnings' && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="rounded-xl border border-white/10 bg-gradient-to-br from-emerald-500/10 to-teal-500/5 p-6 backdrop-blur-sm">
+                <div className="premium-card relative p-6 overflow-hidden">
                   <div className="flex items-center justify-between mb-4">
                     <div>
                       <p className="text-sm font-medium text-white/70 mb-1">Available</p>
@@ -2693,9 +2662,10 @@ export default function FreelancerDashboard() {
                     </div>
                   </div>
                   <p className="text-xs text-white/50">Ready to withdraw</p>
+                  <div className="metric-bar bg-gradient-to-r from-emerald-400 to-teal-500" />
                 </div>
 
-                <div className="rounded-xl border border-white/10 bg-gradient-to-br from-cyan-500/10 to-blue-500/5 p-6 backdrop-blur-sm">
+                <div className="premium-card relative p-6 overflow-hidden">
                   <div className="flex items-center justify-between mb-4">
                     <div>
                       <p className="text-sm font-medium text-white/70 mb-1">In Escrow</p>
@@ -2708,9 +2678,10 @@ export default function FreelancerDashboard() {
                     </div>
                   </div>
                   <p className="text-xs text-white/50">Secured until milestone completion</p>
+                  <div className="metric-bar bg-gradient-to-r from-cyan-400 to-blue-500" />
                 </div>
 
-                <div className="rounded-xl border border-white/10 bg-gradient-to-br from-amber-500/10 to-orange-500/5 p-6 backdrop-blur-sm">
+                <div className="premium-card relative p-6 overflow-hidden">
                   <div className="flex items-center justify-between mb-4">
                     <div>
                       <p className="text-sm font-medium text-white/70 mb-1">Pending</p>
@@ -2723,19 +2694,20 @@ export default function FreelancerDashboard() {
                     </div>
                   </div>
                   <p className="text-xs text-white/50">Awaiting payment clearance</p>
+                  <div className="metric-bar bg-gradient-to-r from-amber-400 to-orange-500" />
                 </div>
               </div>
 
-              <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm p-6">
-                <h3 className="text-lg font-semibold mb-4">Payout Settings</h3>
-                <div className="p-8 text-center text-white/70 border border-white/10 rounded-lg bg-white/5">
-                  <DollarSign className="w-12 h-12 text-white/20 mx-auto mb-3" />
-                  <p className="text-sm mb-4">Add a payout method to receive funds</p>
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-sm p-6">
+                <h3 className="text-lg font-semibold text-white mb-4">Payout Settings</h3>
+                <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-sm text-white/40 space-y-2">
+                  <DollarSign className="w-10 h-10 text-white/20 mx-auto" />
+                  <p>Add a payout method to receive funds</p>
                   <div className="flex items-center justify-center gap-3">
-                    <button className="px-6 py-2.5 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-400 hover:to-blue-500 transition-all duration-200 font-medium">
+                    <button className="rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold px-6 py-2.5 transition">
                       Connect Stripe
                     </button>
-                    <button className="px-6 py-2.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition-all duration-200 font-medium">
+                    <button className="rounded-xl border border-white/10 bg-white/5 text-white/70 px-6 py-2.5 hover:bg-white/10 transition">
                       Add Bank Account
                     </button>
                   </div>
@@ -2745,16 +2717,16 @@ export default function FreelancerDashboard() {
           )}
 
           {activeTab === 'deliverables' && (
-            <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm overflow-hidden">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-sm overflow-hidden">
               <div className="px-6 py-4 border-b border-white/10 bg-white/5">
-                <h2 className="text-lg font-semibold">Project Deliverables</h2>
+                <h2 className="text-lg font-semibold text-white">Project Deliverables</h2>
               </div>
               <div className="p-6">
                 {projects.filter(p => (p.deliverables && p.deliverables.length > 0) || p.status === 'delivered').length === 0 ? (
-                  <div className="text-center py-12 text-white/70">
-                    <Upload className="w-16 h-16 text-white/20 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-white mb-2">No deliverables yet</h3>
-                    <p className="text-sm">Upload files and code for your projects</p>
+                  <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-sm text-white/40 space-y-2">
+                    <Upload className="w-10 h-10 text-white/20 mx-auto" />
+                    <p className="text-white/50 font-medium">No deliverables yet</p>
+                    <p>Upload files and code for your projects</p>
                   </div>
                 ) : (
                   <div className="space-y-6">
@@ -2774,7 +2746,7 @@ export default function FreelancerDashboard() {
                           {project.deliverables && project.deliverables.length > 0 ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                               {project.deliverables.map(deliverable => (
-                                <div key={deliverable.id} className="border border-white/10 rounded-lg p-4 bg-black/30 hover:bg-black/40 transition-colors">
+                                <div key={deliverable.id} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 hover:border-white/20 transition-all">
                                   <div className="flex items-center space-x-2 mb-2">
                                     {deliverable.type === 'code' ? (
                                       <Code className="w-5 h-5 text-emerald-300" />
@@ -2797,10 +2769,10 @@ export default function FreelancerDashboard() {
                               ))}
                             </div>
                           ) : (
-                            <div className="text-center py-8 text-white/50 border border-white/10 rounded-lg bg-white/5">
-                              <Upload className="w-12 h-12 text-white/20 mx-auto mb-3" />
-                              <p className="text-sm">No deliverables uploaded yet</p>
-                              <p className="text-xs mt-1">This project is marked as delivered</p>
+                            <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-sm text-white/40 space-y-2">
+                              <Upload className="w-8 h-8 text-white/20 mx-auto" />
+                              <p>No deliverables uploaded yet</p>
+                              <p>This project is marked as delivered</p>
                             </div>
                           )}
                         </div>
@@ -2813,8 +2785,8 @@ export default function FreelancerDashboard() {
           )}
 
           {activeTab === 'profile' && (
-            <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm p-6">
-              <h2 className="text-lg font-semibold mb-6 flex items-center space-x-2">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-sm p-6">
+              <h2 className="text-lg font-semibold text-white mb-6 flex items-center space-x-2">
                 <User className="w-5 h-5 text-cyan-400" />
                 <span>Edit Profile</span>
               </h2>
@@ -2852,7 +2824,7 @@ export default function FreelancerDashboard() {
                 <div>
                   <label className="block text-sm font-medium text-white mb-2">Display Name *</label>
                   <input
-                    className="w-full px-4 py-2.5 border border-white/10 bg-black/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-white placeholder:text-white/40"
+                    className="bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
                     value={profileForm.display_name}
                     onChange={(e) => setProfileForm({ ...profileForm, display_name: e.target.value })}
                     required
@@ -2862,7 +2834,7 @@ export default function FreelancerDashboard() {
                 <div>
                   <label className="block text-sm font-medium text-white mb-2">Headline</label>
                   <input
-                    className="w-full px-4 py-2.5 border border-white/10 bg-black/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-white placeholder:text-white/40"
+                    className="bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
                     value={profileForm.headline}
                     onChange={(e) => setProfileForm({ ...profileForm, headline: e.target.value })}
                     placeholder="e.g., Senior Web Developer"
@@ -2871,7 +2843,7 @@ export default function FreelancerDashboard() {
                 <div>
                   <label className="block text-sm font-medium text-white mb-2">Title</label>
                   <input
-                    className="w-full px-4 py-2.5 border border-white/10 bg-black/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-white placeholder:text-white/40"
+                    className="bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
                     value={profileForm.title}
                     onChange={(e) => setProfileForm({ ...profileForm, title: e.target.value })}
                     placeholder="Your professional title"
@@ -2883,7 +2855,7 @@ export default function FreelancerDashboard() {
                     <span>Country</span>
                   </label>
                   <input
-                    className="w-full px-4 py-2.5 border border-white/10 bg-black/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-white placeholder:text-white/40"
+                    className="bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
                     value={profileForm.country}
                     onChange={(e) => setProfileForm({ ...profileForm, country: e.target.value })}
                     placeholder="Your country"
@@ -2893,7 +2865,7 @@ export default function FreelancerDashboard() {
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-white mb-2">Bio</label>
                   <textarea
-                    className="w-full px-4 py-2.5 border border-white/10 bg-black/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-white placeholder:text-white/40 resize-none"
+                    className="bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full resize-none"
                     rows={3}
                     value={profileForm.bio}
                     onChange={(e) => setProfileForm({ ...profileForm, bio: e.target.value })}
@@ -2904,7 +2876,7 @@ export default function FreelancerDashboard() {
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-white mb-2">Description</label>
                   <textarea
-                    className="w-full px-4 py-2.5 border border-white/10 bg-black/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-white placeholder:text-white/40 resize-none"
+                    className="bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full resize-none"
                     rows={4}
                     value={profileForm.description}
                     onChange={(e) => setProfileForm({ ...profileForm, description: e.target.value })}
@@ -2915,7 +2887,7 @@ export default function FreelancerDashboard() {
                 <div>
                   <label className="block text-sm font-medium text-white mb-2">Skills (comma separated)</label>
                   <input
-                    className="w-full px-4 py-2.5 border border-white/10 bg-black/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-white placeholder:text-white/40"
+                    className="bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
                     value={profileForm.skills}
                     onChange={(e) => setProfileForm({ ...profileForm, skills: e.target.value })}
                     placeholder="React, TypeScript, Node.js"
@@ -2927,7 +2899,7 @@ export default function FreelancerDashboard() {
                     type="number"
                     min="0"
                     step="0.01"
-                    className="w-full px-4 py-2.5 border border-white/10 bg-black/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-white placeholder:text-white/40"
+                    className="bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
                     value={profileForm.hourly_rate_cents ? (Number(profileForm.hourly_rate_cents) / 100).toFixed(2) : ''}
                     onChange={(e) => setProfileForm({ ...profileForm, hourly_rate_cents: String(Math.round(Number(e.target.value) * 100)) })}
                     placeholder="50.00"
@@ -2938,7 +2910,7 @@ export default function FreelancerDashboard() {
                   <button
                     type="submit"
                     disabled={saving}
-                    className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-lg hover:from-cyan-400 hover:to-blue-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center space-x-2"
+                    className="rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold px-6 py-3 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
                   >
                     {saving ? (
                       <>
@@ -2957,7 +2929,7 @@ export default function FreelancerDashboard() {
 
               {/* KYC Documents Section */}
               <div className="mt-8 pt-8 border-t border-white/10">
-                <h3 className="text-lg font-semibold mb-4 flex items-center space-x-2">
+                <h3 className="text-lg font-semibold text-white mb-4 flex items-center space-x-2">
                   <Lock className="w-5 h-5 text-cyan-400" />
                   <span>KYC Documents & Verification</span>
                 </h3>
@@ -2966,14 +2938,14 @@ export default function FreelancerDashboard() {
                 </p>
 
                 {/* Upload Form */}
-                <div className="bg-black/30 rounded-lg border border-white/10 p-4 mb-6">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 mb-6">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                     <div>
                       <label className="block text-sm font-medium text-white mb-2">Document Type *</label>
                       <select
                         value={kycUploadForm.documentType}
                         onChange={(e) => setKycUploadForm({ ...kycUploadForm, documentType: e.target.value })}
-                        className="w-full px-4 py-2.5 border border-white/10 bg-black/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-white"
+                        className="bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
                       >
                         <option value="">Select type</option>
                         <option value="id_card">ID Card</option>
@@ -2990,7 +2962,7 @@ export default function FreelancerDashboard() {
                         type="text"
                         value={kycUploadForm.documentName}
                         onChange={(e) => setKycUploadForm({ ...kycUploadForm, documentName: e.target.value })}
-                        className="w-full px-4 py-2.5 border border-white/10 bg-black/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-white placeholder:text-white/40"
+                        className="bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
                         placeholder="Optional: Document name"
                       />
                     </div>
@@ -3007,7 +2979,7 @@ export default function FreelancerDashboard() {
                   <button
                     onClick={uploadKycDocument}
                     disabled={uploadingKyc || !kycUploadForm.documentType || !kycUploadForm.file}
-                    className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-lg hover:from-cyan-400 hover:to-blue-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center space-x-2"
+                    className="rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold px-4 py-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
                   >
                     {uploadingKyc ? (
                       <>
@@ -3046,7 +3018,7 @@ export default function FreelancerDashboard() {
                       return (
                         <div
                           key={doc.id}
-                          className="rounded-lg border border-white/10 bg-white/5 p-4 hover:bg-white/10 transition"
+                          className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 hover:border-white/20 transition-all"
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex-1 min-w-0">
@@ -3124,8 +3096,8 @@ export default function FreelancerDashboard() {
                     })}
                   </div>
                 ) : (
-                  <div className="text-center py-8 text-white/50">
-                    <p className="text-sm">No KYC documents uploaded yet</p>
+                  <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-sm text-white/40 space-y-2">
+                    <p>No KYC documents uploaded yet</p>
                   </div>
                 )}
               </div>
@@ -3153,7 +3125,7 @@ export default function FreelancerDashboard() {
                           type="text"
                           value={kycEditForm.documentName}
                           onChange={(e) => setKycEditForm({ ...kycEditForm, documentName: e.target.value })}
-                          className="w-full px-4 py-2.5 border border-white/10 bg-black/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-white placeholder:text-white/40"
+                          className="bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
                           placeholder="Document name"
                         />
                       </div>
@@ -3176,14 +3148,14 @@ export default function FreelancerDashboard() {
                       <div className="flex gap-3 pt-2">
                         <button
                           onClick={cancelEditKycDocument}
-                          className="flex-1 px-4 py-2 border border-white/10 bg-white/5 text-white rounded-lg hover:bg-white/10 transition"
+                          className="flex-1 rounded-xl border border-white/10 bg-white/5 text-white/70 px-4 py-2 hover:bg-white/10 transition"
                         >
                           Cancel
                         </button>
                         <button
                           onClick={updateKycDocument}
                           disabled={uploadingKyc || (!kycEditForm.documentName && !kycEditForm.file)}
-                          className="flex-1 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-lg hover:from-cyan-400 hover:to-blue-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2"
+                          className="flex-1 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold px-4 py-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                         >
                           {uploadingKyc ? (
                             <>
@@ -3243,7 +3215,7 @@ export default function FreelancerDashboard() {
                     <textarea
                       value={milestoneForm.description}
                       onChange={(e) => setMilestoneForm({ ...milestoneForm, description: e.target.value })}
-                      className="w-full px-3 py-2 border border-white/10 bg-black/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-white placeholder:text-white/40 resize-none"
+                      className="bg-white/5 border border-white/10 rounded-xl text-white px-3 py-2 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full resize-none"
                       rows={3}
                       placeholder="Describe what this milestone includes..."
                     />
@@ -3258,7 +3230,7 @@ export default function FreelancerDashboard() {
                         onClick={() => setShowCalendar(!showCalendar)}
                         readOnly
                         placeholder="dd-mm-yyyy"
-                        className="w-full px-3 py-2 pr-10 border border-white/10 bg-black/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-white placeholder:text-white/40 cursor-pointer"
+                        className="w-full px-3 py-2 pr-10 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition cursor-pointer"
                       />
                       <Calendar 
                         className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/40 pointer-events-none" 
@@ -3289,14 +3261,14 @@ export default function FreelancerDashboard() {
                         setCreatingMilestone(false);
                         setMilestoneForm({ projectId: '', title: '', description: '', amount: '', dueDate: '' });
                       }}
-                      className="flex-1 px-4 py-2 border border-white/10 bg-white/5 hover:bg-white/10 rounded-lg text-white transition-colors"
+                      className="flex-1 rounded-xl border border-white/10 bg-white/5 text-white/70 px-4 py-2 hover:bg-white/10 transition"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={createMilestone}
                       disabled={saving || !milestoneForm.title.trim() || (milestones[milestoneForm.projectId]?.length || 0) >= PREDEFINED_MILESTONE_TITLES.length}
-                      className="flex-1 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-lg hover:from-cyan-400 hover:to-blue-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-1 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold px-4 py-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {saving ? 'Creating...' : (milestones[milestoneForm.projectId]?.length || 0) >= PREDEFINED_MILESTONE_TITLES.length ? 'Maximum Milestones Reached' : 'Create Milestone'}
                     </button>

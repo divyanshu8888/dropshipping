@@ -51,7 +51,7 @@ async function fileExists(filePath: string): Promise<boolean> {
 }
 
 async function handleGet(
-  req: NextApiRequest,
+  _req: NextApiRequest,
   res: NextApiResponse,
   id: string
 ) {

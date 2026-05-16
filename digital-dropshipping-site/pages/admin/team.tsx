@@ -25,7 +25,7 @@ interface AdminProps {
   user: any;
 }
 
-export default function TeamManagement({ user }: AdminProps) {
+export default function TeamManagement(_props: AdminProps) {
   const router = useRouter()
   const auth = useAuth()
   const [loading, setLoading] = useState(true)
@@ -153,39 +153,10 @@ export default function TeamManagement({ user }: AdminProps) {
     }
   }
 
-  const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [memberPendingDelete, setMemberPendingDelete] = useState<TeamMember | null>(null)
-
-  const handleDeleteConfirm = async () => {
-    if (!memberPendingDelete) return
-
-    setLoadingAction(true)
-    try {
-      const response = await fetch('/api/admin/team-members', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: memberPendingDelete.id })
-      })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        fetchTeamMembers()
-        setShowDeleteModal(false)
-        setMemberPendingDelete(null)
-      } else {
-        setErrors({ submit: data.error || 'Failed to delete team member' })
-      }
-    } catch (error) {
-      setErrors({ submit: 'Error deleting team member' })
-    } finally {
-      setLoadingAction(false)
-    }
-  }
+  const [_memberPendingDelete, setMemberPendingDelete] = useState<TeamMember | null>(null)
 
   const openDeleteModal = (member: TeamMember) => {
     setMemberPendingDelete(member)
-    setShowDeleteModal(true)
   }
 
   const handleInvite = async (e: React.FormEvent) => {
@@ -818,7 +789,7 @@ export default function TeamManagement({ user }: AdminProps) {
   )
 }
 
-export const getServerSideProps: GetServerSideProps = async (context) => {
+export const getServerSideProps: GetServerSideProps = async (_context) => {
   // For client-side authentication, we'll handle auth in the component
   // This prevents server-side redirect issues
   return {

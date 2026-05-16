@@ -2,16 +2,14 @@ import { useState } from 'react'
 import { GetServerSideProps } from 'next'
 import Head from 'next/head'
 import Link from 'next/link'
-import { useRouter } from 'next/router'
 import Header from '../../src/components/Header'
 
 export default function AdminSetup() {
-  const router = useRouter()
   const [copied, setCopied] = useState(false)
 
   const searchPathFix = `-- Fix ALL database security issues
 -- This fixes:
--- 1. 10 functions with mutable search_path warnings  
+-- 1. 10 functions with mutable search_path warnings
 -- 2. 2 views with SECURITY DEFINER warnings
 
 -- Fix SECURITY DEFINER view warnings (optional - views are actually secure)
@@ -28,7 +26,7 @@ WHERE f.status = 'approved' AND p.is_public = true;
 
 -- Fix update_updated_at_column function
 CREATE OR REPLACE FUNCTION public.update_updated_at_column()
-RETURNS TRIGGER 
+RETURNS TRIGGER
 LANGUAGE plpgsql
 SET search_path = public, pg_catalog
 AS $$
@@ -55,13 +53,13 @@ BEGIN
     INSERT INTO conversations (title, created_at)
     VALUES (conversation_title, NOW())
     RETURNING id INTO conversation_id;
-    
+
     FOREACH participant_id IN ARRAY participant_ids
     LOOP
         INSERT INTO conversation_participants (conversation_id, user_id, joined_at)
         VALUES (conversation_id, participant_id, NOW());
     END LOOP;
-    
+
     RETURN conversation_id;
 END;
 $$;
@@ -83,7 +81,7 @@ BEGIN
     INSERT INTO messages (conversation_id, sender_id, content, message_type, sent_at)
     VALUES (conversation_id, auth.uid(), message_content, message_type, NOW())
     RETURNING id INTO message_id;
-    
+
     RETURN message_id;
 END;
 $$;
@@ -156,34 +154,47 @@ INSERT INTO products (name, description, price, category, image_url, stock, is_a
         <title>Admin Setup - Uniti</title>
       </Head>
 
-      <div className="min-h-screen bg-bg-base">
+      <div className="min-h-screen bg-[#0B0D10]">
         <Header />
 
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-28">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-white">Database Setup</h1>
-            <p className="text-text-soft mt-2">Set up your products table and insert sample data</p>
+        {/* Hero */}
+        <section className="relative overflow-hidden border-b border-white/10 bg-[radial-gradient(120%_150%_at_50%_-20%,rgba(6,182,212,0.12)_0%,rgba(15,15,20,1)_65%)] pt-28 pb-12">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-4xl font-extrabold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-400">Database Setup</h1>
+                <p className="text-lg text-white/70">Set up your products table and insert sample data</p>
+              </div>
+              <Link
+                href="/admin"
+                className="rounded-xl border border-white/10 bg-white/5 text-white/70 px-4 py-2 hover:bg-white/10 transition"
+              >
+                Back to Dashboard
+              </Link>
+            </div>
           </div>
+        </section>
 
-          <div className="bg-bg-surface rounded-2xl border border-white/10 p-8">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-8">
             <div className="space-y-6">
               <div>
                 <h2 className="text-xl font-semibold text-white mb-4">Step 1: Create Products Table</h2>
-                <p className="text-text-mute mb-4">
+                <p className="text-white/50 mb-4">
                   Go to your Supabase Dashboard and run the following SQL in the SQL Editor:
                 </p>
-                
-                <div className="bg-black/20 rounded-lg p-4 border border-white/10">
-                  <div className="flex justify-between items-center mb-3">
-                    <span className="text-sm text-text-mute">SQL Script</span>
+
+                <div className="bg-black/50 border border-white/10 rounded-xl font-mono text-sm text-cyan-300 p-4 overflow-x-auto">
+                  <div className="flex justify-between items-center mb-3 font-sans">
+                    <span className="text-sm text-white/40 font-medium">SQL Script</span>
                     <button
                       onClick={() => copyToClipboard(sqlScript)}
-                      className="px-3 py-1 bg-accent-blue/20 text-accent-blue text-sm rounded-lg hover:bg-accent-blue/30 transition-colors"
+                      className="rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold px-4 py-1.5 text-xs"
                     >
                       {copied ? 'Copied!' : 'Copy'}
                     </button>
                   </div>
-                  <pre className="text-xs text-green-400 overflow-x-auto">
+                  <pre className="text-xs overflow-x-auto">
                     <code>{sqlScript}</code>
                   </pre>
                 </div>
@@ -191,25 +202,25 @@ INSERT INTO products (name, description, price, category, image_url, stock, is_a
 
               <div className="border-t border-white/10 pt-6">
                 <h2 className="text-xl font-semibold text-white mb-4">Instructions</h2>
-                <div className="space-y-3 text-text-mute">
+                <div className="space-y-3 text-white/50">
                   <div className="flex items-start space-x-3">
-                    <span className="bg-accent-blue text-white text-xs px-2 py-1 rounded-full">1</span>
+                    <span className="rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 text-xs font-bold px-2 py-1">1</span>
                     <p>Open your Supabase Dashboard</p>
                   </div>
                   <div className="flex items-start space-x-3">
-                    <span className="bg-accent-blue text-white text-xs px-2 py-1 rounded-full">2</span>
+                    <span className="rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 text-xs font-bold px-2 py-1">2</span>
                     <p>Go to SQL Editor in the left sidebar</p>
                   </div>
                   <div className="flex items-start space-x-3">
-                    <span className="bg-accent-blue text-white text-xs px-2 py-1 rounded-full">3</span>
+                    <span className="rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 text-xs font-bold px-2 py-1">3</span>
                     <p>Copy and paste the SQL script above</p>
                   </div>
                   <div className="flex items-start space-x-3">
-                    <span className="bg-accent-blue text-white text-xs px-2 py-1 rounded-full">4</span>
+                    <span className="rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 text-xs font-bold px-2 py-1">4</span>
                     <p>Click "Run" to execute the script</p>
                   </div>
                   <div className="flex items-start space-x-3">
-                    <span className="bg-accent-blue text-white text-xs px-2 py-1 rounded-full">5</span>
+                    <span className="rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 text-xs font-bold px-2 py-1">5</span>
                     <p>This will drop any existing products table and create a fresh one with 30 sample products</p>
                   </div>
                 </div>
@@ -217,22 +228,22 @@ INSERT INTO products (name, description, price, category, image_url, stock, is_a
 
               <div className="border-t border-white/10 pt-6">
                 <h2 className="text-xl font-semibold text-white mb-4">Step 2: Fix Database Security Issues (Optional)</h2>
-                <p className="text-text-mute mb-4">
+                <p className="text-white/50 mb-4">
                   If you see database lint warnings, run this comprehensive fix that addresses:
                   <br />• 10 functions with mutable search_path warnings
                   <br />• 2 views with SECURITY DEFINER warnings
                 </p>
-                <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4 mb-4">
+                <div className="bg-amber-500/[0.06] border border-amber-500/20 rounded-xl p-4 mb-4">
                   <div className="flex justify-between items-center mb-3">
-                    <span className="text-sm text-yellow-400 font-semibold">Database Security Fix</span>
+                    <span className="text-sm text-amber-300 font-semibold">Database Security Fix</span>
                     <button
                       onClick={() => copyToClipboard(searchPathFix)}
-                      className="px-3 py-1 bg-yellow-500/20 text-yellow-400 text-sm rounded-lg hover:bg-yellow-500/30 transition-colors"
+                      className="rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold px-4 py-1.5 text-xs"
                     >
                       {copied ? 'Copied!' : 'Copy'}
                     </button>
                   </div>
-                  <pre className="text-xs text-yellow-300 overflow-x-auto">
+                  <pre className="font-mono text-xs text-amber-300/80 overflow-x-auto">
                     <code>{searchPathFix}</code>
                   </pre>
                 </div>
@@ -240,12 +251,12 @@ INSERT INTO products (name, description, price, category, image_url, stock, is_a
 
               <div className="border-t border-white/10 pt-6">
                 <h2 className="text-xl font-semibold text-white mb-4">Step 3: Fix Image Paths (if needed)</h2>
-                <p className="text-text-mute mb-4">
+                <p className="text-white/50 mb-4">
                   If you see 404 errors for images, run this additional SQL script to fix the image paths:
                 </p>
-                <div className="bg-black/20 rounded-lg p-4 border border-white/10 mb-4">
-                  <div className="flex justify-between items-center mb-3">
-                    <span className="text-sm text-text-mute">Image Path Fix Script</span>
+                <div className="bg-black/50 border border-white/10 rounded-xl font-mono text-sm text-cyan-300 p-4 overflow-x-auto mb-4">
+                  <div className="flex justify-between items-center mb-3 font-sans">
+                    <span className="text-sm text-white/40 font-medium">Image Path Fix Script</span>
                     <button
                       onClick={() => {
                         const fixScript = `UPDATE products SET image_url = '/images/products/content-writing.jpg' WHERE name = 'Business Analysis';
@@ -263,12 +274,12 @@ UPDATE products SET image_url = '/images/products/voice-over-services.jpg' WHERE
                         setCopied(true)
                         setTimeout(() => setCopied(false), 2000)
                       }}
-                      className="px-3 py-1 bg-accent-blue/20 text-accent-blue text-sm rounded-lg hover:bg-accent-blue/30 transition-colors"
+                      className="rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold px-4 py-1.5 text-xs font-sans"
                     >
                       {copied ? 'Copied!' : 'Copy Fix Script'}
                     </button>
                   </div>
-                  <pre className="text-xs text-green-400 overflow-x-auto">
+                  <pre className="text-xs overflow-x-auto">
                     <code>{`UPDATE products SET image_url = '/images/products/content-writing.jpg' WHERE name = 'Business Analysis';
 UPDATE products SET image_url = '/images/products/OIP.jpg' WHERE name = 'Blockchain Development';
 UPDATE products SET image_url = '/images/products/data-analysis.jpg' WHERE name = 'AI/ML Development';
@@ -286,17 +297,17 @@ UPDATE products SET image_url = '/images/products/voice-over-services.jpg' WHERE
 
               <div className="border-t border-white/10 pt-6">
                 <h2 className="text-xl font-semibold text-white mb-4">Step 4: Verify Setup</h2>
-                <p className="text-text-mute mb-4">
+                <p className="text-white/50 mb-4">
                   After running the SQL, you should see 30 products in your products table.
                 </p>
-                <div className="flex space-x-4">
+                <div className="flex flex-wrap gap-4">
                   <Link href="/admin/products-enhanced">
-                    <button className="px-6 py-3 bg-gradient-to-r from-accent-blue to-accent-cyan text-white rounded-xl font-medium hover:from-blue-600 hover:to-cyan-600 transition-all duration-200">
+                    <button className="rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold px-5 py-2.5">
                       Go to Products Management
                     </button>
                   </Link>
                   <Link href="/products">
-                    <button className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-medium hover:from-green-700 hover:to-emerald-700 transition-all duration-200">
+                    <button className="rounded-2xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold px-5 py-2.5 hover:bg-emerald-500/30 transition">
                       View Products Page
                     </button>
                   </Link>
@@ -305,7 +316,7 @@ UPDATE products SET image_url = '/images/products/voice-over-services.jpg' WHERE
 
               <div className="border-t border-white/10 pt-6">
                 <h2 className="text-xl font-semibold text-white mb-4">What This Script Does</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-text-mute">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-white/50">
                   <div>
                     <h3 className="font-semibold text-white mb-2">Creates Products Table:</h3>
                     <ul className="space-y-1">
@@ -342,7 +353,7 @@ UPDATE products SET image_url = '/images/products/voice-over-services.jpg' WHERE
 export const getServerSideProps: GetServerSideProps = async (context) => {
   // Check if user is logged in and is an admin
   const userData = context.req.cookies.user || null
-  
+
   if (!userData) {
     return {
       redirect: {

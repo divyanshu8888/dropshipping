@@ -18,9 +18,6 @@ interface UnitiFiltersProps {
   variant?: UnitiFilterVariant
   controls: FilterControlDescriptor[]
   onClearAll: () => void
-  activeFilters: Array<{ key: string; label: string; onRemove: () => void }>
-  filteredCount: number
-  totalCount: number
 }
 
 const join = (...classes: Array<string | false | null | undefined>) =>
@@ -36,9 +33,6 @@ const UnitiFilters = ({
   variant = 'outline',
   controls,
   onClearAll,
-  activeFilters,
-  filteredCount,
-  totalCount,
 }: UnitiFiltersProps) => {
   const variantClass = variantClasses[variant]
 

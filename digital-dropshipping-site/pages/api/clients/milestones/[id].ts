@@ -145,11 +145,8 @@ export default async function handler(
     updateQuery += ` WHERE id = ?`;
     updateParams.push(milestoneId);
 
-    console.log('Updating milestone:', { milestoneId, status, finalStatus, updateQuery, updateParams, currentStatus: milestone.status });
-    
     try {
-      const updateResult = await query(updateQuery, updateParams);
-      console.log('Update result:', updateResult);
+      await query(updateQuery, updateParams);
     } catch (updateError: any) {
       console.error('Database update error:', updateError);
       return res.status(500).json({ 
@@ -163,8 +160,6 @@ export default async function handler(
       `SELECT id, status FROM milestones WHERE id = ?`,
       [milestoneId]
     );
-
-    console.log('Updated milestone from database:', verificationMilestone);
 
     if (!verificationMilestone) {
       console.error('Milestone not found after update');
@@ -239,11 +234,9 @@ export default async function handler(
     );
 
     if (allMilestones && allMilestones.length > 0) {
-      const totalMilestones = allMilestones.length;
-      const completedMilestones = allMilestones.filter(m => 
+      const completedMilestones = allMilestones.filter(m =>
         ['approved', 'released'].includes(m.status)
       ).length;
-      const allCompleted = completedMilestones === totalMilestones;
       const hasApproved = completedMilestones > 0;
 
       // Get current project status

@@ -175,8 +175,7 @@ export function guardMessage(raw: string): GuardResult {
     if (matches) detectedContent.push(...matches);
   }
   
-  // Check for number words near dollar signs or budget terms (normalized check)
-  const normalizedText = raw.toLowerCase();
+  // Check for number words near dollar signs or budget terms
   const hasDollarNearNumberWord = /\$\s*(zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion)/i.test(raw) ||
     /(budget|amount|price|cost|fee|charge|payment|pay|paid)\s+(zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion)/i.test(raw);
   

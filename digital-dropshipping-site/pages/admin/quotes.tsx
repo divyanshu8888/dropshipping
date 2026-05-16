@@ -28,19 +28,15 @@ interface QuoteRequest {
 
 interface QuotesPageProps {
   initialQuoteRequests: QuoteRequest[];
-  totalPages: number;
-  currentPage: number;
 }
 
-export default function QuotesPage({ initialQuoteRequests, totalPages, currentPage }: QuotesPageProps) {
+export default function QuotesPage({ initialQuoteRequests }: QuotesPageProps) {
   const [quoteRequests, setQuoteRequests] = useState<QuoteRequest[]>(initialQuoteRequests);
-  const [loading, setLoading] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedQuote, setSelectedQuote] = useState<QuoteRequest | null>(null);
   const [adminNotesDraft, setAdminNotesDraft] = useState('');
 
   const fetchQuoteRequests = async (status = selectedStatus, page = 1) => {
-    setLoading(true);
     try {
       const params = new URLSearchParams();
       if (status !== 'all') params.append('status', status);
@@ -54,8 +50,6 @@ export default function QuotesPage({ initialQuoteRequests, totalPages, currentPa
       }
     } catch (error) {
       console.error('Error fetching quote requests:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -97,17 +91,6 @@ export default function QuotesPage({ initialQuoteRequests, totalPages, currentPa
     }
   }, [selectedQuote]);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending': return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
-      case 'approved': return 'bg-green-500/20 text-green-400 border-green-500/30';
-      case 'rejected': return 'bg-red-500/20 text-red-400 border-red-500/30';
-      case 'in_progress': return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
-      case 'completed': return 'bg-purple-500/20 text-purple-400 border-purple-500/30';
-      default: return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
-    }
-  };
-
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'urgent': return 'bg-red-500/20 text-red-400 border-red-500/30';
@@ -118,31 +101,50 @@ export default function QuotesPage({ initialQuoteRequests, totalPages, currentPa
     }
   };
 
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return <span className="rounded-full bg-amber-500/15 border border-amber-500/20 px-2.5 py-0.5 text-xs font-semibold text-amber-300">{status.replace('_', ' ')}</span>;
+      case 'approved':
+        return <span className="rounded-full bg-emerald-500/15 border border-emerald-500/20 px-2.5 py-0.5 text-xs font-semibold text-emerald-300">{status.replace('_', ' ')}</span>;
+      case 'rejected':
+        return <span className="rounded-full bg-rose-500/15 border border-rose-500/20 px-2.5 py-0.5 text-xs font-semibold text-rose-300">{status.replace('_', ' ')}</span>;
+      case 'in_progress':
+        return <span className="rounded-full bg-cyan-500/15 border border-cyan-500/20 px-2.5 py-0.5 text-xs font-semibold text-cyan-300">in progress</span>;
+      case 'completed':
+        return <span className="rounded-full bg-blue-500/15 border border-blue-500/20 px-2.5 py-0.5 text-xs font-semibold text-blue-300">{status.replace('_', ' ')}</span>;
+      default:
+        return <span className="rounded-full bg-white/10 border border-white/10 px-2.5 py-0.5 text-xs font-semibold text-white/50">{status.replace('_', ' ')}</span>;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-bg-base">
       <Head>
         <title>Quote Requests - Admin Dashboard</title>
       </Head>
-      
+
       <Header />
-      
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-white">Quote Requests</h1>
-              <p className="text-text-soft mt-2">Manage client quote requests and project inquiries</p>
+
+      {/* Hero Header */}
+      <section className="relative overflow-hidden border-b border-white/10 bg-[radial-gradient(120%_150%_at_50%_-20%,rgba(6,182,212,0.15)_0%,rgba(15,15,20,1)_65%)] pt-28 pb-12">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="flex items-end justify-between gap-6">
+            <div className="space-y-2">
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-white/60">
+                Quote Requests
+              </span>
+              <h1 className="font-display text-3xl text-white">Manage <span className="bg-gradient-to-r from-cyan-300 to-blue-300 bg-clip-text text-transparent">Quote Requests</span></h1>
+              <p className="text-sm text-white/60">Review and respond to client project inquiries</p>
             </div>
-            <Link
-              href="/admin"
-              className="px-4 py-2 border border-white/10 bg-white/5 text-white/80 rounded-xl hover:bg-white/10 transition-all"
-            >
+            <Link href="/admin" className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70 hover:bg-white/10 transition">
               ← Back to Dashboard
             </Link>
           </div>
         </div>
+      </section>
 
+      <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Filters */}
         <div className="mb-6 flex gap-4">
           <select
@@ -151,7 +153,7 @@ export default function QuotesPage({ initialQuoteRequests, totalPages, currentPa
               setSelectedStatus(e.target.value);
               fetchQuoteRequests(e.target.value);
             }}
-            className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
+            className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40 focus:outline-none transition"
           >
             <option value="all">All Status</option>
             <option value="pending">Pending</option>
@@ -163,67 +165,75 @@ export default function QuotesPage({ initialQuoteRequests, totalPages, currentPa
         </div>
 
         {/* Quote Requests Table */}
-        <div className="bg-bg-surface rounded-2xl border border-white/10 overflow-hidden">
+        <div className="bg-bg-surface rounded-2xl border border-white/10 overflow-hidden shadow-2xl">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-white/5">
                 <tr>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-text-base">Client</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-text-base">Project</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-text-base">Category</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-text-base">Budget</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-text-base">Status</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-text-base">Priority</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-text-base">Date</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-text-base">Actions</th>
+                  <th className="text-xs uppercase tracking-widest text-white/40 py-3 px-4 text-left font-medium">Client</th>
+                  <th className="text-xs uppercase tracking-widest text-white/40 py-3 px-4 text-left font-medium">Project</th>
+                  <th className="text-xs uppercase tracking-widest text-white/40 py-3 px-4 text-left font-medium">Category</th>
+                  <th className="text-xs uppercase tracking-widest text-white/40 py-3 px-4 text-left font-medium">Budget</th>
+                  <th className="text-xs uppercase tracking-widest text-white/40 py-3 px-4 text-left font-medium">Status</th>
+                  <th className="text-xs uppercase tracking-widest text-white/40 py-3 px-4 text-left font-medium">Priority</th>
+                  <th className="text-xs uppercase tracking-widest text-white/40 py-3 px-4 text-left font-medium">Date</th>
+                  <th className="text-xs uppercase tracking-widest text-white/40 py-3 px-4 text-left font-medium">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
-                {quoteRequests.map((quote) => (
-                  <tr key={quote.id} className="hover:bg-white/5 transition-colors">
-                    <td className="px-6 py-4">
-                      <div>
-                        <div className="font-medium text-white">{quote.client_name}</div>
-                        <div className="text-sm text-text-mute">{quote.client_email}</div>
+              <tbody>
+                {quoteRequests.length === 0 ? (
+                  <tr>
+                    <td colSpan={8}>
+                      <div className="rounded-2xl border border-dashed border-white/10 p-12 text-center text-sm text-white/40 m-4">
+                        No quote requests found
                       </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div>
-                        <div className="font-medium text-white">{quote.project_title}</div>
-                        <div className="text-sm text-text-mute truncate max-w-xs">{quote.project_description}</div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="px-3 py-1 bg-white/10 text-white rounded-full text-sm">
-                        {quote.category}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-white">
-                      {quote.budget ? `$${quote.budget.toLocaleString()}` : 'Not specified'}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-3 py-1 rounded-full text-sm border ${getStatusColor(quote.status)}`}>
-                        {quote.status.replace('_', ' ')}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-3 py-1 rounded-full text-sm border ${getPriorityColor(quote.priority)}`}>
-                        {quote.priority}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-text-mute">
-                      {new Date(quote.created_at).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4">
-                      <button
-                        onClick={() => setSelectedQuote(quote)}
-                        className="px-3 py-1 bg-cyan-500/20 text-cyan-400 rounded-lg hover:bg-cyan-500/30 transition-colors text-sm"
-                      >
-                        View
-                      </button>
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  quoteRequests.map((quote) => (
+                    <tr key={quote.id} className="border-t border-white/5 hover:bg-white/[0.02] transition-colors">
+                      <td className="px-4 py-4 text-sm text-white/80">
+                        <div>
+                          <div className="font-medium text-white">{quote.client_name}</div>
+                          <div className="text-xs text-white/40">{quote.client_email}</div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 text-sm text-white/80">
+                        <div>
+                          <div className="font-medium text-white">{quote.project_title}</div>
+                          <div className="text-xs text-white/40 truncate max-w-xs">{quote.project_description}</div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 text-sm text-white/80">
+                        <span className="rounded-full bg-white/10 border border-white/10 px-2.5 py-0.5 text-xs font-medium text-white/70">
+                          {quote.category}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 text-sm text-white/80">
+                        {quote.budget ? `$${quote.budget.toLocaleString()}` : 'Not specified'}
+                      </td>
+                      <td className="px-4 py-4 text-sm text-white/80">
+                        {getStatusBadge(quote.status)}
+                      </td>
+                      <td className="px-4 py-4 text-sm text-white/80">
+                        <span className={`px-3 py-1 rounded-full text-xs border ${getPriorityColor(quote.priority)}`}>
+                          {quote.priority}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 text-sm text-white/40">
+                        {new Date(quote.created_at).toLocaleDateString()}
+                      </td>
+                      <td className="px-4 py-4 text-sm text-white/80">
+                        <button
+                          onClick={() => setSelectedQuote(quote)}
+                          className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 px-3 py-1.5 text-xs font-semibold text-slate-900 hover:from-cyan-300 hover:to-blue-400 transition-all"
+                        >
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -231,8 +241,8 @@ export default function QuotesPage({ initialQuoteRequests, totalPages, currentPa
 
         {/* Quote Details Modal */}
         {selectedQuote && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div className="relative w-full max-w-4xl mx-4 bg-bg-surface rounded-2xl border border-white/10 shadow-2xl max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+            <div className="relative w-full max-w-4xl mx-4 bg-[#0F1115] rounded-2xl border border-white/10 shadow-2xl max-h-[90vh] overflow-y-auto">
               {/* Header */}
               <div className="flex items-center justify-between p-6 border-b border-white/10">
                 <div>
@@ -325,7 +335,7 @@ export default function QuotesPage({ initialQuoteRequests, totalPages, currentPa
                   <textarea
                     value={adminNotesDraft}
                     onChange={(event) => setAdminNotesDraft(event.target.value)}
-                    className="w-full mt-2 p-4 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 resize-none"
+                    className="w-full mt-2 p-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition resize-none"
                     rows={3}
                     placeholder="Add admin notes..."
                   />
@@ -356,19 +366,19 @@ export default function QuotesPage({ initialQuoteRequests, totalPages, currentPa
                 <div className="flex gap-4 pt-4 border-t border-white/10">
                   <button
                     onClick={() => updateQuoteStatus(selectedQuote.id, 'approved', adminNotesDraft)}
-                    className="px-6 py-3 bg-green-500/20 text-green-400 rounded-xl hover:bg-green-500/30 transition-colors"
+                    className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-green-500 px-5 py-2.5 text-sm font-semibold text-white hover:from-emerald-400 hover:to-green-400 transition-all shadow-lg"
                   >
                     Approve
                   </button>
                   <button
                     onClick={() => updateQuoteStatus(selectedQuote.id, 'rejected', adminNotesDraft)}
-                    className="px-6 py-3 bg-red-500/20 text-red-400 rounded-xl hover:bg-red-500/30 transition-colors"
+                    className="inline-flex items-center gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-5 py-2.5 text-sm font-semibold text-rose-300 hover:bg-rose-500/20 transition-all"
                   >
                     Reject
                   </button>
                   <button
                     onClick={() => updateQuoteStatus(selectedQuote.id, 'in_progress', adminNotesDraft)}
-                    className="px-6 py-3 bg-blue-500/20 text-blue-400 rounded-xl hover:bg-blue-500/30 transition-colors"
+                    className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-5 py-2.5 text-sm font-semibold text-white/70 hover:bg-white/10 transition-all"
                   >
                     Mark In Progress
                   </button>

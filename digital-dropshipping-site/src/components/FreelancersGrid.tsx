@@ -133,7 +133,6 @@ export default function FreelancersGrid({
         className={`${styles.resultsGridRefresh} ${viewMode === 'list' ? 'grid grid-cols-1 gap-6' : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8'}`}
       >
         {freelancers.map((freelancer) => {
-          const overlapHours = freelancer.overlap_hours || calculateOverlapHours(freelancer.timezone_offset);
           const turnaround = freelancer.turnaround_days
             ? `≈${freelancer.turnaround_days * 24}h`
             : freelancer.response_time || '≈72h';

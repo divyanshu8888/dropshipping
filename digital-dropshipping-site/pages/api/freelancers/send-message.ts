@@ -115,7 +115,7 @@ export default async function handler(
 
     if (!conversation) {
       // Create new conversation
-      const result = await query(
+      await query(
         `INSERT INTO conversations (project_id, title) VALUES (?, ?)`,
         [Number(projectId), `Project Discussion`]
       );

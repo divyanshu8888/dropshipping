@@ -11,9 +11,7 @@ export const config = {
   },
 }
 
-const readdir = promisify(fs.readdir)
 const mkdir = promisify(fs.mkdir)
-const unlink = promisify(fs.unlink)
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -45,7 +43,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     })
 
-    const [fields, files] = await form.parse(req)
+    const [_fields, files] = await form.parse(req)
     
     if (!files.image || Array.isArray(files.image)) {
       return res.status(400).json({ message: 'No image file provided' })
