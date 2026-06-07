@@ -350,8 +350,8 @@ $ unitive status
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
-          {/* Left: editor — hidden on mobile, shown on md+ */}
-          <div className="hidden md:block relative rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-xl shadow-[inset_0_1px_0_rgba(255,255,255,.06),0_30px_80px_rgba(0,0,0,.35)]">
+          {/* Left: editor */}
+          <div className="relative rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-xl shadow-[inset_0_1px_0_rgba(255,255,255,.06),0_30px_80px_rgba(0,0,0,.35)]">
             {/* window controls */}
             <div className="flex items-center justify-between px-3 py-2 border-b border-white/10">
               <div className="flex gap-1.5">
