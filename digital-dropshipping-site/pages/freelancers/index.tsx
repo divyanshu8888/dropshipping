@@ -195,7 +195,8 @@ const heroTrustBadges: HeroTrustBadge[] = [
 
 export default function FreelancersPage({ freelancers, initialSearchTerm }: FreelancersPageProps) {
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, isFreelancer } = useAuth()
+  const viewerIsFreelancer = isFreelancer()
   const [searchTerm, setSearchTerm] = useState(initialSearchTerm || '')
 
   const handlePostProject = () => {
@@ -605,7 +606,7 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
                     aria-label="Search freelancers"
                     aria-expanded={showSuggestions}
                     aria-haspopup="listbox"
-                  className="h-full flex-1 bg-transparent text-slate-100 font-medium text-[15px] placeholder-slate-300 outline-none tracking-wide focus-visible:outline-none"
+                  className="h-full flex-1 bg-transparent text-white font-medium text-[15px] outline-none tracking-wide focus-visible:outline-none search-input-field"
                     placeholder="Try 'Web Designer', 'Logo Animation', or 'SEO Audit'..."
                   />
                   <button
@@ -949,8 +950,8 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
                     </div>
                     )}
 
-                    {/* CTAs */}
-                    <div className="mt-3 flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
+                    {/* CTAs — only shown to clients and logged-out visitors */}
+                    {!viewerIsFreelancer && <div className="mt-3 flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
                       <Link
                         href={buildQuoteHref({
                           source: 'freelancer',
@@ -985,7 +986,7 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
                       >
                         Ask for samples
                       </Link>
-                    </div>
+                    </div>}
                   </div>
                 </div>
               )
@@ -1004,7 +1005,7 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
         </section>
 
         {/* CTA Panel */}
-        <section className="relative overflow-hidden border-t border-white/10 bg-gradient-to-br from-[#090F1A] via-[#070C16] to-[#060910] py-14">
+        {!viewerIsFreelancer && <section className="relative overflow-hidden border-t border-white/10 bg-gradient-to-br from-[#090F1A] via-[#070C16] to-[#060910] py-14">
           <div className="pointer-events-none absolute -left-28 top-1/2 h-[18rem] w-[18rem] -translate-y-1/2 rounded-full bg-[radial-gradient(circle,_rgba(0,198,255,0.25)_0%,rgba(13,17,28,0)_72%)] blur-3xl" />
           <div className="pointer-events-none absolute -right-16 top-12 h-[16rem] w-[16rem] rounded-full bg-[radial-gradient(circle,_rgba(125,42,232,0.28)_0%,rgba(13,17,28,0)_68%)] blur-3xl" />
 
@@ -1086,7 +1087,7 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
               </div>
             </div>
           </div>
-        </section>
+        </section>}
 
         <footer className="border-t border-white/10 bg-[#080C16]">
           <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-6 py-6 text-xs text-white/60 md:flex-row">

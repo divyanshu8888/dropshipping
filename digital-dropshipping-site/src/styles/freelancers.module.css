@@ -6,20 +6,12 @@
 
 /* Hero Gradient - Freelancers Page Specific */
 .heroGradient {
-  background: linear-gradient(90deg, #00C6FF, #5F57FF, #7D2AE8, #00C6FF);
-  background-size: 250% auto;
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #00C6FF;
+  -webkit-text-fill-color: #00C6FF;
   letter-spacing: -0.03em;
   font-weight: 800;
-  animation: gradientFlowModule 6s ease-in-out infinite;
-}
-
-@keyframes gradientFlowModule {
-  0%   { background-position: 0% 50%; }
-  50%  { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  -webkit-filter: drop-shadow(0 0 10px rgba(0,198,255,0.3));
+  filter: drop-shadow(0 0 10px rgba(0,198,255,0.3));
 }
 
 .heroNoise {

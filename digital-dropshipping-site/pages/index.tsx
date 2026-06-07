@@ -619,9 +619,8 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
               playsInline
               preload="metadata"
             />
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_55%_45%,rgba(0,0,0,.15),transparent_55%)]" />
-            <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/25 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-black/20 to-transparent" />
+            <div className="absolute inset-0 bg-black/45" />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-transparent" />
             <div className="absolute inset-0 hero-overlay-gradient-refined" />
 
             {/* Light glow specifically behind gradient text area - much stronger */}

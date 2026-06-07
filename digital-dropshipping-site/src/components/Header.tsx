@@ -19,18 +19,21 @@ import { useAuth } from '../contexts/AuthContext';
 
 const publicNavItems = [
   { href: '/freelancers', label: 'Freelancers' },
+  { href: '/open-projects', label: 'Projects' },
   { href: '/products', label: 'Services' },
   { href: '/how-it-works', label: 'How it works' },
 ];
 
 const freelancerNavItems = [
-  { href: '/freelancers', label: 'Browse Projects' },
+  { href: '/freelancers', label: 'Freelancers' },
+  { href: '/open-projects', label: 'Projects' },
   { href: '/products', label: 'Services' },
   { href: '/how-it-works', label: 'How it works' },
 ];
 
 const clientNavItems = [
-  { href: '/freelancers', label: 'Find Talent' },
+  { href: '/freelancers', label: 'Freelancers' },
+  { href: '/open-projects', label: 'Projects' },
   { href: '/products', label: 'Services' },
   { href: '/how-it-works', label: 'How it works' },
 ];
@@ -107,7 +110,7 @@ const Header: React.FC = () => {
   ].filter(Boolean) as Array<{ href: string; label: string; icon: React.ComponentType<{ className?: string }> }>;
 
   return (
-    <header className="sticky top-0 z-50 border-b border-white/10 bg-[#07090d]/90 backdrop-blur-2xl">
+    <header className="sticky top-0 z-50 border-b border-white/10 bg-[#141414]/95 backdrop-blur-2xl">
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-cyan-300/30 to-transparent" />
 
       <div className="mx-auto flex min-h-[72px] max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
@@ -181,7 +184,7 @@ const Header: React.FC = () => {
 
               {isAccountMenuOpen && (
                 <div
-                  className="absolute right-0 mt-3 w-72 rounded-2xl border border-white/10 bg-[#080b12]/95 p-3 shadow-2xl shadow-black/40 backdrop-blur-2xl"
+                  className="absolute right-0 mt-3 w-72 rounded-2xl border border-white/10 bg-[#141414] p-3 shadow-2xl shadow-black/60"
                   role="menu"
                 >
                   <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-3">
@@ -262,7 +265,7 @@ const Header: React.FC = () => {
       </div>
 
       {isMobileMenuOpen && (
-        <div className="border-t border-white/10 bg-[#07090d]/98 px-4 pb-5 pt-3 md:hidden">
+        <div className="border-t border-white/10 bg-[#141414]/98 px-4 pb-5 pt-3 md:hidden">
           <nav className="space-y-1" aria-label="Mobile navigation">
             {[
               { href: '/', label: 'Home' },

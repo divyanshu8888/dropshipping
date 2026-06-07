@@ -322,16 +322,20 @@
   100% { background-position: 0% 50%; }
 }
 
+@keyframes auroraDrift {
+  0%   { transform: translate3d(-2%, -1%, 0) scale(1); }
+  50%  { transform: translate3d(2%, 1%, 0) scale(1.05); }
+  100% { transform: translate3d(-2%, -1%, 0) scale(1); }
+}
+
 /* Hero gradient refined — animated shifting */
 .hero-gradient-refined {
-  background: linear-gradient(90deg, #00C6FF, #5F57FF, #7D2AE8, #00C6FF);
-  background-size: 250% auto;
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #00C6FF;
+  -webkit-text-fill-color: #00C6FF;
   letter-spacing: -0.03em;
   font-weight: 800;
-  animation: gradientFlow 6s ease-in-out infinite;
+  -webkit-filter: drop-shadow(0 0 10px rgba(0,198,255,0.3));
+  filter: drop-shadow(0 0 10px rgba(0,198,255,0.3));
 }
 
 /* Gradient text — reusable across all pages */
