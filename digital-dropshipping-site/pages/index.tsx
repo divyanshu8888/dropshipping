@@ -631,13 +631,11 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
               {/* HEADLINE */}
               <h1
                 className="mx-auto font-extrabold
-                           text-[clamp(36px,7vw,80px)] leading-[1.08]
-                           animate-fade-in-up animate-delay-100 tracking-[-0.03em]"
-                style={{ color: '#FFFFFF' }}
+                           text-[clamp(32px,5vw,62px)] leading-[1.1]
+                           animate-fade-in-up animate-delay-100 tracking-[-0.03em] text-white"
               >
-                <span style={{ color: '#FFFFFF' }}>Your Vision,</span>{" "}
-                <br className="hidden sm:block" />
-                <span className="hero-gradient-refined animate-fade-in-up animate-delay-200">
+                Your Vision,{" "}
+                <span className="hero-gradient-refined">
                   Built by Experts.
                 </span>
               </h1>
