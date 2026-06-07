@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Header from '../../src/components/Header';
 import { getProduct, Product } from '../../src/lib/api';
 import { buildQuoteHref } from '../../src/lib/quoteLink';
+import { useAuth } from '../../src/contexts/AuthContext';
 
 interface ProductDetailProps {
   product: Product | null;
@@ -13,6 +14,8 @@ const PRODUCT_CACHE_TTL_MS = 60 * 1000;
 const productCache = new Map<string, { data: Product; expiresAt: number }>();
 
 const ProductDetail = ({ product }: ProductDetailProps) => {
+  const { isFreelancer } = useAuth();
+  const viewerIsFreelancer = isFreelancer();
 
   if (!product) {
         return (
@@ -117,23 +120,25 @@ const ProductDetail = ({ product }: ProductDetailProps) => {
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-3">
-                    <Link
-                      href={buildQuoteHref({
-                        source: 'product',
-                        intent: 'proposal',
-                        title: `Proposal for ${displayTitle}`,
-                        subtitle: product.summary || product.description || undefined,
-                        badge: categoryLabel || undefined,
-                        meta: product.freelancer_name ? `Operated by ${product.freelancer_name}` : undefined,
-                        category: product.category || undefined,
-                        freelancerId: product.freelancer_id ?? undefined,
-                        freelancerName: product.freelancer_name ?? undefined
-                      })}
-                      className="inline-flex flex-1 min-w-[160px] items-center justify-center rounded-2xl bg-gradient-to-r from-cyan-500 via-fuchsia-500 to-rose-500 px-5 h-12 text-sm font-semibold text-white shadow-lg shadow-indigo-900/40 transition hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-cyan-400/50 whitespace-nowrap"
-                      aria-label={`Request proposal for ${displayTitle}`}
-                    >
-                      Request custom quote
-                    </Link>
+                    {!viewerIsFreelancer && (
+                      <Link
+                        href={buildQuoteHref({
+                          source: 'product',
+                          intent: 'proposal',
+                          title: `Proposal for ${displayTitle}`,
+                          subtitle: product.summary || product.description || undefined,
+                          badge: categoryLabel || undefined,
+                          meta: product.freelancer_name ? `Operated by ${product.freelancer_name}` : undefined,
+                          category: product.category || undefined,
+                          freelancerId: product.freelancer_id ?? undefined,
+                          freelancerName: product.freelancer_name ?? undefined
+                        })}
+                        className="inline-flex flex-1 min-w-[160px] items-center justify-center rounded-2xl bg-gradient-to-r from-cyan-500 via-fuchsia-500 to-rose-500 px-5 h-12 text-sm font-semibold text-white shadow-lg shadow-indigo-900/40 transition hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-cyan-400/50 whitespace-nowrap"
+                        aria-label={`Request proposal for ${displayTitle}`}
+                      >
+                        Request custom quote
+                      </Link>
+                    )}
                     <Link
                       href="/freelancers"
                       className="inline-flex flex-1 min-w-[160px] items-center justify-center rounded-2xl border border-white/15 px-5 h-12 text-sm font-semibold text-white/80 transition hover:bg-white/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/20 whitespace-nowrap"
@@ -195,43 +200,45 @@ const ProductDetail = ({ product }: ProductDetailProps) => {
                             </div>
 
               <div className="space-y-6">
-                <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
-                  <p className="text-xs uppercase tracking-[0.3em] text-white/60">Pricing</p>
-                  <p className="mt-3 text-4xl font-semibold text-white">Request a quote</p>
-                  <p className="mt-3 text-sm text-white/70">
-                    Share your scope and we&apos;ll send a proposal with milestones, delivery dates, and automation add-ons.
-                  </p>
-                                <Link
-                    href={buildQuoteHref({
-                      source: 'product',
-                      intent: 'proposal',
-                      title: `Proposal for ${displayTitle}`,
-                      subtitle: product.summary || product.description || undefined,
-                      badge: categoryLabel || undefined,
-                      meta: product.freelancer_name ? `Operated by ${product.freelancer_name}` : undefined,
-                      category: product.category || undefined,
-                      freelancerId: product.freelancer_id ?? undefined,
-                      freelancerName: product.freelancer_name ?? undefined
-                    })}
-                    className="mt-6 inline-flex w-full justify-center rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
-                  >
-                    Start quote
-                                </Link>
-                  <div className="mt-6 space-y-3 text-sm text-white/70">
-                    <div className="flex items-center gap-2">
-                      <span className="h-1.5 w-1.5 rounded-full bg-green-400" />
-                      Payment protection & escrow
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="h-1.5 w-1.5 rounded-full bg-green-400" />
-                      Cancel or pause with 7-day notice
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="h-1.5 w-1.5 rounded-full bg-green-400" />
-                      Swap operators if priorities change
+                {!viewerIsFreelancer && (
+                  <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
+                    <p className="text-xs uppercase tracking-[0.3em] text-white/60">Pricing</p>
+                    <p className="mt-3 text-4xl font-semibold text-white">Request a quote</p>
+                    <p className="mt-3 text-sm text-white/70">
+                      Share your scope and we&apos;ll send a proposal with milestones, delivery dates, and automation add-ons.
+                    </p>
+                    <Link
+                      href={buildQuoteHref({
+                        source: 'product',
+                        intent: 'proposal',
+                        title: `Proposal for ${displayTitle}`,
+                        subtitle: product.summary || product.description || undefined,
+                        badge: categoryLabel || undefined,
+                        meta: product.freelancer_name ? `Operated by ${product.freelancer_name}` : undefined,
+                        category: product.category || undefined,
+                        freelancerId: product.freelancer_id ?? undefined,
+                        freelancerName: product.freelancer_name ?? undefined
+                      })}
+                      className="mt-6 inline-flex w-full justify-center rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+                    >
+                      Start quote
+                    </Link>
+                    <div className="mt-6 space-y-3 text-sm text-white/70">
+                      <div className="flex items-center gap-2">
+                        <span className="h-1.5 w-1.5 rounded-full bg-green-400" />
+                        Payment protection & escrow
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="h-1.5 w-1.5 rounded-full bg-green-400" />
+                        Cancel or pause with 7-day notice
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="h-1.5 w-1.5 rounded-full bg-green-400" />
+                        Swap operators if priorities change
+                      </div>
                     </div>
                   </div>
-                            </div>
+                )}
 
                 <div className="rounded-3xl border border-white/10 bg-white/5 p-6 space-y-4 text-sm text-white/80">
                   <div className="flex items-center gap-3">

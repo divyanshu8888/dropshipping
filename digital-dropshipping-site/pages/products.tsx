@@ -13,7 +13,7 @@ interface ProductsPageProps {
   selectedCategory?: string | null;
 }
 
-const PRODUCTS_CACHE_TTL_MS = 60 * 1000; // 1 minute
+const PRODUCTS_CACHE_TTL_MS = 60 * 1000;
 let cachedProducts: { payload: Product[]; expiresAt: number } | null = null;
 
 const categoryChips = [
@@ -23,7 +23,7 @@ const categoryChips = [
   { label: 'Development', value: 'web-development' },
   { label: 'Data & AI', value: 'data-science' },
   { label: 'Operations', value: 'business' },
-  { label: 'Content', value: 'writing' }
+  { label: 'Content', value: 'writing' },
 ];
 
 export default function ProductsPage({ products, selectedCategory }: ProductsPageProps) {
@@ -45,7 +45,10 @@ export default function ProductsPage({ products, selectedCategory }: ProductsPag
     <>
       <Head>
         <title>{pageTitle}</title>
-        <meta name="description" content="Discover professional services and digital products from our verified freelancers. Get custom quotes and view detailed service information." />
+        <meta
+          name="description"
+          content="Discover professional services and digital products from our verified freelancers. Get custom quotes and view detailed service information."
+        />
       </Head>
 
       <div className="min-h-screen bg-bg-base">
@@ -60,35 +63,37 @@ export default function ProductsPage({ products, selectedCategory }: ProductsPag
               </p>
               <h1 className="mt-5 text-[clamp(36px,5.5vw,68px)] font-extrabold tracking-[-0.03em] leading-[1.08] text-white">
                 Find the{' '}
-                <span className="gradient-text">
-                  Perfect Playbook
-                </span>
+                <span className="gradient-text">Perfect Playbook</span>
               </h1>
               <p className="mt-4 text-lg text-white/80 leading-relaxed">
                 Browse done-for-you service playbooks delivered by verified operators. Every package includes onboarding, QA, and milestone-based delivery.
               </p>
-              <div className="mt-8 flex flex-wrap gap-3">
-                <Link
-                  href="/products"
-                  className="inline-flex items-center justify-center rounded-2xl bg-white text-sm font-semibold text-[#0e101d] px-6 py-3 shadow-lg shadow-indigo-900/40 hover:-translate-y-0.5 transition"
-                >
-                  Browse Playbooks
-                </Link>
-                <Link
-                  href={getQuoteHref({
-                    source: 'general',
-                    intent: 'brief',
-                    title: 'Request a custom brief',
-                    subtitle: 'Tell us about the scope you need and we’ll prepare options.'
-                  })}
-                  className="inline-flex items-center justify-center rounded-2xl border border-white/40 text-sm font-semibold text-white px-6 py-3 hover:bg-white/10 transition"
-                >
-                  Request a Custom Brief
-                </Link>
-              </div>
-              <p className="mt-3 text-sm text-white/70">
-                Not sure what you need? We’ll map scope, timeline, and budget in one quote request.
-              </p>
+              {!viewerIsFreelancer && (
+                <>
+                  <div className="mt-8 flex flex-wrap gap-3">
+                    <Link
+                      href="/products"
+                      className="inline-flex items-center justify-center rounded-2xl bg-white text-sm font-semibold text-[#0e101d] px-6 py-3 shadow-lg shadow-indigo-900/40 hover:-translate-y-0.5 transition"
+                    >
+                      Browse Playbooks
+                    </Link>
+                    <Link
+                      href={getQuoteHref({
+                        source: 'general',
+                        intent: 'brief',
+                        title: 'Request a custom brief',
+                        subtitle: "Tell us about the scope you need and we'll prepare options.",
+                      })}
+                      className="inline-flex items-center justify-center rounded-2xl border border-white/40 text-sm font-semibold text-white px-6 py-3 hover:bg-white/10 transition"
+                    >
+                      Request a Custom Brief
+                    </Link>
+                  </div>
+                  <p className="mt-3 text-sm text-white/70">
+                    Not sure what you need? We&apos;ll map scope, timeline, and budget in one quote request.
+                  </p>
+                </>
+              )}
               <div className="mt-4 flex flex-wrap gap-3 text-xs uppercase tracking-[0.35em] text-white/55">
                 <span>Trusted by 120+ brands</span>
                 <span className="hidden sm:inline">•</span>
@@ -132,7 +137,7 @@ export default function ProductsPage({ products, selectedCategory }: ProductsPag
                 </Link>
               </li>
               <li>/</li>
-              <li className="text-white">Services & Products</li>
+              <li className="text-white">Services &amp; Products</li>
               {selectedCategory && (
                 <>
                   <li>/</li>
@@ -155,11 +160,23 @@ export default function ProductsPage({ products, selectedCategory }: ProductsPag
 
           {renderedProducts.length === 0 ? (
             <div className="text-center py-16">
-              <svg className="mx-auto h-24 w-24 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0V6a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2V6" />
+              <svg
+                className="mx-auto h-24 w-24 text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1}
+                  d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0V6a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2V6"
+                />
               </svg>
               <h2 className="mt-4 text-xl font-semibold text-white">No services available</h2>
-              <p className="mt-2 text-text-soft">Our freelancers are preparing amazing services for you. Check back soon!</p>
+              <p className="mt-2 text-text-soft">
+                Our freelancers are preparing amazing services for you. Check back soon!
+              </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -210,14 +227,15 @@ export default function ProductsPage({ products, selectedCategory }: ProductsPag
                         </div>
                         {product.delivery_days && (
                           <div className="text-right">
-                            <p className="text-white text-sm font-semibold">{product.delivery_days} days</p>
+                            <p className="text-white text-sm font-semibold">
+                              {product.delivery_days} days
+                            </p>
                             <p className="text-white/60">Avg delivery</p>
                           </div>
                         )}
                       </div>
-
-                      <div className="flex gap-3">
-                        {!viewerIsFreelancer && (
+                      {!viewerIsFreelancer && (
+                        <div className="flex gap-3">
                           <Link
                             href={getQuoteHref({
                               source: 'product',
@@ -225,53 +243,38 @@ export default function ProductsPage({ products, selectedCategory }: ProductsPag
                               title: `Proposal for ${product.service_name || product.title}`,
                               subtitle: product.summary || product.description || undefined,
                               badge: product.category || undefined,
-                              meta: product.freelancer_name ? `Operated by ${product.freelancer_name}` : undefined,
+                              meta: product.freelancer_name
+                                ? `Operated by ${product.freelancer_name}`
+                                : undefined,
                               category: product.category || undefined,
                               freelancerId: product.freelancer_id ?? undefined,
-                              freelancerName: product.freelancer_name ?? undefined
+                              freelancerName: product.freelancer_name ?? undefined,
                             })}
                             className="flex-1 inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-cyan-500 via-fuchsia-500 to-rose-500 px-5 h-12 text-sm font-semibold text-white shadow-lg shadow-indigo-900/40 transition duration-200 hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-cyan-400/50 whitespace-nowrap"
                             aria-label={`Request proposal for ${product.service_name || product.title}`}
                           >
                             Request Proposal
                           </Link>
-                        )}
-                        <Link
-                          href={`/products/${product.slug}`}
-                          className="flex-1 inline-flex items-center justify-center rounded-2xl border border-white/15 px-5 h-12 text-sm font-semibold text-white/90 hover:text-white hover:border-white/40 hover:bg-white/5 transition focus:outline-none focus:ring-2 focus:ring-white/20 whitespace-nowrap"
-                          aria-label={`View scope for ${product.service_name || product.title}`}
-                        >
-                          View Scope
-                        </Link>
-                      </div>
+                          <Link
+                            href={`/products/${product.slug}`}
+                            className="flex-1 inline-flex items-center justify-center rounded-2xl border border-white/15 px-5 h-12 text-sm font-semibold text-white/90 hover:text-white hover:border-white/40 hover:bg-white/5 transition focus:outline-none focus:ring-2 focus:ring-white/20 whitespace-nowrap"
+                            aria-label={`View scope for ${product.service_name || product.title}`}
+                          >
+                            View Scope
+                          </Link>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
               ))}
             </div>
           )}
-
-          {renderedProducts.length === 0 && (
-            <div className="text-center py-16">
-              <div className="text-text-soft text-lg">No products available</div>
-              <p className="text-text-mute mt-2">Products need to be added through the admin dashboard</p>
-              <div className="mt-4 p-4 bg-bg-surface rounded-xl border border-white/10 max-w-md mx-auto">
-                <p className="text-sm text-text-mute mb-2">Admin Setup Required:</p>
-                <p className="text-xs text-text-mute">
-                  1. Go to Admin Dashboard → Manage Products<br/>
-                  2. Run the MySQL service catalog schema if needed<br/>
-                  3. Add products with images through admin interface
-                </p>
-              </div>
-            </div>
-          )}
         </div>
       </div>
-
     </>
   );
 }
-
 
 export const getServerSideProps: GetServerSideProps = async ({ query }) => {
   try {
@@ -283,26 +286,20 @@ export const getServerSideProps: GetServerSideProps = async ({ query }) => {
     if (!categoryParam && cachedProducts && cachedProducts.expiresAt > now) {
       products = cachedProducts.payload;
     } else {
-      products = await getProducts(
-        categoryParam
-          ? {
-              categoryName: categoryParam
-            }
-          : {}
-      );
+      products = await getProducts(categoryParam ? { categoryName: categoryParam } : {});
 
       if (!categoryParam) {
         cachedProducts = {
           payload: products || [],
-          expiresAt: now + PRODUCTS_CACHE_TTL_MS
+          expiresAt: now + PRODUCTS_CACHE_TTL_MS,
         };
       }
     }
-    
+
     return {
       props: {
         products: products || [],
-        selectedCategory: categoryParam
+        selectedCategory: categoryParam,
       },
     };
   } catch (error) {
