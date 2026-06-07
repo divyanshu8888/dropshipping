@@ -14,12 +14,18 @@ export default function AboutPage() {
         <Header />
 
         {/* Hero Section */}
-        <section className="relative border-b border-white/10 bg-gradient-to-b from-[#0B0C0F] to-[#0B0C0F] pt-24 pb-8">
-          <div className="max-w-4xl mx-auto px-6 text-center">
-            <h1 className="text-xs text-white/60 font-bold tracking-wide uppercase mb-2">About Us</h1>
-            <p className="text-2xl md:text-3xl font-black text-white leading-tight tracking-tight">
-              Where ideas unite your vision with{" "}
-              <span className="bg-gradient-to-r from-[#00C6FF] to-[#7D2AE8] bg-clip-text text-transparent">expert talent</span>
+        <section className="relative overflow-hidden border-b border-white/10 bg-[#0B0C0F] pt-28 pb-16">
+          <div className="pointer-events-none absolute -top-32 left-1/2 -translate-x-1/2 w-[600px] h-[300px] rounded-full bg-gradient-to-b from-cyan-500/15 via-violet-500/10 to-transparent blur-3xl" />
+          <div className="relative max-w-4xl mx-auto px-6 text-center">
+            <span className="inline-flex items-center rounded-full border border-white/12 bg-white/[0.06] px-3 py-1 text-[11px] font-semibold uppercase tracking-widest text-white/60 mb-5">
+              About Us
+            </span>
+            <h1 className="text-[clamp(36px,6vw,72px)] font-extrabold tracking-[-0.03em] leading-[1.08] text-white">
+              Where ideas unite with{" "}
+              <span className="gradient-text">expert talent</span>
+            </h1>
+            <p className="mt-5 text-base sm:text-lg text-white/60 max-w-xl mx-auto leading-relaxed">
+              Unitiv connects verified professionals with clients worldwide — securely, transparently, and at scale.
             </p>
           </div>
         </section>

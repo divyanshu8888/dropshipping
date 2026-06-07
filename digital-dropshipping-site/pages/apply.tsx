@@ -168,14 +168,15 @@ export default function ApplyPage() {
         <section className="relative overflow-hidden border-b border-white/10 bg-[radial-gradient(120%_150%_at_50%_-20%,rgba(99,102,241,0.35)_0%,rgba(15,15,20,1)_80%)] pt-32 pb-16">
           <div className="absolute -top-24 left-1/2 -translate-x-1/2 h-64 w-64 rounded-full bg-indigo-500/20 blur-[120px]" />
           <div className="max-w-4xl mx-auto px-4 text-center relative">
-            <h1 className="font-display text-4xl text-white mb-4">
+            <span className="inline-flex items-center rounded-full border border-white/12 bg-white/[0.06] px-3 py-1 text-[11px] font-semibold uppercase tracking-widest text-white/60 mb-5">
+              For Freelancers
+            </span>
+            <h1 className="text-[clamp(36px,6vw,72px)] font-extrabold tracking-[-0.03em] leading-[1.08] text-white mb-5">
               Join{' '}
-              <span className="bg-gradient-to-r from-cyan-300 to-violet-300 bg-clip-text text-transparent">
-                Unitiv
-              </span>
+              <span className="gradient-text">Unitiv</span>
             </h1>
-            <p className="text-white/70 text-lg">
-              Connect with thousands of clients and grow your freelance business
+            <p className="text-white/65 text-base sm:text-lg max-w-lg mx-auto leading-relaxed">
+              Connect with thousands of clients and grow your freelance business on your own terms.
             </p>
           </div>
         </section>

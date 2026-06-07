@@ -94,12 +94,12 @@ export default function HowItWorksPage() {
             <span className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.06] px-3 py-1 text-[11px] font-semibold uppercase tracking-widest text-white/60 mb-4">
               How It Works
             </span>
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-white leading-tight">
+            <h1 className="text-[clamp(36px,6vw,72px)] font-extrabold tracking-[-0.03em] text-white leading-[1.08]">
               Simple.{' '}
-              <span className="bg-gradient-to-r from-cyan-300 to-violet-300 bg-clip-text text-transparent">Secure.</span>{' '}
+              <span className="gradient-text">Secure.</span>{' '}
               Professional.
             </h1>
-            <p className="mt-4 text-sm sm:text-base text-white/60 max-w-lg mx-auto">
+            <p className="mt-5 text-base sm:text-lg text-white/60 max-w-lg mx-auto leading-relaxed">
               Whether you're hiring talent or offering your skills, Unitiv makes it straightforward.
             </p>
 

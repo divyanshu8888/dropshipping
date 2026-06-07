@@ -564,13 +564,13 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
           <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="pointer-events-none absolute inset-x-0 top-20 h-44 rounded-[36px] bg-black/28 blur-3xl -z-10" />
             <div className="text-center mb-8 animate-fade-in-up">
-              <h1 className="mx-auto font-extrabold text-[clamp(32px,5.2vw,52px)] leading-[1.12] tracking-tight animate-fade-in-up animate-delay-100 drop-shadow-none md:drop-shadow-[0_0_18px_rgba(70,105,255,.24)]">
+              <h1 className="mx-auto font-extrabold text-[clamp(40px,6.5vw,76px)] leading-[1.08] tracking-[-0.03em] animate-fade-in-up animate-delay-100 drop-shadow-[0_0_30px_rgba(70,105,255,.3)]">
                 Find the{' '}
                 <span className={styles.heroGradient}>
                   Perfect Freelancer
                 </span>
               </h1>
-              <p className="mx-auto mt-5 text-[clamp(14px,1.5vw,16px)] max-w-[600px] text-[rgba(234,238,246,0.92)] fadeUp animateDelay2 hero-tagline leading-relaxed">
+              <p className="mx-auto mt-6 text-[clamp(15px,1.6vw,18px)] max-w-[580px] text-[rgba(234,238,246,0.80)] fadeUp animateDelay2 hero-tagline leading-relaxed">
                 Discover top-rated professionals ready to design, build, and scale your vision
               </p>
             </div>

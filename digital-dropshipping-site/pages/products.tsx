@@ -55,9 +55,9 @@ export default function ProductsPage({ products, selectedCategory }: ProductsPag
               <p className="text-xs uppercase tracking-[0.4em] text-white/70">
                 Unitiv service catalog
               </p>
-              <h1 className="mt-5 text-4xl sm:text-5xl font-semibold tracking-tight text-white">
+              <h1 className="mt-5 text-[clamp(36px,5.5vw,68px)] font-extrabold tracking-[-0.03em] leading-[1.08] text-white">
                 Find the{' '}
-                <span className="bg-gradient-to-r from-cyan-400 via-blue-400 to-violet-400 bg-clip-text text-transparent drop-shadow-[0_4px_25px_rgba(82,156,255,0.35)]">
+                <span className="gradient-text">
                   Perfect Playbook
                 </span>
               </h1>

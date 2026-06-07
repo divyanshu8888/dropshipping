@@ -600,11 +600,12 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
       {/* Hero Section - Framer Style */}
       <section className="relative overflow-hidden bg-bg-base">
         {/* Breathing glow orbs */}
-        <div className="pointer-events-none absolute -top-48 left-[12%] w-[28rem] h-[28rem] rounded-full bg-cyan-500/12 blur-[120px] animate-[pulse_12s_ease-in-out_infinite]"></div>
-        <div className="pointer-events-none absolute -bottom-48 right-[10%] w-[26rem] h-[26rem] rounded-full bg-violet-500/12 blur-[110px] animate-[pulse_14s_ease-in-out_infinite]"></div>
-        
+        <div className="pointer-events-none absolute -top-48 left-[8%] w-[36rem] h-[36rem] rounded-full bg-cyan-500/20 blur-[130px] animate-[pulse_10s_ease-in-out_infinite]"></div>
+        <div className="pointer-events-none absolute -bottom-32 right-[6%] w-[34rem] h-[34rem] rounded-full bg-violet-500/20 blur-[120px] animate-[pulse_12s_ease-in-out_infinite]"></div>
+        <div className="pointer-events-none absolute top-[20%] right-[20%] w-[20rem] h-[20rem] rounded-full bg-blue-500/15 blur-[100px] animate-[pulse_15s_ease-in-out_infinite]"></div>
+
         {/* Floating glow blob */}
-        <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-gradient-to-r from-cyan-400/20 via-blue-500/20 to-violet-500/20 blur-3xl animate-[pulse_8s_ease-in-out_infinite]"></div>
+        <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[32rem] h-[32rem] rounded-full bg-gradient-to-r from-cyan-400/25 via-blue-500/20 to-violet-500/25 blur-3xl animate-[pulse_8s_ease-in-out_infinite]"></div>
         
         {/* Full-screen video banner */}
         <div className="relative w-full min-h-[78vh] overflow-hidden text-center pt-6 md:pt-8">
@@ -630,21 +631,22 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
               {/* HEADLINE */}
               <h1
                 className="mx-auto font-extrabold
-                           text-[clamp(26px,5.5vw,48px)] leading-[1.15]
-                           animate-fade-in-up animate-delay-100 tracking-tight"
+                           text-[clamp(36px,7vw,80px)] leading-[1.08]
+                           animate-fade-in-up animate-delay-100 tracking-[-0.03em]"
                 style={{ color: '#FFFFFF' }}
               >
                 <span style={{ color: '#FFFFFF' }}>Your Vision,</span>{" "}
+                <br className="hidden sm:block" />
                 <span className="hero-gradient-refined animate-fade-in-up animate-delay-200">
-                  Built by Experts
+                  Built by Experts.
                 </span>
               </h1>
 
               {/* TAGLINE */}
               <p
-                className="mx-auto text-[clamp(14px,1.5vw,16px)] max-w-[600px] animate-fade-in-up animate-delay-300 hero-tagline"
+                className="mx-auto max-w-[560px] animate-fade-in-up animate-delay-300 hero-tagline"
               >
-                Where ideas unite your vision.
+                Hire verified freelancers for design, development, marketing, and more — with milestone-based payment protection.
               </p>
 
               {/* SEARCH – pushed further down */}

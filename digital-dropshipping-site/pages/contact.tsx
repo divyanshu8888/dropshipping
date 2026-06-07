@@ -30,12 +30,18 @@ export default function ContactPage() {
         <Header />
 
         {/* Hero Section */}
-        <section className="relative border-b border-white/10 bg-gradient-to-b from-[#0B0C0F] to-[#0B0C0F] pt-24 pb-8">
-          <div className="max-w-4xl mx-auto px-6 text-center">
-            <h1 className="text-xs text-white/60 font-bold tracking-wide uppercase mb-2">Contact Us</h1>
-            <p className="text-2xl md:text-3xl font-black text-white leading-tight tracking-tight">
+        <section className="relative overflow-hidden border-b border-white/10 bg-[#0B0C0F] pt-28 pb-16">
+          <div className="pointer-events-none absolute -top-32 left-1/2 -translate-x-1/2 w-[500px] h-[300px] rounded-full bg-gradient-to-b from-violet-500/15 via-cyan-500/10 to-transparent blur-3xl" />
+          <div className="relative max-w-4xl mx-auto px-6 text-center">
+            <span className="inline-flex items-center rounded-full border border-white/12 bg-white/[0.06] px-3 py-1 text-[11px] font-semibold uppercase tracking-widest text-white/60 mb-5">
+              Contact Us
+            </span>
+            <h1 className="text-[clamp(36px,6vw,72px)] font-extrabold tracking-[-0.03em] leading-[1.08] text-white">
               We'd love to{" "}
-              <span className="bg-gradient-to-r from-[#00C6FF] to-[#7D2AE8] bg-clip-text text-transparent">hear from you</span>
+              <span className="gradient-text">hear from you</span>
+            </h1>
+            <p className="mt-5 text-base sm:text-lg text-white/60 max-w-lg mx-auto leading-relaxed">
+              Got a question or want to work together? Drop us a message and we'll get back to you quickly.
             </p>
           </div>
         </section>
