@@ -341,7 +341,7 @@ $ unitive status
     <div className="relative bg-[#0B0C0F] py-16 overflow-hidden">
       {/* slow conic halo */}
       <div
-        className="pointer-events-none absolute -top-1/2 left-1/2 -translate-x-1/2 w-[1200px] h-[1200px] rounded-full blur-3xl opacity-20 -z-10"
+        className="pointer-events-none absolute -top-1/2 left-1/2 -translate-x-1/2 w-[min(1200px,100vw)] h-[min(1200px,100vw)] rounded-full blur-3xl opacity-20 -z-10"
         style={{
           background: "conic-gradient(from 180deg,#67e8f9,#60a5fa,#a78bfa,transparent 70%)",
           animation: "spin 36s linear infinite"
