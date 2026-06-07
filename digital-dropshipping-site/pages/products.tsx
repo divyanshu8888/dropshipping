@@ -6,6 +6,7 @@ import Header from '../src/components/Header';
 import { QuoteRequestContext } from '../src/components/QuoteRequestForm';
 import { buildQuoteHref } from '../src/lib/quoteLink';
 import { getProducts, Product } from '../src/lib/api';
+import { useAuth } from '../src/contexts/AuthContext';
 
 interface ProductsPageProps {
   products: Product[];
@@ -26,6 +27,8 @@ const categoryChips = [
 ];
 
 export default function ProductsPage({ products, selectedCategory }: ProductsPageProps) {
+  const { isFreelancer } = useAuth();
+  const viewerIsFreelancer = isFreelancer();
 
   const pageTitle = useMemo(() => {
     if (selectedCategory) {
@@ -214,23 +217,25 @@ export default function ProductsPage({ products, selectedCategory }: ProductsPag
                       </div>
 
                       <div className="flex gap-3">
-                        <Link
-                          href={getQuoteHref({
-                            source: 'product',
-                            intent: 'proposal',
-                            title: `Proposal for ${product.service_name || product.title}`,
-                            subtitle: product.summary || product.description || undefined,
-                            badge: product.category || undefined,
-                            meta: product.freelancer_name ? `Operated by ${product.freelancer_name}` : undefined,
-                            category: product.category || undefined,
-                            freelancerId: product.freelancer_id ?? undefined,
-                            freelancerName: product.freelancer_name ?? undefined
-                          })}
-                          className="flex-1 inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-cyan-500 via-fuchsia-500 to-rose-500 px-5 h-12 text-sm font-semibold text-white shadow-lg shadow-indigo-900/40 transition duration-200 hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-cyan-400/50 whitespace-nowrap"
-                          aria-label={`Request proposal for ${product.service_name || product.title}`}
-                        >
-                          Request Proposal
-                        </Link>
+                        {!viewerIsFreelancer && (
+                          <Link
+                            href={getQuoteHref({
+                              source: 'product',
+                              intent: 'proposal',
+                              title: `Proposal for ${product.service_name || product.title}`,
+                              subtitle: product.summary || product.description || undefined,
+                              badge: product.category || undefined,
+                              meta: product.freelancer_name ? `Operated by ${product.freelancer_name}` : undefined,
+                              category: product.category || undefined,
+                              freelancerId: product.freelancer_id ?? undefined,
+                              freelancerName: product.freelancer_name ?? undefined
+                            })}
+                            className="flex-1 inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-cyan-500 via-fuchsia-500 to-rose-500 px-5 h-12 text-sm font-semibold text-white shadow-lg shadow-indigo-900/40 transition duration-200 hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-cyan-400/50 whitespace-nowrap"
+                            aria-label={`Request proposal for ${product.service_name || product.title}`}
+                          >
+                            Request Proposal
+                          </Link>
+                        )}
                         <Link
                           href={`/products/${product.slug}`}
                           className="flex-1 inline-flex items-center justify-center rounded-2xl border border-white/15 px-5 h-12 text-sm font-semibold text-white/90 hover:text-white hover:border-white/40 hover:bg-white/5 transition focus:outline-none focus:ring-2 focus:ring-white/20 whitespace-nowrap"

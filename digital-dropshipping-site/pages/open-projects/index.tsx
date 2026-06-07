@@ -1,14 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import {
   Briefcase,
+  CheckCircle,
   ChevronRight,
   Clock,
   Loader2,
   Search,
+  Send,
   SlidersHorizontal,
   Tag,
+  X,
   Zap,
 } from 'lucide-react';
 import Header from '../../src/components/Header';
@@ -54,6 +57,7 @@ type ProjectCardProps = Project & {
   canApplyUnverified: boolean;
   isLoggedIn: boolean;
   isFreelancer: boolean;
+  onApply: (project: Project) => void;
 };
 
 const ProjectCard: React.FC<ProjectCardProps> = ({
@@ -71,6 +75,8 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
   canApplyUnverified,
   isLoggedIn,
   isFreelancer,
+  onApply,
+  ...rest
 }) => (
   <div className="group flex flex-col gap-4 rounded-[20px] border border-white/12 bg-gradient-to-b from-[#101722] via-[#0c121d] to-[#060910] p-6 transition-all duration-300 hover:-translate-y-1 hover:border-white/20 hover:shadow-xl hover:shadow-black/40">
     <div className="flex items-start gap-3">
@@ -123,12 +129,12 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
       </div>
 
       {canApply || canApplyUnverified ? (
-        <Link
-          href={`/freelancers/dashboard?apply=${id}`}
+        <button
+          onClick={() => onApply({ id, title, description, category, budget, budgetRaw: rest.budgetRaw, deadline, skills, clientCompany, postedAgo })}
           className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-cyan-500 to-violet-500 px-3.5 py-1.5 text-xs font-bold text-white transition hover:opacity-90 hover:-translate-y-0.5"
         >
           Apply <ChevronRight className="h-3.5 w-3.5" />
-        </Link>
+        </button>
       ) : !isLoggedIn ? (
         <Link
           href="/login"
@@ -149,6 +155,46 @@ export default function ProjectsPage() {
   const canApply = isLoggedInFreelancer && verified;
   const canApplyUnverified = isLoggedInFreelancer && !verified;
   const showBudget = false;
+
+  // Apply modal state
+  const [applyProject, setApplyProject] = useState<Project | null>(null);
+  const [coverLetter, setCoverLetter] = useState('');
+  const [proposedRate, setProposedRate] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [submitResult, setSubmitResult] = useState<{ ok: boolean; msg: string } | null>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  const openApply = (project: Project) => {
+    setApplyProject(project);
+    setCoverLetter('');
+    setProposedRate('');
+    setSubmitResult(null);
+  };
+
+  const closeApply = () => { setApplyProject(null); setSubmitResult(null); };
+
+  const submitProposal = async () => {
+    if (!coverLetter.trim()) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch('/api/proposals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user?.id,
+          projectId: applyProject?.id,
+          message: coverLetter,
+          proposedRate: proposedRate || null,
+        }),
+      });
+      const data = await res.json();
+      setSubmitResult({ ok: res.ok, msg: data.message || data.error || 'Unknown error' });
+    } catch {
+      setSubmitResult({ ok: false, msg: 'Network error. Please try again.' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -375,6 +421,7 @@ export default function ProjectsPage() {
                     canApplyUnverified={canApplyUnverified}
                     isLoggedIn={!!user}
                     isFreelancer={isLoggedInFreelancer}
+                    onApply={openApply}
                   />
                 ))}
               </div>
@@ -417,6 +464,86 @@ export default function ProjectsPage() {
           </div>}
         </section>
       </div>
+      {/* Apply Modal */}
+      {applyProject && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={(e) => { if (e.target === e.currentTarget) closeApply(); }}>
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+          <div ref={modalRef} className="relative w-full max-w-lg rounded-2xl border border-white/12 bg-[#0e1420] shadow-2xl shadow-black/60 p-6">
+            <button onClick={closeApply} className="absolute right-4 top-4 grid h-8 w-8 place-items-center rounded-full border border-white/10 bg-white/[0.06] text-white/60 hover:text-white transition">
+              <X className="h-4 w-4" />
+            </button>
+
+            {submitResult?.ok ? (
+              <div className="flex flex-col items-center gap-4 py-6 text-center">
+                <CheckCircle className="h-12 w-12 text-emerald-400" />
+                <h3 className="text-xl font-bold text-white">Proposal sent!</h3>
+                <p className="text-sm text-white/55">Your proposal for <span className="text-white/80 font-semibold">{applyProject.title}</span> has been submitted. The client will review it shortly.</p>
+                <button onClick={closeApply} className="mt-2 rounded-full bg-gradient-to-r from-cyan-500 to-violet-500 px-6 py-2.5 text-sm font-bold text-white hover:opacity-90 transition">
+                  Done
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="mb-5">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-white/35 mb-1">Applying for</p>
+                  <h3 className="text-lg font-bold text-white leading-snug">{applyProject.title}</h3>
+                  {applyProject.category && (
+                    <span className="mt-1.5 inline-block rounded-full border border-white/10 bg-white/[0.05] px-2.5 py-0.5 text-[11px] font-semibold text-white/50">{applyProject.category}</span>
+                  )}
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="mb-1.5 block text-sm font-semibold text-white/70">Cover letter <span className="text-rose-400">*</span></label>
+                    <textarea
+                      rows={5}
+                      value={coverLetter}
+                      onChange={(e) => setCoverLetter(e.target.value)}
+                      placeholder="Introduce yourself and explain why you're a great fit for this project…"
+                      className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white placeholder-white/30 outline-none resize-none focus:border-cyan-400/40 transition"
+                    />
+                    <p className="mt-1 text-right text-[11px] text-white/25">{coverLetter.length} chars</p>
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-sm font-semibold text-white/70">Your proposed rate (AUD) <span className="text-white/30 font-normal">— optional</span></label>
+                    <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 focus-within:border-cyan-400/40 transition">
+                      <span className="text-white/40 text-sm">$</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="50"
+                        value={proposedRate}
+                        onChange={(e) => setProposedRate(e.target.value)}
+                        placeholder="e.g. 2500"
+                        className="w-full bg-transparent text-sm text-white placeholder-white/30 outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {submitResult && !submitResult.ok && (
+                  <p className="mt-3 rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-2.5 text-sm text-rose-300">{submitResult.msg}</p>
+                )}
+
+                <div className="mt-5 flex gap-3">
+                  <button onClick={closeApply} className="flex-1 rounded-full border border-white/12 py-2.5 text-sm font-semibold text-white/60 hover:text-white hover:border-white/25 transition">
+                    Cancel
+                  </button>
+                  <button
+                    onClick={submitProposal}
+                    disabled={submitting || !coverLetter.trim()}
+                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-cyan-500 to-violet-500 py-2.5 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    {submitting ? 'Sending…' : 'Send Proposal'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 }
