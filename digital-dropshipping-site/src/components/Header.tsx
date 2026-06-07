@@ -21,21 +21,18 @@ const publicNavItems = [
   { href: '/freelancers', label: 'Freelancers' },
   { href: '/products', label: 'Services' },
   { href: '/how-it-works', label: 'How it works' },
-  { href: '/pricing', label: 'Pricing' },
 ];
 
 const freelancerNavItems = [
   { href: '/freelancers', label: 'Browse Projects' },
   { href: '/products', label: 'Services' },
   { href: '/how-it-works', label: 'How it works' },
-  { href: '/pricing', label: 'Pricing' },
 ];
 
 const clientNavItems = [
   { href: '/freelancers', label: 'Find Talent' },
   { href: '/products', label: 'Services' },
   { href: '/how-it-works', label: 'How it works' },
-  { href: '/pricing', label: 'Pricing' },
 ];
 
 const getNavItems = (role?: string) => {

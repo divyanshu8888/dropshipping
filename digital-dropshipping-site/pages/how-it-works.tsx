@@ -193,6 +193,67 @@ export default function HowItWorksPage() {
           </div>
         </section>
 
+        {/* Pricing / Free section */}
+        <section className="mx-auto max-w-5xl px-4 sm:px-6 py-16">
+          <div className="text-center mb-10">
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.06] px-3 py-1 text-[11px] font-semibold uppercase tracking-widest text-white/60 mb-4">
+              Pricing
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-white">
+              Always{' '}
+              <span className="bg-gradient-to-r from-cyan-300 to-violet-300 bg-clip-text text-transparent">free</span>{' '}
+              to use
+            </h2>
+            <p className="mt-3 text-sm text-white/55 max-w-md mx-auto">
+              No subscriptions. No monthly fees. Only pay when work gets done.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {/* For Clients */}
+            <div className="rounded-2xl border border-cyan-400/20 bg-gradient-to-b from-cyan-500/10 via-blue-500/5 to-transparent p-7 backdrop-blur-sm">
+              <div className="inline-flex items-center gap-2 rounded-full bg-cyan-400/10 border border-cyan-400/20 px-3 py-1 text-[11px] font-semibold text-cyan-300 uppercase tracking-wider mb-4">
+                For Clients
+              </div>
+              <div className="text-4xl font-extrabold text-white mb-1">Free</div>
+              <p className="text-xs text-white/50 mb-6">No credit card needed</p>
+              <ul className="space-y-2.5">
+                {['Post unlimited projects', 'Browse all verified freelancers', 'Milestone-based payment protection', 'Messaging, video calls & file sharing', 'Analytics dashboard', 'Team workspace', 'Custom contracts & NDAs'].map((f) => (
+                  <li key={f} className="flex items-start gap-2.5">
+                    <svg className="h-4 w-4 flex-shrink-0 text-emerald-400 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span className="text-xs text-white/80">{f}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* For Freelancers */}
+            <div className="rounded-2xl border border-violet-400/20 bg-gradient-to-b from-violet-500/10 via-purple-500/5 to-transparent p-7 backdrop-blur-sm">
+              <div className="inline-flex items-center gap-2 rounded-full bg-violet-400/10 border border-violet-400/20 px-3 py-1 text-[11px] font-semibold text-violet-300 uppercase tracking-wider mb-4">
+                For Freelancers
+              </div>
+              <div className="text-4xl font-extrabold text-white mb-1">Free</div>
+              <p className="text-xs text-white/50 mb-6">No monthly subscription</p>
+              <ul className="space-y-2.5">
+                {['Create a free profile', 'Apply to unlimited projects', 'Get paid via milestone escrow', 'Messaging, video calls & file sharing', 'Portfolio showcase', 'Verified badge & trust score', 'Instant payout options'].map((f) => (
+                  <li key={f} className="flex items-start gap-2.5">
+                    <svg className="h-4 w-4 flex-shrink-0 text-emerald-400 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span className="text-xs text-white/80">{f}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          <p className="mt-5 text-center text-xs text-white/40">
+            A small service commission is charged on successfully completed projects to cover escrow and payment protection.
+          </p>
+        </section>
+
         {/* Bottom CTA banner */}
         <section className="mx-auto max-w-4xl px-4 sm:px-6 py-16">
           <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-violet-500/10 p-6 sm:p-8 md:p-10 text-center shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
