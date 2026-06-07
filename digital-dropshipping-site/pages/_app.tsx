@@ -7,6 +7,7 @@ import { AuthProvider } from '../src/contexts/AuthContext'
 import { NotificationProvider } from '../src/contexts/NotificationContext'
 import { ToastProvider } from '../src/components/Toast'
 import Footer from '../src/components/Footer'
+import { Analytics } from '@vercel/analytics/react'
 
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter()
@@ -40,6 +41,7 @@ export default function App({ Component, pageProps }: AppProps) {
           <ToastProvider>
             <Component {...pageProps} />
             {showFooter && <Footer />}
+            <Analytics />
           </ToastProvider>
         </NotificationProvider>
       </AuthProvider>
