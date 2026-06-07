@@ -149,7 +149,7 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
             [
               'moderation_pricing_violation',
               'Client attempted to share pricing/payment information',
-              `Client "${userInfo?.name || userInfo?.email || 'Unknown'}" attempted to send a message containing pricing or payment information in project "${projectInfo?.title || 'Unknown'}". This violates platform policy to keep all payments within Uniti.`,
+              `Client "${userInfo?.name || userInfo?.email || 'Unknown'}" attempted to send a message containing pricing or payment information in project "${projectInfo?.title || 'Unknown'}". This violates platform policy to keep all payments within Unitiv.`,
               JSON.stringify({
                 projectId: Number(projectId),
                 projectTitle: projectInfo?.title || 'Unknown',
@@ -223,8 +223,8 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
 
       // Return user-friendly error message
       const errorMessage = isPricingViolation
-        ? 'Payment information cannot be shared in messages. For your security and protection, all payments must be processed through Uniti\'s secure payment system. Please use the project\'s payment features instead.'
-        : 'For safety, keep contact & payments inside Uniti. Messages cannot contain phone numbers, email addresses, external links, or personal contact details.';
+        ? 'Payment information cannot be shared in messages. For your security and protection, all payments must be processed through Unitiv\'s secure payment system. Please use the project\'s payment features instead.'
+        : 'For safety, keep contact & payments inside Unitiv. Messages cannot contain phone numbers, email addresses, external links, or personal contact details.';
 
       return res.status(400).json({
         error: errorMessage,

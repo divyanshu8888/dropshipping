@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef, type ReactNode } from 'react'
 import { useRouter } from 'next/router'
+import { useAuth } from '../../src/contexts/AuthContext'
 import { GetStaticProps } from 'next'
 import Head from 'next/head'
 import Link from 'next/link'
@@ -194,7 +195,14 @@ const heroTrustBadges: HeroTrustBadge[] = [
 
 export default function FreelancersPage({ freelancers, initialSearchTerm }: FreelancersPageProps) {
   const router = useRouter()
+  const { user } = useAuth()
   const [searchTerm, setSearchTerm] = useState(initialSearchTerm || '')
+
+  const handlePostProject = () => {
+    if (!user) return router.push('/login?mode=signup&role=client&redirect=/projects')
+    if (user.role === 'FREELANCER') return router.push('/freelancers/dashboard')
+    router.push('/projects')
+  }
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1)
   const [recentSearches, setRecentSearches] = useState<string[]>([])
@@ -535,7 +543,7 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
   return (
     <>
       <Head>
-        <title>Find Freelancers - Uniti</title>
+        <title>Find Freelancers - Unitiv</title>
         <meta name="description" content="Browse verified freelancers and hire top talent for your projects" />
       </Head>
 
@@ -864,7 +872,7 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
                           </svg>
                         {isNewFreelancer ? (
                           <span className="rounded-full border border-cyan-300/35 bg-cyan-400/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-100">
-                            New to Uniti
+                            New to Unitiv
                           </span>
                         ) : (
                           <>
@@ -967,7 +975,7 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
                           subtitle: freelancer.headline || freelancer.title || undefined,
                           badge: freelancer.country || undefined,
                           meta: isNewFreelancer
-                            ? 'New to Uniti'
+                            ? 'New to Unitiv'
                             : `${formatRating(ratingValue)} · ${formatInteger(projectCount)} projects`,
                           category: serviceFilter !== 'all' ? serviceFilter : undefined,
                           freelancerId: freelancer.id,
@@ -1021,15 +1029,15 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
                 </span>
               </div>
               <div className="flex flex-col gap-3 pt-4 sm:flex-row sm:items-center sm:gap-4">
-            <Link
-              href="/projects"
-                  className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#00C6FF] to-[#7D2AE8] px-6 py-3 text-sm font-semibold tracking-[0.16em] text-white shadow-[0_18px_40px_-22px_rgba(0,198,255,0.65)] transition hover:shadow-[0_28px_70px_-26px_rgba(125,42,232,0.55)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300"
+            <button
+              onClick={handlePostProject}
+              className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#00C6FF] to-[#7D2AE8] px-6 py-3 text-sm font-semibold tracking-[0.16em] text-white shadow-[0_18px_40px_-22px_rgba(0,198,255,0.65)] transition hover:shadow-[0_28px_70px_-26px_rgba(125,42,232,0.55)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300"
             >
               Post a Project
-                  <svg className="ml-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="ml-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
               </svg>
-            </Link>
+            </button>
                 <Link
                   href="/contact"
                   className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-white/80 transition hover:border-white/30 hover:text-white"
@@ -1082,7 +1090,7 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
 
         <footer className="border-t border-white/10 bg-[#080C16]">
           <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-6 py-6 text-xs text-white/60 md:flex-row">
-            <p>© {new Date().getFullYear()} Uniti. All rights reserved.</p>
+            <p>© {new Date().getFullYear()} Unitiv. All rights reserved.</p>
             <div className="flex items-center gap-5">
               <Link href="/terms" className="hover:text-white transition-colors">
                 Terms

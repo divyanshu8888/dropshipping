@@ -19,7 +19,7 @@ const CartPage = () => {
     return (
         <>
             <Head>
-                <title>Shopping Cart - Uniti Store</title>
+                <title>Shopping Cart - Unitiv Store</title>
                 <meta name="description" content="Review your items and proceed to checkout" />
             </Head>
 

@@ -1,4 +1,4 @@
-# Uniti Platform
+# Unitiv
 
 A comprehensive e-commerce platform with integrated freelancer showcase system.
 

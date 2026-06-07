@@ -278,7 +278,7 @@ export default function ProjectsPage({ categories }: ProjectPageProps) {
   return (
     <>
       <Head>
-        <title>Post a Project - Uniti</title>
+        <title>Post a Project - Unitiv</title>
         <meta name="description" content="Post a project and our admin team will match you with the right freelancers." />
       </Head>
       <div className="min-h-screen bg-[#080c16] text-white">
@@ -535,7 +535,7 @@ export default function ProjectsPage({ categories }: ProjectPageProps) {
               <div className="flex-1 space-y-8">
                 <header className="max-w-2xl space-y-3">
                   <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] uppercase tracking-[0.32em] text-white/60">
-                    Plan with Uniti
+                    Plan with Unitiv
                   </span>
                   <h2 className="text-3xl font-semibold leading-tight md:text-[32px]">
                     Here’s what happens after you share your project.
@@ -554,7 +554,7 @@ export default function ProjectsPage({ categories }: ProjectPageProps) {
                     copy: 'Our talent team reviews portfolios and recent work to surface a handful of suitable freelancers.'
                   }, {
                     title: 'Review and kick off',
-                    copy: 'Pick who you like, agree on milestones, and start collaborating inside Uniti.'
+                    copy: 'Pick who you like, agree on milestones, and start collaborating inside Unitiv.'
                   }].map((item, index) => (
                     <div key={item.title} className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 backdrop-blur">
                       <span className="text-xs font-semibold uppercase tracking-[0.28em] text-cyan-300/80">
@@ -570,7 +570,7 @@ export default function ProjectsPage({ categories }: ProjectPageProps) {
                   <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
                     <h4 className="text-sm font-semibold uppercase tracking-[0.26em] text-white/60">Need inspo?</h4>
                     <ul className="mt-3 space-y-2 text-sm text-white/70">
-                      <li><a className="hover:text-white" href="/how-it-works">How Uniti’s matching works</a></li>
+                      <li><a className="hover:text-white" href="/how-it-works">How Unitiv’s matching works</a></li>
                       <li><a className="hover:text-white" href="/case-studies">Recent client stories</a></li>
                       <li><a className="hover:text-white" href="/protection">Milestones & payment protection</a></li>
                     </ul>
@@ -606,7 +606,7 @@ export default function ProjectsPage({ categories }: ProjectPageProps) {
         </main>
         <footer className="border-t border-white/10 bg-[#070a12]">
           <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-4 px-6 py-6 text-xs text-white/55 md:flex-row">
-            <p>© {new Date().getFullYear()} Uniti. All rights reserved.</p>
+            <p>© {new Date().getFullYear()} Unitiv. All rights reserved.</p>
             <div className="flex items-center gap-4">
               <a href="/terms" className="hover:text-white">Terms</a>
               <a href="/privacy" className="hover:text-white">Privacy</a>

@@ -249,7 +249,7 @@ export default function ProductsManagement() {
   return (
     <>
       <Head>
-        <title>Products Management - Uniti</title>
+        <title>Products Management - Unitiv</title>
       </Head>
 
       <div className="min-h-screen bg-bg-base">

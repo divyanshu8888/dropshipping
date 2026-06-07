@@ -6,8 +6,8 @@ export default function VerifiedPage() {
   return (
     <>
       <Head>
-        <title>Verified Portfolios - Uniti</title>
-        <meta name="description" content="Browse verified professional portfolios on Uniti" />
+        <title>Verified Portfolios - Unitiv</title>
+        <meta name="description" content="Browse verified professional portfolios on Unitiv" />
       </Head>
 
       <div className="min-h-screen bg-bg-base">
@@ -20,7 +20,7 @@ export default function VerifiedPage() {
           <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8 mb-8">
             <h2 className="text-2xl font-bold text-white mb-4">What Does Verified Mean?</h2>
             <p className="text-gray-300 leading-relaxed mb-6">
-              Every freelancer on Uniti undergoes a thorough verification process to ensure quality and trust:
+              Every freelancer on Unitiv undergoes a thorough verification process to ensure quality and trust:
             </p>
             <ul className="space-y-3 text-gray-300">
               <li className="flex items-start gap-3">

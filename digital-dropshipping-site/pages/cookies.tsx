@@ -6,8 +6,8 @@ export default function CookiesPage() {
   return (
     <>
       <Head>
-        <title>Cookie Policy - Uniti</title>
-        <meta name="description" content="Cookie Policy for Uniti platform" />
+        <title>Cookie Policy - Unitiv</title>
+        <meta name="description" content="Cookie Policy for Unitiv platform" />
       </Head>
 
       <div className="min-h-screen bg-bg-base">

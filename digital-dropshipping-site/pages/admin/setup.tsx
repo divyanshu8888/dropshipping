@@ -151,7 +151,7 @@ INSERT INTO products (name, description, price, category, image_url, stock, is_a
   return (
     <>
       <Head>
-        <title>Admin Setup - Uniti</title>
+        <title>Admin Setup - Unitiv</title>
       </Head>
 
       <div className="min-h-screen bg-[#0B0D10]">
@@ -181,7 +181,7 @@ INSERT INTO products (name, description, price, category, image_url, stock, is_a
               <div>
                 <h2 className="text-xl font-semibold text-white mb-4">Step 1: Create Products Table</h2>
                 <p className="text-white/50 mb-4">
-                  Go to your Supabase Dashboard and run the following SQL in the SQL Editor:
+                  Open your MySQL client and run the following SQL against your Unitiv database:
                 </p>
 
                 <div className="bg-black/50 border border-white/10 rounded-xl font-mono text-sm text-cyan-300 p-4 overflow-x-auto">
@@ -205,7 +205,7 @@ INSERT INTO products (name, description, price, category, image_url, stock, is_a
                 <div className="space-y-3 text-white/50">
                   <div className="flex items-start space-x-3">
                     <span className="rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 text-xs font-bold px-2 py-1">1</span>
-                    <p>Open your Supabase Dashboard</p>
+                    <p>Open your MySQL client or database admin tool</p>
                   </div>
                   <div className="flex items-start space-x-3">
                     <span className="rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 text-xs font-bold px-2 py-1">2</span>

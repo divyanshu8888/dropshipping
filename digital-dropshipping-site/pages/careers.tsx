@@ -30,8 +30,8 @@ export default function CareersPage() {
   return (
     <>
       <Head>
-        <title>Careers - Uniti</title>
-        <meta name="description" content="Join the Uniti team and help shape the future of freelance" />
+        <title>Careers - Unitiv</title>
+        <meta name="description" content="Join the Unitiv team and help shape the future of freelance" />
       </Head>
 
       <div className="min-h-screen bg-[#0B0C0F]">
@@ -43,7 +43,7 @@ export default function CareersPage() {
             <h1 className="text-xs text-white/60 font-bold tracking-wide uppercase mb-2">Careers</h1>
             <p className="text-2xl md:text-3xl font-black text-white leading-tight tracking-tight">
               Join the{" "}
-              <span className="bg-gradient-to-r from-[#00C6FF] to-[#7D2AE8] bg-clip-text text-transparent">Uniti team</span>
+              <span className="bg-gradient-to-r from-[#00C6FF] to-[#7D2AE8] bg-clip-text text-transparent">Unitiv team</span>
             </p>
           </div>
         </section>
@@ -51,7 +51,7 @@ export default function CareersPage() {
         <div className="max-w-4xl mx-auto px-6 py-12">
 
           <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8 mb-8">
-            <h2 className="text-2xl font-bold text-white mb-4">Why Work at Uniti?</h2>
+            <h2 className="text-2xl font-bold text-white mb-4">Why Work at Unitiv?</h2>
             <p className="text-gray-300 leading-relaxed mb-4">
               We're building the future of professional collaboration. Join us in creating a platform that
               empowers freelancers and helps clients bring their ideas to life with confidence.

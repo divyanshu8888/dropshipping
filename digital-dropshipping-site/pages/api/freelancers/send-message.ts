@@ -50,7 +50,7 @@ export default async function handler(
           ? `Freelancer attempted to share pricing/payment information`
           : `Blocked message attempt: ${sender === 'freelancer' ? 'Freelancer' : 'Client'} tried to share contact info`;
         const notificationMessage = isPricingViolation
-          ? `Freelancer "${userInfo?.display_name || userInfo?.name || userInfo?.email || 'Unknown'}" attempted to send a message containing pricing or payment information in project "${project?.title || 'Unknown'}". This violates platform policy to keep all payments within Uniti.`
+          ? `Freelancer "${userInfo?.display_name || userInfo?.name || userInfo?.email || 'Unknown'}" attempted to send a message containing pricing or payment information in project "${project?.title || 'Unknown'}". This violates platform policy to keep all payments within Unitiv.`
           : `User attempted to send a message containing restricted content: ${guardResult.reasons.join(', ')}. Detected: ${guardResult.detectedContent || 'N/A'}`;
 
         await query(
@@ -93,8 +93,8 @@ export default async function handler(
 
       // Return user-friendly error message
       const errorMessage = isPricingViolation
-        ? 'Payment information cannot be shared in messages. For your security and protection, all payments must be processed through Uniti\'s secure payment system. Please use the project\'s payment features instead.'
-        : 'For safety, keep contact & payments inside Uniti. Messages cannot contain phone numbers, email addresses, external links, or personal contact details.';
+        ? 'Payment information cannot be shared in messages. For your security and protection, all payments must be processed through Unitiv\'s secure payment system. Please use the project\'s payment features instead.'
+        : 'For safety, keep contact & payments inside Unitiv. Messages cannot contain phone numbers, email addresses, external links, or personal contact details.';
 
       return res.status(400).json({ 
         error: errorMessage,
@@ -102,8 +102,8 @@ export default async function handler(
         detectedContent: guardResult.detectedContent,
         violationType: isPricingViolation ? 'pricing_payment' : 'contact_info',
         details: isPricingViolation 
-          ? 'All payments must be processed through Uniti to ensure security and compliance. Please use the platform\'s payment system for all transactions.'
-          : 'Messages cannot contain phone numbers, email addresses, external links, pricing information, or personal contact details. Please use Uniti chat, calls, and payments instead.'
+          ? 'All payments must be processed through Unitiv to ensure security and compliance. Please use the platform\'s payment system for all transactions.'
+          : 'Messages cannot contain phone numbers, email addresses, external links, pricing information, or personal contact details. Please use Unitiv chat, calls, and payments instead.'
       });
     }
 

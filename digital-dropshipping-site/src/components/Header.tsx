@@ -1,314 +1,356 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
+import {
+  Briefcase,
+  ChevronDown,
+  ClipboardList,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  Settings,
+  ShieldCheck,
+  UserRound,
+  Users,
+  X,
+} from 'lucide-react';
 import { canAccessAdminDashboard } from '../lib/permissions';
 import { useAuth } from '../contexts/AuthContext';
-import { useRouter } from 'next/router';
 
-// Clean Uniti Logo Component
-const UnitiLogo = () => {
-    return (
-        <div className="logo" aria-label="Uniti – Where ideas unite">
-            {/* Optional logo image */}
-            <img 
-                src="/images/logo/logo2.1.png" 
-                alt="Uniti Logo" 
-                className="logo-icon"
-            />
-            <span className="logo-text">Uniti</span>
-        </div>
-    );
+const publicNavItems = [
+  { href: '/freelancers', label: 'Freelancers' },
+  { href: '/products', label: 'Services' },
+  { href: '/how-it-works', label: 'How it works' },
+  { href: '/pricing', label: 'Pricing' },
+];
+
+const freelancerNavItems = [
+  { href: '/freelancers', label: 'Browse Projects' },
+  { href: '/products', label: 'Services' },
+  { href: '/how-it-works', label: 'How it works' },
+  { href: '/pricing', label: 'Pricing' },
+];
+
+const clientNavItems = [
+  { href: '/freelancers', label: 'Find Talent' },
+  { href: '/products', label: 'Services' },
+  { href: '/how-it-works', label: 'How it works' },
+  { href: '/pricing', label: 'Pricing' },
+];
+
+const getNavItems = (role?: string) => {
+  if (role === 'FREELANCER') return freelancerNavItems;
+  if (role === 'CLIENT') return clientNavItems;
+  return publicNavItems;
+};
+
+const roleStyles: Record<string, string> = {
+  ADMIN: 'from-purple-500 to-indigo-600',
+  TEAM_MEMBER: 'from-indigo-500 to-blue-600',
+  FREELANCER: 'from-blue-500 to-sky-500',
+  CLIENT: 'from-emerald-500 to-teal-500',
+};
+
+const roleLabel = (role?: string) => (role ? role.replace('_', ' ').toLowerCase() : 'member');
+
+const dashboardHref = (role?: string) => {
+  if (canAccessAdminDashboard(role || '')) return '/admin';
+  if (role === 'FREELANCER') return '/freelancers/dashboard';
+  if (role === 'CLIENT') return '/clients/dashboard';
+  return '/dashboard';
 };
 
 const Header: React.FC = () => {
-    const { user, logout } = useAuth();
-    const router = useRouter();
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-    const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false);
-    const adminMenuRef = useRef<HTMLDivElement | null>(null);
-    const isAdminUser = canAccessAdminDashboard(user?.role || '');
-    const displayName = user?.name || (user?.email ? user.email.split('@')[0] : undefined) || 'Account';
+  const { user, logout } = useAuth();
+  const router = useRouter();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+  const accountMenuRef = useRef<HTMLDivElement | null>(null);
+  const isAdminUser = canAccessAdminDashboard(user?.role || '');
+  const displayName = user?.name || (user?.email ? user.email.split('@')[0] : undefined) || 'Account';
+  const navItems = getNavItems(user?.role);
 
-    const handleLogout = () => {
-        setIsAdminMenuOpen(false);
-        logout();
+  const isActive = (href: string) => router.pathname === href || router.pathname.startsWith(`${href}/`);
+
+  const closeMenus = () => {
+    setIsMobileMenuOpen(false);
+    setIsAccountMenuOpen(false);
+  };
+
+  const handleLogout = () => {
+    closeMenus();
+    logout();
+  };
+
+  useEffect(() => {
+    closeMenus();
+  }, [router.asPath]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (accountMenuRef.current && !accountMenuRef.current.contains(event.target as Node)) {
+        setIsAccountMenuOpen(false);
+      }
     };
 
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (adminMenuRef.current && !adminMenuRef.current.contains(event.target as Node)) {
-                setIsAdminMenuOpen(false);
-            }
-        };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, [isAdminMenuOpen]);
+  const accountLinks = [
+    user
+      ? {
+          href: dashboardHref(user.role),
+          label: isAdminUser ? 'Dashboard' : 'My dashboard',
+          icon: isAdminUser ? LayoutDashboard : user.role === 'FREELANCER' ? Briefcase : ClipboardList,
+        }
+      : null,
+    user && isAdminUser ? { href: '/admin/team', label: 'Team', icon: Users } : null,
+    user && isAdminUser ? { href: '/admin/setup', label: 'Settings', icon: Settings } : null,
+  ].filter(Boolean) as Array<{ href: string; label: string; icon: React.ComponentType<{ className?: string }> }>;
 
-    return (
-        <header className="sticky top-0 z-50 bg-black/80 backdrop-blur-2xl border-b border-white/10">
-            {/* Soft glow divider */}
-            <div className="absolute left-0 right-0 top-[100%] h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
-            <div className="w-full px-6 md:px-40 flex items-center justify-between" style={{ paddingTop: '0.75rem', paddingBottom: '0.75rem' }}>
-                <div className="flex items-center">
-                    <Link href="/" className="flex items-center group overflow-visible">
-                        {/* UnitiLogo handles both logo and text for left corner */}
-                        <UnitiLogo />
-                    </Link>
-                </div>
-                
-                {/* Desktop Navigation */}
-                <nav className="hidden md:flex items-center gap-8">
-                    <Link href="/freelancers" className="relative text-white/75 hover:text-white transition-all duration-300 after:absolute after:left-0 after:-bottom-1.5 after:h-[2px] after:w-0 after:bg-gradient-to-r from-cyan-400 to-violet-400 hover:after:w-full after:transition-all after:duration-300 focus:ring-2 focus:ring-white/50 focus:outline-none rounded px-2 py-1 text-sm font-medium">
-                        Freelancers
-                    </Link>
-                    <Link href="/products" className="relative text-white/75 hover:text-white transition-all duration-300 after:absolute after:left-0 after:-bottom-1.5 after:h-[2px] after:w-0 after:bg-gradient-to-r from-cyan-400 to-violet-400 hover:after:w-full after:transition-all after:duration-300 focus:ring-2 focus:ring-white/50 focus:outline-none rounded px-2 py-1 text-sm font-medium">
-                        Products
-                    </Link>
-                    
-                    {/* Role-specific Dashboard Links */}
-                    {isAdminUser && (
-                        <Link
-                            href="/admin"
-                            className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 px-4 py-1.5 text-xs font-semibold text-white shadow-lg shadow-purple-500/20 transition hover:shadow-purple-500/40 hover:-translate-y-[1px]"
-                        >
-                            <span className="text-sm">🧭</span>
-                            Admin Command
-                        </Link>
-                    )}
-                    <div className="ml-auto relative" ref={adminMenuRef}>
-                        {user ? (
-                            <>
-                                <button
-                                    onClick={() => setIsAdminMenuOpen((prev) => !prev)}
-                                    className="flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 backdrop-blur transition hover:border-indigo-400/60 hover:bg-white/10"
-                                >
-                                    <div
-                                        className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold text-white shadow-inner shadow-black/30 ${
-                                            user.role === 'ADMIN'
-                                                ? 'bg-gradient-to-br from-purple-500 to-indigo-600'
-                                                : user.role === 'TEAM_MEMBER'
-                                                ? 'bg-gradient-to-br from-indigo-500 to-blue-600'
-                                                : user.role === 'FREELANCER'
-                                                ? 'bg-gradient-to-br from-blue-500 to-sky-500'
-                                                : user.role === 'CLIENT'
-                                                ? 'bg-gradient-to-br from-emerald-500 to-teal-500'
-                                                : 'bg-gradient-to-br from-slate-500 to-slate-600'
-                                        }`}
-                                    >
-                                        {displayName.charAt(0).toUpperCase()}
-                                    </div>
-                                    <div className="flex flex-col items-start">
-                                        <span className="text-xs font-semibold text-white/90">{displayName}</span>
-                                        <span className="text-[10px] uppercase tracking-[0.18em] text-white/50">
-                                            {user.role?.replace('_', ' ')}
-                                        </span>
-                                    </div>
-                                    <svg
-                                        className={`h-4 w-4 text-white/60 transition ${isAdminMenuOpen ? 'rotate-180' : ''}`}
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke="currentColor"
-                                    >
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                    </svg>
-                                </button>
-                                {isAdminMenuOpen && (
-                                    <div className="absolute right-0 mt-3 w-64 rounded-2xl border border-white/10 bg-black/90 p-3 shadow-xl backdrop-blur-lg">
-                                        <div className="flex items-center gap-3 rounded-xl border border-white/5 bg-white/5 px-3 py-2">
-                                            <div
-                                                className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold text-white shadow-inner ${
-                                                    user.role === 'ADMIN'
-                                                        ? 'bg-gradient-to-br from-purple-500 to-indigo-600'
-                                                        : user.role === 'TEAM_MEMBER'
-                                                        ? 'bg-gradient-to-br from-indigo-500 to-blue-600'
-                                                        : user.role === 'FREELANCER'
-                                                        ? 'bg-gradient-to-br from-blue-500 to-sky-500'
-                                                        : user.role === 'CLIENT'
-                                                        ? 'bg-gradient-to-br from-emerald-500 to-teal-500'
-                                                        : 'bg-gradient-to-br from-slate-500 to-slate-600'
-                                                }`}
-                                            >
-                                                {displayName.charAt(0).toUpperCase()}
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-semibold text-white/90">{displayName}</p>
-                                                <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">
-                                                    {user.role?.replace('_', ' ')}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        {user?.role === 'FREELANCER' && (
-                                            <div className="mt-3 space-y-1">
-                                                <button
-                                                    onClick={() => {
-                                                        setIsAdminMenuOpen(false);
-                                                        router.push('/freelancers/dashboard');
-                                                    }}
-                                                    className="w-full text-left flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-white/80 transition hover:bg-white/10"
-                                                >
-                                                    💼 My Dashboard
-                                                </button>
-                                            </div>
-                                        )}
-                                        {user?.role === 'CLIENT' && (
-                                            <div className="mt-3 space-y-1">
-                                                <button
-                                                    onClick={() => {
-                                                        setIsAdminMenuOpen(false);
-                                                        router.push('/clients/dashboard');
-                                                    }}
-                                                    className="w-full text-left flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-white/80 transition hover:bg-white/10"
-                                                >
-                                                    📋 My Dashboard
-                                                </button>
-                                            </div>
-                                        )}
-                                        {isAdminUser && (
-                                            <div className="mt-3 space-y-1">
-                                                <button
-                                                    onClick={() => {
-                                                        setIsAdminMenuOpen(false);
-                                                        router.push('/admin');
-                                                    }}
-                                                    className="w-full text-left flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-white/80 transition hover:bg-white/10"
-                                                >
-                                                    🧭 Admin Dashboard
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        setIsAdminMenuOpen(false);
-                                                        router.push('/admin/team');
-                                                    }}
-                                                    className="w-full text-left flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-white/80 transition hover:bg-white/10"
-                                                >
-                                                    👥 Manage Team
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        setIsAdminMenuOpen(false);
-                                                        router.push('/admin/setup');
-                                                    }}
-                                                    className="w-full text-left flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-white/80 transition hover:bg-white/10"
-                                                >
-                                                    ⚙️ Admin Settings
-                                                </button>
-                                            </div>
-                                        )}
-                                        <div className="mt-3 border-t border-white/10 pt-3">
-                                            <button
-                                                onClick={handleLogout}
-                                                className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-500/20 px-3 py-2 text-sm font-semibold text-red-300 transition hover:bg-red-500/30"
-                                            >
-                                                ⏏ Logout
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
-                            </>
-                        ) : (
-                            <div className="ml-4 flex items-center gap-3">
-                                <Link
-                                    href="/login"
-                                    className="relative text-white/75 hover:text-white transition-all duration-300 after:absolute after:left-0 after:-bottom-1.5 after:h-[2px] after:w-0 after:bg-gradient-to-r from-cyan-400 to-violet-400 hover:after:w-full after:transition-all after:duration-300 focus:ring-2 focus:ring-white/50 focus:outline-none rounded px-2 py-1 text-sm font-medium"
-                                >
-                                    Log in
-                                </Link>
-                            </div>
-                        )}
-                    </div>
-                </nav>
+  return (
+    <header className="sticky top-0 z-50 border-b border-white/10 bg-[#07090d]/90 backdrop-blur-2xl">
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-cyan-300/30 to-transparent" />
 
-                {/* Mobile Menu Button */}
-                <div className="md:hidden">
-                    <button 
-                        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                        className="text-text-mute hover:text-white p-2 rounded-xl hover:bg-white/5 transition-all duration-200 focus:ring-2 focus:ring-white/50 focus:outline-none"
+      <div className="mx-auto flex min-h-[72px] max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+        <Link
+          href="/"
+          className="group flex items-center gap-3 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+          aria-label="Unitiv home"
+        >
+          <span className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/[0.06] shadow-inner shadow-white/5">
+            <img src="/images/logo/logo2.1.png" alt="" className="h-7 w-7 object-contain" />
+          </span>
+          <span className="flex flex-col leading-none">
+            <span className="bg-gradient-to-r from-cyan-300 to-violet-300 bg-clip-text text-xl font-bold text-transparent">
+              Unitiv
+            </span>
+            <span className="mt-1 hidden text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45 sm:block">
+              Where ideas unite your vision.
+            </span>
+          </span>
+        </Link>
+
+        <nav className="hidden items-center gap-1 md:flex" aria-label="Main navigation">
+          {navItems.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 ${
+                isActive(item.href)
+                  ? 'bg-white/10 text-white'
+                  : 'text-white/70 hover:bg-white/[0.06] hover:text-white'
+              }`}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+
+        <div className="hidden items-center gap-3 md:flex">
+          {user && user.role !== 'FREELANCER' && (
+            <Link
+              href="/projects"
+              className="inline-flex h-10 items-center justify-center rounded-full border border-white/15 px-4 text-sm font-semibold text-white/85 transition hover:border-white/35 hover:bg-white/[0.06] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+            >
+              Post a project
+            </Link>
+          )}
+
+          {user ? (
+            <div className="relative" ref={accountMenuRef}>
+              <button
+                type="button"
+                onClick={() => setIsAccountMenuOpen((prev) => !prev)}
+                className="inline-flex h-10 items-center gap-3 rounded-full border border-white/10 bg-white/[0.06] pl-1.5 pr-3 text-left transition hover:border-cyan-300/45 hover:bg-white/[0.09] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+                aria-haspopup="menu"
+                aria-expanded={isAccountMenuOpen}
+              >
+                <span
+                  className={`grid h-7 w-7 place-items-center rounded-full bg-gradient-to-br ${
+                    roleStyles[user.role || ''] || 'from-slate-500 to-slate-700'
+                  } text-xs font-bold text-white`}
+                  aria-hidden="true"
+                >
+                  {displayName.charAt(0).toUpperCase()}
+                </span>
+                <span className="max-w-[9rem] truncate text-sm font-semibold text-white/90">{displayName}</span>
+                <ChevronDown
+                  className={`h-4 w-4 text-white/50 transition ${isAccountMenuOpen ? 'rotate-180' : ''}`}
+                  aria-hidden="true"
+                />
+              </button>
+
+              {isAccountMenuOpen && (
+                <div
+                  className="absolute right-0 mt-3 w-72 rounded-2xl border border-white/10 bg-[#080b12]/95 p-3 shadow-2xl shadow-black/40 backdrop-blur-2xl"
+                  role="menu"
+                >
+                  <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-3">
+                    <span
+                      className={`grid h-10 w-10 place-items-center rounded-full bg-gradient-to-br ${
+                        roleStyles[user.role || ''] || 'from-slate-500 to-slate-700'
+                      } text-sm font-bold text-white`}
+                      aria-hidden="true"
                     >
-                        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            {isMobileMenuOpen ? (
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            ) : (
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                            )}
-                        </svg>
-                    </button>
-                </div>
-            </div>
+                      {displayName.charAt(0).toUpperCase()}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-white">{displayName}</p>
+                      <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/45">
+                        {roleLabel(user.role)}
+                      </p>
+                    </div>
+                  </div>
 
-            {/* Mobile Menu */}
-            {isMobileMenuOpen && (
-                <div className="md:hidden pb-4 border-t border-white/10">
-                        <nav className="flex flex-col space-y-2 pt-4">
-                            <Link href="/" className="text-text-soft hover:text-text-base hover:bg-white/5 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200">
-                                Home
-                            </Link>
-                            <Link href="/freelancers" className="text-text-soft hover:text-text-base hover:bg-white/5 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200">
-                                Freelancers
-                            </Link>
-                            <Link href="/products" className="text-text-soft hover:text-text-base hover:bg-white/5 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200">
-                                Products
-                            </Link>
-                        
-                        {/* Role-specific Dashboard Links */}
-                        {canAccessAdminDashboard(user?.role || '') && (
-                            <Link href="/admin" className="text-text-soft hover:text-accent-violet hover:bg-white/5 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 flex items-center">
-                                <span className="mr-2">🧭</span>
-                                Admin Dashboard
-                            </Link>
-                        )}
-                        {user?.role === 'FREELANCER' && (
-                            <Link href="/freelancers/dashboard" className="text-text-soft hover:text-accent-blue hover:bg-white/5 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 flex items-center">
-                                <span className="mr-2">💼</span>
-                                My Dashboard
-                            </Link>
-                        )}
-                        {user?.role === 'CLIENT' && (
-                            <Link href="/clients/dashboard" className="text-text-soft hover:text-accent-cyan hover:bg-white/5 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 flex items-center">
-                                <span className="mr-2">📋</span>
-                                My Dashboard
-                            </Link>
-                        )}
-                        
-                        {user ? (
-                            <div className="pt-2 border-t border-white/10">
-                                <div className="flex items-center space-x-2 px-4 py-3">
-                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                                        user.role === 'ADMIN' ? 'bg-gradient-to-br from-accent-violet to-purple-600' :
-                                        user.role === 'TEAM_MEMBER' ? 'bg-gradient-to-br from-indigo-500 to-indigo-600' :
-                                        user.role === 'FREELANCER' ? 'bg-gradient-to-br from-accent-blue to-blue-600' :
-                                        user.role === 'CLIENT' ? 'bg-gradient-to-br from-accent-cyan to-green-600' :
-                                        'bg-gradient-to-br from-accent-blue to-accent-cyan'
-                                    }`}>
-                                        <span className="text-white text-sm font-bold">
-                                            {displayName.charAt(0).toUpperCase()}
-                                        </span>
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-sm font-medium text-text-base">{displayName}</span>
-                                        <span className="text-xs text-text-mute capitalize">{user.role?.toLowerCase().replace('_', ' ')}</span>
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={handleLogout}
-                                    className="w-full text-left text-text-soft hover:text-red-400 hover:bg-red-500/10 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200"
-                                >
-                                    Logout
-                                </button>
-                            </div>
-                        ) : (
-                            <div className="pt-2 border-t border-white/10 space-y-2">
-                                <Link href="/login" className="text-text-soft hover:text-text-base hover:bg-white/5 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200">
-                                    Log in / Sign up
-                                </Link>
-                            </div>
-                        )}
-                    </nav>
+                  <div className="mt-3 space-y-1">
+                    {accountLinks.map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold text-white/78 transition hover:bg-white/[0.08] hover:text-white"
+                          role="menuitem"
+                        >
+                          <Icon className="h-4 w-4 text-cyan-200/80" aria-hidden="true" />
+                          {item.label}
+                        </Link>
+                      );
+                    })}
+                  </div>
+
+                  <div className="mt-3 border-t border-white/10 pt-3">
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-500/15 px-3 py-2 text-sm font-semibold text-red-200 transition hover:bg-red-500/25"
+                      role="menuitem"
+                    >
+                      <LogOut className="h-4 w-4" aria-hidden="true" />
+                      Log out
+                    </button>
+                  </div>
                 </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Link
+                href="/login"
+                className="inline-flex h-10 items-center justify-center rounded-full px-4 text-sm font-semibold text-white/75 transition hover:bg-white/[0.06] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+              >
+                Log in
+              </Link>
+              <Link
+                href="/login?mode=signup"
+                className="inline-flex h-10 items-center justify-center rounded-full bg-gradient-to-r from-cyan-400 to-violet-500 px-4 text-sm font-bold text-white shadow-lg shadow-cyan-950/30 transition hover:-translate-y-0.5 hover:shadow-violet-900/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+              >
+                Get started
+              </Link>
+            </div>
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setIsMobileMenuOpen((prev) => !prev)}
+          className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.06] text-white transition hover:bg-white/[0.1] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 md:hidden"
+          aria-label={isMobileMenuOpen ? 'Close navigation' : 'Open navigation'}
+          aria-expanded={isMobileMenuOpen}
+        >
+          {isMobileMenuOpen ? <X className="h-5 w-5" aria-hidden="true" /> : <Menu className="h-5 w-5" aria-hidden="true" />}
+        </button>
+      </div>
+
+      {isMobileMenuOpen && (
+        <div className="border-t border-white/10 bg-[#07090d]/98 px-4 pb-5 pt-3 md:hidden">
+          <nav className="space-y-1" aria-label="Mobile navigation">
+            {[
+              { href: '/', label: 'Home' },
+              ...navItems,
+              ...(user && user.role !== 'FREELANCER' ? [{ href: '/projects', label: 'Post a project' }] : []),
+            ].map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center justify-between rounded-xl px-4 py-3 text-sm font-semibold transition ${
+                  isActive(item.href)
+                    ? 'bg-white/10 text-white'
+                    : 'text-white/72 hover:bg-white/[0.06] hover:text-white'
+                }`}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+
+          <div className="mt-4 border-t border-white/10 pt-4">
+            {user ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 rounded-xl bg-white/[0.05] px-4 py-3">
+                  <span
+                    className={`grid h-10 w-10 place-items-center rounded-full bg-gradient-to-br ${
+                      roleStyles[user.role || ''] || 'from-slate-500 to-slate-700'
+                    } text-sm font-bold text-white`}
+                  >
+                    {displayName.charAt(0).toUpperCase()}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-white">{displayName}</p>
+                    <p className="text-xs text-white/50">{roleLabel(user.role)}</p>
+                  </div>
+                </div>
+
+                <div className="grid gap-2">
+                  <Link
+                    href={dashboardHref(user.role)}
+                    className="flex items-center gap-2 rounded-xl border border-white/10 px-4 py-3 text-sm font-semibold text-white/82"
+                  >
+                    <UserRound className="h-4 w-4 text-cyan-200/80" aria-hidden="true" />
+                    My workspace
+                  </Link>
+                  {isAdminUser && (
+                    <Link
+                      href="/admin"
+                      className="flex items-center gap-2 rounded-xl border border-white/10 px-4 py-3 text-sm font-semibold text-white/82"
+                    >
+                      <ShieldCheck className="h-4 w-4 text-cyan-200/80" aria-hidden="true" />
+                      Admin command
+                    </Link>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="flex items-center justify-center gap-2 rounded-xl bg-red-500/15 px-4 py-3 text-sm font-semibold text-red-200"
+                  >
+                    <LogOut className="h-4 w-4" aria-hidden="true" />
+                    Log out
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="grid gap-2">
+                <Link
+                  href="/login?mode=signup"
+                  className="inline-flex h-11 items-center justify-center rounded-xl bg-gradient-to-r from-cyan-400 to-violet-500 px-4 text-sm font-bold text-white"
+                >
+                  Get started
+                </Link>
+                <Link
+                  href="/login"
+                  className="inline-flex h-11 items-center justify-center rounded-xl border border-white/10 px-4 text-sm font-semibold text-white/80"
+                >
+                  Log in
+                </Link>
+              </div>
             )}
-        </header>
-    );
+          </div>
+        </div>
+      )}
+    </header>
+  );
 };
 
 export default Header;

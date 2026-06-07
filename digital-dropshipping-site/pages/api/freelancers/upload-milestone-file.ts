@@ -80,7 +80,7 @@ export default async function handler(
       );
 
       const errorMessage = isPricingViolation
-        ? 'File name cannot contain payment information. For your security, all payments must be processed through Uniti\'s secure payment system.'
+        ? 'File name cannot contain payment information. For your security, all payments must be processed through Unitiv\'s secure payment system.'
         : 'File name cannot contain phone numbers, email addresses, external links, or personal contact details.';
 
       return res.status(400).json({ 

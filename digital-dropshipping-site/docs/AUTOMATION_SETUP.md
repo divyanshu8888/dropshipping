@@ -1,6 +1,6 @@
 # CI/CD Automation Setup Summary
 
-This document summarizes all the automation features added to the Uniti project.
+This document summarizes all the automation features added to the Unitiv project.
 
 ## ✅ What's Been Set Up
 

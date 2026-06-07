@@ -6,7 +6,7 @@ export default function BlogPage() {
   const blogPosts = [
     {
       id: 1,
-      title: "Getting Started with Uniti: A Complete Guide",
+      title: "Getting Started with Unitiv: A Complete Guide",
       excerpt: "Learn everything you need to know to start your first project with verified freelancers.",
       date: "2025-01-15",
       category: "Getting Started"
@@ -30,8 +30,8 @@ export default function BlogPage() {
   return (
     <>
       <Head>
-        <title>Blog - Uniti</title>
-        <meta name="description" content="Insights, tips, and stories from Uniti" />
+        <title>Blog - Unitiv</title>
+        <meta name="description" content="Insights, tips, and stories from Unitiv" />
       </Head>
 
       <div className="min-h-screen bg-[#0B0C0F]">

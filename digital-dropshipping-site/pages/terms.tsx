@@ -6,8 +6,8 @@ export default function TermsPage() {
   return (
     <>
       <Head>
-        <title>Terms of Service - Uniti</title>
-        <meta name="description" content="Terms of Service for Uniti platform" />
+        <title>Terms of Service - Unitiv</title>
+        <meta name="description" content="Terms of Service for Unitiv platform" />
       </Head>
 
       <div className="min-h-screen bg-bg-base">
@@ -20,13 +20,13 @@ export default function TermsPage() {
           <div className="prose prose-invert max-w-none bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
             <h2 className="text-2xl font-bold text-white mb-4">1. Introduction</h2>
             <p className="text-gray-300 leading-relaxed mb-6">
-              Welcome to Uniti. These Terms of Service govern your use of our platform connecting clients with verified freelancers.
-              By using Uniti, you agree to these terms.
+              Welcome to Unitiv. These Terms of Service govern your use of our platform connecting clients with verified freelancers.
+              By using Unitiv, you agree to these terms.
             </p>
 
             <h2 className="text-2xl font-bold text-white mb-4">2. Platform Services</h2>
             <p className="text-gray-300 leading-relaxed mb-6">
-              Uniti provides a marketplace for connecting verified professionals with clients. We facilitate secure project collaboration,
+              Unitiv provides a marketplace for connecting verified professionals with clients. We facilitate secure project collaboration,
               milestone tracking, and payment protection. All freelancers undergo verification before approval.
             </p>
 
@@ -39,7 +39,7 @@ export default function TermsPage() {
 
             <h2 className="text-2xl font-bold text-white mb-4">4. Payment & Milestones</h2>
             <p className="text-gray-300 leading-relaxed mb-6">
-              Payments are held in escrow until milestones are approved. Uniti charges a platform fee as outlined in the
+              Payments are held in escrow until milestones are approved. Unitiv charges a platform fee as outlined in the
               pricing section. Refund policies apply based on project completion status and quality standards.
             </p>
 
@@ -52,12 +52,12 @@ export default function TermsPage() {
             <h2 className="text-2xl font-bold text-white mb-4">6. Dispute Resolution</h2>
             <p className="text-gray-300 leading-relaxed mb-6">
               Disputes are handled through our moderation team. Both parties must provide evidence.
-              Uniti's decision is final for platform-related issues. External disputes may require legal resolution.
+              Unitiv's decision is final for platform-related issues. External disputes may require legal resolution.
             </p>
 
             <h2 className="text-2xl font-bold text-white mb-4">7. Limitation of Liability</h2>
             <p className="text-gray-300 leading-relaxed mb-6">
-              Uniti serves as a platform facilitator. We are not liable for work quality, delivery delays, or disputes
+              Unitiv serves as a platform facilitator. We are not liable for work quality, delivery delays, or disputes
               between users beyond our moderation processes. Use the platform at your own discretion.
             </p>
 

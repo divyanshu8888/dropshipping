@@ -1,6 +1,6 @@
 # Project Structure Guide
 
-This document explains the organization of all files in the Uniti project.
+This document explains the organization of all files in the Unitiv project.
 
 ## 📁 Directory Structure
 

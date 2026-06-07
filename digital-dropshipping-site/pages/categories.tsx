@@ -10,7 +10,13 @@ interface CategoriesPageProps {
 
 export default function CategoriesPage({ products }: CategoriesPageProps) {
   // Extract unique categories from products
-  const categories = Array.from(new Set(products.map(p => p.category))).filter(Boolean);
+  const categories = Array.from(
+    new Set(
+      products
+        .map((product) => product.category)
+        .filter((category): category is string => typeof category === 'string' && category.trim().length > 0)
+    )
+  );
   
   const categoryInfo: { [key: string]: { icon: string; description: string } } = {
     'Web Development': {
@@ -46,8 +52,8 @@ export default function CategoriesPage({ products }: CategoriesPageProps) {
   return (
     <>
       <Head>
-        <title>Service Categories - Uniti</title>
-        <meta name="description" content="Browse all service categories on Uniti" />
+        <title>Service Categories - Unitiv</title>
+        <meta name="description" content="Browse all service categories on Unitiv" />
       </Head>
 
       <div className="min-h-screen bg-bg-base">

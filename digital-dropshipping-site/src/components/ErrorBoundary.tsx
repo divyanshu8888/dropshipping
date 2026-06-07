@@ -38,8 +38,8 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
               <h3 className="font-semibold text-yellow-800 mb-2">Quick Fix:</h3>
               <ol className="text-sm text-yellow-700 text-left space-y-1">
                 <li>1. Create a <code className="bg-yellow-100 px-1 rounded">.env.local</code> file</li>
-                <li>2. Add your Supabase credentials</li>
-                <li>3. Set up your database schema</li>
+                <li>2. Add your MySQL credentials</li>
+                <li>3. Set up your SQL database schema</li>
                 <li>4. Refresh the page</li>
               </ol>
             </div>

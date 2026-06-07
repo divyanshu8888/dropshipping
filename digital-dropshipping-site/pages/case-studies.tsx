@@ -33,8 +33,8 @@ export default function CaseStudiesPage() {
   return (
     <>
       <Head>
-        <title>Case Studies - Uniti</title>
-        <meta name="description" content="Real success stories from Uniti clients and freelancers" />
+        <title>Case Studies - Unitiv</title>
+        <meta name="description" content="Real success stories from Unitiv clients and freelancers" />
       </Head>
 
       <div className="min-h-screen bg-bg-base">

@@ -1,6 +1,6 @@
 # Deployment Guide
 
-Complete guide for deploying Uniti to production.
+Complete guide for deploying Unitiv to production.
 
 ## Prerequisites
 

@@ -215,7 +215,7 @@ const QuoteRequestForm: React.FC<QuoteRequestFormProps> = ({ onClose, onSuccess,
       <div className="w-full max-w-3xl my-6 rounded-[28px] border border-white/12 bg-[#0B0D12]/95 shadow-[0_30px_120px_-40px_rgba(37,99,235,0.45)] backdrop-blur-lg">
         <div className="flex flex-wrap items-start justify-between gap-4 px-8 pt-8">
         <div>
-          <p className="text-xs uppercase tracking-[0.38em] text-white/60">Uniti Request Desk</p>
+          <p className="text-xs uppercase tracking-[0.38em] text-white/60">Unitiv Request Desk</p>
           <h2 className="mt-2 text-3xl font-semibold text-white">Request a Quote</h2>
           <p className="mt-2 text-base text-white/75">
             Tell us about your project and we'll match you with a verified operator.

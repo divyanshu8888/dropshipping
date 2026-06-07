@@ -6,7 +6,7 @@ export default function PayoutsPage() {
   return (
     <>
       <Head>
-        <title>Payouts - Uniti</title>
+        <title>Payouts - Unitiv</title>
         <meta name="description" content="Fast, secure payout options for freelancers" />
       </Head>
 

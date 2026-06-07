@@ -6,8 +6,8 @@ export default function CommunityPage() {
   return (
     <>
       <Head>
-        <title>Community - Uniti</title>
-        <meta name="description" content="Join the Uniti freelancer community" />
+        <title>Community - Unitiv</title>
+        <meta name="description" content="Join the Unitiv freelancer community" />
       </Head>
 
       <div className="min-h-screen bg-bg-base">

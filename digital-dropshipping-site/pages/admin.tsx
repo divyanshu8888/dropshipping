@@ -877,7 +877,7 @@ export default function AdminDashboard({
   return (
     <>
       <Head>
-        <title>Admin Dashboard · Uniti</title>
+        <title>Admin Dashboard · Unitiv</title>
       </Head>
       <div className="min-h-screen bg-superhuman text-text-base">
         <Header />

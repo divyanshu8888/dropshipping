@@ -29,9 +29,9 @@ export default function ProductsPage({ products, selectedCategory }: ProductsPag
 
   const pageTitle = useMemo(() => {
     if (selectedCategory) {
-      return `${selectedCategory} Services - Uniti`;
+      return `${selectedCategory} Services - Unitiv`;
     }
-    return 'Freelancer Services & Products - Uniti';
+    return 'Freelancer Services & Products - Unitiv';
   }, [selectedCategory]);
 
   const getQuoteHref = (context: QuoteRequestContext) => buildQuoteHref(context);
@@ -53,7 +53,7 @@ export default function ProductsPage({ products, selectedCategory }: ProductsPag
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(91,143,254,0.3),_transparent_60%)] pointer-events-none" />
             <div className="relative w-full px-6 sm:px-10 py-16 max-w-6xl mx-auto">
               <p className="text-xs uppercase tracking-[0.4em] text-white/70">
-                Uniti service catalog
+                Unitiv service catalog
               </p>
               <h1 className="mt-5 text-4xl sm:text-5xl font-semibold tracking-tight text-white">
                 Find the{' '}
@@ -202,7 +202,7 @@ export default function ProductsPage({ products, selectedCategory }: ProductsPag
                           <p className="text-white/60 mt-0.5">
                             {product.freelancer_name
                               ? `Operated by ${product.freelancer_name}`
-                              : 'Verified Uniti operator'}
+                              : 'Verified Unitiv operator'}
                           </p>
                         </div>
                         {product.delivery_days && (
@@ -254,7 +254,7 @@ export default function ProductsPage({ products, selectedCategory }: ProductsPag
                 <p className="text-sm text-text-mute mb-2">Admin Setup Required:</p>
                 <p className="text-xs text-text-mute">
                   1. Go to Admin Dashboard → Manage Products<br/>
-                  2. Create products table in Supabase if needed<br/>
+                  2. Run the MySQL service catalog schema if needed<br/>
                   3. Add products with images through admin interface
                 </p>
               </div>

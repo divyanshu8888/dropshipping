@@ -6,8 +6,8 @@ export default function ProtectionPage() {
   return (
     <>
       <Head>
-        <title>Milestone Protection - Uniti</title>
-        <meta name="description" content="Learn how Uniti protects your payments through milestone-based escrow" />
+        <title>Milestone Protection - Unitiv</title>
+        <meta name="description" content="Learn how Unitiv protects your payments through milestone-based escrow" />
       </Head>
 
       <div className="min-h-screen bg-[#0B0C0F]">

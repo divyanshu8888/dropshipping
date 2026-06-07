@@ -132,7 +132,7 @@ export default async function handler(
       }
 
       const errorMessage = isPricingViolation
-        ? 'This description cannot be saved. Your description contains payment or budget information, which is not allowed. Please refine your description by removing all payment details, budget amounts, and pricing information. All payments must be processed through Uniti\'s secure payment system. ⚠️ This attempt has been automatically reported to administrators for review.'
+        ? 'This description cannot be saved. Your description contains payment or budget information, which is not allowed. Please refine your description by removing all payment details, budget amounts, and pricing information. All payments must be processed through Unitiv\'s secure payment system. ⚠️ This attempt has been automatically reported to administrators for review.'
         : 'This description cannot be saved. Your description contains restricted content (phone numbers, email addresses, external links, or personal contact details). Please refine your description by removing all contact information and external references. ⚠️ This attempt has been automatically reported to administrators for review.';
 
       return res.status(400).json({ 

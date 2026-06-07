@@ -5,6 +5,7 @@ import { useRouter } from 'next/router';
 import dynamic from 'next/dynamic';
 const Header = dynamic(() => import('../../src/components/Header'));
 import { useAuth } from '../../src/contexts/AuthContext';
+import { useRoleGuard } from '../../src/lib/useRoleGuard';
 import { useToast } from '../../src/components/Toast';
 import {
   AlertCircle,
@@ -84,6 +85,7 @@ interface DashboardMetrics {
 export default function ClientDashboard() {
   const router = useRouter();
   const { user, isClient, loading: authLoading, verified: authVerified } = useAuth();
+  useRoleGuard(['CLIENT', 'ADMIN', 'TEAM_MEMBER'], { FREELANCER: '/freelancers/dashboard' });
   const { addToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
@@ -846,7 +848,7 @@ export default function ClientDashboard() {
       if (match) {
         return { 
           valid: false, 
-          error: `Payment information cannot be shared. Use Uniti's payment system instead.` 
+          error: `Payment information cannot be shared. Use Unitiv's payment system instead.` 
         };
       }
     }
@@ -856,7 +858,7 @@ export default function ClientDashboard() {
     if (currencyMatch && content.split(/\s+/).length <= 3) {
       return { 
         valid: false, 
-        error: `Payment information cannot be shared. Use Uniti's payment system instead.` 
+        error: `Payment information cannot be shared. Use Unitiv's payment system instead.` 
       };
     }
 
@@ -866,7 +868,7 @@ export default function ClientDashboard() {
       if (match) {
         return { 
           valid: false, 
-          error: `Payment methods cannot be shared. Use Uniti's payment system instead.` 
+          error: `Payment methods cannot be shared. Use Unitiv's payment system instead.` 
         };
       }
     }
@@ -877,7 +879,7 @@ export default function ClientDashboard() {
       if (match) {
         return { 
           valid: false, 
-          error: `Phone numbers cannot be shared. Keep communication within Uniti.` 
+          error: `Phone numbers cannot be shared. Keep communication within Unitiv.` 
         };
       }
     }
@@ -887,7 +889,7 @@ export default function ClientDashboard() {
     if (emailMatch) {
       return { 
         valid: false, 
-        error: `Email addresses cannot be shared. Keep communication within Uniti.` 
+        error: `Email addresses cannot be shared. Keep communication within Unitiv.` 
       };
     }
 
@@ -896,7 +898,7 @@ export default function ClientDashboard() {
     if (urlMatch) {
       return { 
         valid: false, 
-        error: `External links cannot be shared. Keep communication within Uniti.` 
+        error: `External links cannot be shared. Keep communication within Unitiv.` 
       };
     }
 
@@ -906,7 +908,7 @@ export default function ClientDashboard() {
       if (match) {
         return { 
           valid: false, 
-          error: `Social media handles cannot be shared. Keep communication within Uniti.` 
+          error: `Social media handles cannot be shared. Keep communication within Unitiv.` 
         };
       }
     }
@@ -916,7 +918,7 @@ export default function ClientDashboard() {
       if (pattern.test(content)) {
         return { 
           valid: false, 
-          error: 'Contact information cannot be shared. Keep communication within Uniti.' 
+          error: 'Contact information cannot be shared. Keep communication within Unitiv.' 
         };
       }
     }
@@ -927,7 +929,7 @@ export default function ClientDashboard() {
     if (spelledNumberMatches.length >= 2 && words.length <= 5) {
       return { 
         valid: false, 
-        error: 'Contact information cannot be shared. Keep communication within Uniti.' 
+        error: 'Contact information cannot be shared. Keep communication within Unitiv.' 
       };
     }
 
@@ -949,7 +951,7 @@ export default function ClientDashboard() {
         if (!hasPaymentContext) {
           return { 
             valid: false, 
-            error: 'Phone numbers cannot be shared. Keep communication within Uniti.' 
+            error: 'Phone numbers cannot be shared. Keep communication within Unitiv.' 
           };
         }
       }
@@ -968,7 +970,7 @@ export default function ClientDashboard() {
         if (totalChars > 0 && numberChars / totalChars > 0.5) {
           return { 
             valid: false, 
-            error: 'Phone numbers cannot be shared. Keep communication within Uniti.' 
+            error: 'Phone numbers cannot be shared. Keep communication within Unitiv.' 
           };
         }
       }
@@ -985,7 +987,7 @@ export default function ClientDashboard() {
         if (digitGroups && digitGroups.length >= 2) {
           return { 
             valid: false, 
-            error: 'Phone numbers cannot be shared. Keep communication within Uniti.' 
+            error: 'Phone numbers cannot be shared. Keep communication within Unitiv.' 
           };
         }
       }
@@ -1230,7 +1232,7 @@ export default function ClientDashboard() {
   return (
     <>
       <Head>
-        <title>Client Dashboard - Uniti</title>
+        <title>Client Dashboard - Unitiv</title>
         <meta name="description" content="Manage your projects and collaborate with freelancers" />
       </Head>
 

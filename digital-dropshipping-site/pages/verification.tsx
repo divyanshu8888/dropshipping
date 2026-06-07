@@ -6,8 +6,8 @@ export default function VerificationPage() {
   return (
     <>
       <Head>
-        <title>Verification Guide - Uniti</title>
-        <meta name="description" content="Learn how to get verified as a freelancer on Uniti" />
+        <title>Verification Guide - Unitiv</title>
+        <meta name="description" content="Learn how to get verified as a freelancer on Unitiv" />
       </Head>
 
       <div className="min-h-screen bg-bg-base">

@@ -1,7 +1,7 @@
 # Milestone Workflow Best Practices
 
 ## Overview
-This document outlines the recommended milestone-based project management workflow for Uniti, based on industry best practices.
+This document outlines the recommended milestone-based project management workflow for Unitiv, based on industry best practices.
 
 ## Why Milestones Win
 

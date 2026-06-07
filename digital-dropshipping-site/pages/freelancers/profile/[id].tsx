@@ -78,7 +78,7 @@ export default function FreelancerProfile({ freelancer, reviews, portfolio }: Fr
   return (
     <div className="min-h-screen bg-[#0B0D10]">
       <Head>
-        <title>{freelancer?.display_name || 'Freelancer'} - Uniti</title>
+        <title>{freelancer?.display_name || 'Freelancer'} - Unitiv</title>
         <meta name="description" content={freelancer?.description || 'Professional freelancer profile'} />
       </Head>
 

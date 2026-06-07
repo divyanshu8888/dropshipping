@@ -247,10 +247,10 @@ export default function TeamManagement(_props: AdminProps) {
             <div className="relative z-10 space-y-4">
               <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-white/70">
                 <Users className="h-3.5 w-3.5" />
-                Uniti Team Command
+                Unitiv Team Command
               </span>
               <h1 className="font-display text-4xl leading-tight sm:text-5xl">
-                Orchestrate the <span className="bg-gradient-to-r from-cyan-300 via-indigo-300 to-purple-300 bg-clip-text text-transparent">Uniti squad</span>
+                Orchestrate the <span className="bg-gradient-to-r from-cyan-300 via-indigo-300 to-purple-300 bg-clip-text text-transparent">Unitiv squad</span>
               </h1>
               <p className="max-w-xl text-sm text-white/70">
                 Invite operators, assign permissions, and keep the marketplace support force humming. Every teammate you add gets instant routing into the admin experience.
@@ -436,7 +436,7 @@ export default function TeamManagement(_props: AdminProps) {
               <div className="flex items-center justify-between border-b border-white/10 px-8 py-6 text-white">
                 <div>
                   <p className="text-xs uppercase tracking-[0.3em] text-white/40">Create teammate</p>
-                  <h2 className="text-2xl font-semibold">Add to Uniti Command</h2>
+                  <h2 className="text-2xl font-semibold">Add to Unitiv Command</h2>
                 </div>
                 <button
                   onClick={() => setShowAddModal(false)}

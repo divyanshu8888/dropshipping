@@ -28,7 +28,7 @@ export default async function handler(
 
     const freelancerDbId = freelancer[0].id;
 
-    // Attempt MySQL fallback (no Supabase)
+    // Query projects from the SQL backend
     let rows: any[] = [];
     try {
       rows = await query<any>(

@@ -1,138 +1,235 @@
 import Head from 'next/head';
 import Header from '../src/components/Header';
 import Link from 'next/link';
+import { useState } from 'react';
+import { useAuth } from '../src/contexts/AuthContext';
+import { useRouter } from 'next/router';
+
+const clientSteps = [
+  {
+    n: '1',
+    title: 'Create an account',
+    desc: 'Sign up as a client in under 2 minutes. No credit card needed to get started.',
+  },
+  {
+    n: '2',
+    title: 'Post your project',
+    desc: 'Describe what you need — skills, budget, and deadline. Our guided brief makes it easy.',
+  },
+  {
+    n: '3',
+    title: 'Get matched',
+    desc: 'We surface verified freelancers based on your requirements. Review profiles, ratings, and past work.',
+  },
+  {
+    n: '4',
+    title: 'Collaborate & pay safely',
+    desc: 'Work through milestones. Funds sit in escrow and are released only when you approve the work.',
+  },
+];
+
+const freelancerSteps = [
+  {
+    n: '1',
+    title: 'Create an account',
+    desc: 'Sign up as a freelancer. It only takes a few minutes to get your profile live.',
+  },
+  {
+    n: '2',
+    title: 'Build your profile',
+    desc: 'Showcase your skills, portfolio, and hourly rate. A strong profile gets you matched faster.',
+  },
+  {
+    n: '3',
+    title: 'Get discovered',
+    desc: 'Clients browse verified freelancers. We also proactively match you to relevant projects.',
+  },
+  {
+    n: '4',
+    title: 'Deliver & earn',
+    desc: 'Complete milestones, get approved, and receive payment securely — no chasing invoices.',
+  },
+];
+
+const trustPoints = [
+  { icon: '✓', title: 'Verified identities', desc: 'ID & portfolio checks on every freelancer' },
+  { icon: '🔒', title: 'Escrow protection', desc: 'Funds released only when you approve' },
+  { icon: '⚡', title: 'Fast matching', desc: 'Most projects matched within 24h' },
+  { icon: '💬', title: 'Built-in comms', desc: 'Messaging, video calls & file sharing' },
+];
 
 export default function HowItWorksPage() {
+  const [tab, setTab] = useState<'client' | 'freelancer'>('client');
+  const { user } = useAuth();
+  const router = useRouter();
+
+  const handleClientCTA = () => {
+    if (!user) return router.push('/login?mode=signup&role=client&redirect=/projects');
+    if (user.role === 'FREELANCER') return router.push('/freelancers/dashboard');
+    router.push('/projects');
+  };
+
+  const handleFreelancerCTA = () => {
+    if (!user) return router.push('/login?mode=signup&role=freelancer&redirect=/freelancers/profile-setup');
+    if (user.role !== 'FREELANCER') return router.push('/apply');
+    router.push('/freelancers/profile-setup');
+  };
+
+  const steps = tab === 'client' ? clientSteps : freelancerSteps;
+
   return (
     <>
       <Head>
-        <title>How It Works - Uniti</title>
-        <meta name="description" content="Learn how Uniti connects clients with verified freelancers" />
+        <title>How It Works — Unitiv</title>
+        <meta name="description" content="Learn how Unitiv connects clients with verified freelancers. Simple, secure, and professional." />
       </Head>
 
       <div className="min-h-screen bg-[#0B0C0F]">
         <Header />
 
-        {/* Hero Section */}
-        <section className="relative border-b border-white/10 bg-gradient-to-b from-[#0B0C0F] to-[#0B0C0F] pt-24 pb-8">
-          <div className="max-w-4xl mx-auto px-6 text-center">
-            <h1 className="text-xs text-white/60 font-bold tracking-wide uppercase mb-2">How It Works</h1>
-            <p className="text-2xl md:text-3xl font-black text-white leading-tight tracking-tight">
-              Simple. Secure.{" "}
-              <span className="bg-gradient-to-r from-[#00C6FF] to-[#7D2AE8] bg-clip-text text-transparent">Professional.</span>
+        {/* Hero */}
+        <section className="relative pt-24 pb-14 text-center overflow-hidden">
+          <div className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-[500px] h-[300px] rounded-full bg-gradient-to-b from-cyan-500/10 via-violet-500/8 to-transparent blur-3xl" />
+          <div className="relative mx-auto max-w-3xl px-6">
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.06] px-3 py-1 text-[11px] font-semibold uppercase tracking-widest text-white/60 mb-4">
+              How It Works
+            </span>
+            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-white leading-tight">
+              Simple.{' '}
+              <span className="bg-gradient-to-r from-cyan-300 to-violet-300 bg-clip-text text-transparent">Secure.</span>{' '}
+              Professional.
+            </h1>
+            <p className="mt-4 text-base text-white/60 max-w-lg mx-auto">
+              Whether you're hiring talent or offering your skills, Unitiv makes it straightforward.
             </p>
+
+            {/* Tab toggle */}
+            <div className="mt-8 inline-flex rounded-full border border-white/12 bg-white/[0.05] p-1">
+              <button
+                onClick={() => setTab('client')}
+                className={`rounded-full px-5 py-2 text-sm font-semibold transition-all ${
+                  tab === 'client' ? 'bg-gradient-to-r from-cyan-400 to-violet-500 text-white shadow-lg' : 'text-white/55 hover:text-white/80'
+                }`}
+              >
+                I'm a Client
+              </button>
+              <button
+                onClick={() => setTab('freelancer')}
+                className={`rounded-full px-5 py-2 text-sm font-semibold transition-all ${
+                  tab === 'freelancer' ? 'bg-gradient-to-r from-cyan-400 to-violet-500 text-white shadow-lg' : 'text-white/55 hover:text-white/80'
+                }`}
+              >
+                I'm a Freelancer
+              </button>
+            </div>
           </div>
         </section>
 
-        <div className="max-w-4xl mx-auto px-6 py-12">
-
-          <div className="space-y-8">
-            {/* Step 1 */}
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
-              <div className="flex items-start gap-6">
-                <div className="w-16 h-16 bg-gradient-to-r from-cyan-400 to-violet-500 rounded-full flex items-center justify-center text-2xl font-bold text-white flex-shrink-0">
-                  1
+        {/* Steps */}
+        <section className="mx-auto max-w-4xl px-6 pb-16">
+          <div className="space-y-5">
+            {steps.map((step) => (
+              <div
+                key={step.n}
+                className="flex items-start gap-6 rounded-2xl border border-white/10 bg-white/[0.04] p-7 backdrop-blur-sm transition hover:border-white/20 hover:bg-white/[0.06]"
+              >
+                <div className="grid h-12 w-12 flex-shrink-0 place-items-center rounded-full bg-gradient-to-br from-cyan-400 to-violet-500 text-lg font-extrabold text-white shadow-lg shadow-cyan-950/30">
+                  {step.n}
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-white mb-3">Post Your Project</h2>
-                  <p className="text-gray-300 leading-relaxed">
-                    Create a detailed project brief with requirements, timeline, and budget.
-                    Use our guided form to ensure nothing is missed. Request a custom quote from verified experts.
-                  </p>
+                  <h2 className="text-lg font-bold text-white">{step.title}</h2>
+                  <p className="mt-1 text-sm text-white/60 leading-relaxed">{step.desc}</p>
                 </div>
               </div>
-            </div>
-
-            {/* Step 2 */}
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
-              <div className="flex items-start gap-6">
-                <div className="w-16 h-16 bg-gradient-to-r from-cyan-400 to-violet-500 rounded-full flex items-center justify-center text-2xl font-bold text-white flex-shrink-0">
-                  2
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-white mb-3">Get Matched</h2>
-                  <p className="text-gray-300 leading-relaxed">
-                    Our platform matches you with verified professionals based on skills, portfolio, and ratings.
-                    Review profiles, past work, and client testimonials before selecting your expert.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Step 3 */}
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
-              <div className="flex items-start gap-6">
-                <div className="w-16 h-16 bg-gradient-to-r from-cyan-400 to-violet-500 rounded-full flex items-center justify-center text-2xl font-bold text-white flex-shrink-0">
-                  3
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-white mb-3">Collaborate Securely</h2>
-                  <p className="text-gray-300 leading-relaxed">
-                    Work together through our platform with built-in messaging, file sharing, and milestone tracking.
-                    Payments are held securely in escrow until you approve deliverables.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Step 4 */}
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
-              <div className="flex items-start gap-6">
-                <div className="w-16 h-16 bg-gradient-to-r from-cyan-400 to-violet-500 rounded-full flex items-center justify-center text-2xl font-bold text-white flex-shrink-0">
-                  4
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-white mb-3">Approve & Pay</h2>
-                  <p className="text-gray-300 leading-relaxed">
-                    Review completed work through our milestone system. Approve quality deliverables
-                    to release payment. Your satisfaction is protected by our quality guarantee.
-                  </p>
-                </div>
-              </div>
-            </div>
+            ))}
           </div>
 
-          <div className="mt-12 bg-gradient-to-r from-cyan-500/20 to-violet-500/20 border border-white/20 rounded-2xl p-8">
-            <h2 className="text-2xl font-bold text-white mb-4">Why Choose Uniti?</h2>
-            <div className="grid md:grid-cols-3 gap-4">
-              <div className="text-center">
-                <div className="text-4xl mb-2">✓</div>
-                <h3 className="font-semibold text-white mb-2">Verified Experts</h3>
-                <p className="text-gray-300 text-sm">ID & portfolio checks</p>
+          {/* CTA for current tab */}
+          <div className="mt-10 text-center">
+            {tab === 'client' ? (
+              <div className="space-y-3">
+                <button
+                  onClick={handleClientCTA}
+                  className="inline-flex h-12 items-center gap-2 rounded-full bg-gradient-to-r from-cyan-400 to-violet-500 px-8 text-sm font-bold text-white shadow-lg shadow-cyan-950/30 transition hover:-translate-y-0.5 hover:opacity-95"
+                >
+                  Post a Project →
+                </button>
+                <p className="text-xs text-white/40">
+                  {user ? 'Go to your project dashboard' : 'Free to post · No obligation · Matched within 24h'}
+                </p>
               </div>
-              <div className="text-center">
-                <div className="text-4xl mb-2">🔒</div>
-                <h3 className="font-semibold text-white mb-2">Secure Payments</h3>
-                <p className="text-gray-300 text-sm">Escrow protection</p>
+            ) : (
+              <div className="space-y-3">
+                <button
+                  onClick={handleFreelancerCTA}
+                  className="inline-flex h-12 items-center gap-2 rounded-full bg-gradient-to-r from-cyan-400 to-violet-500 px-8 text-sm font-bold text-white shadow-lg shadow-cyan-950/30 transition hover:-translate-y-0.5 hover:opacity-95"
+                >
+                  {user?.role === 'FREELANCER' ? 'Update my profile →' : 'Apply as a Freelancer →'}
+                </button>
+                <p className="text-xs text-white/40">
+                  {user ? 'Keep your profile up to date to get more matches' : 'Free to join · No monthly fee · Earn on every project'}
+                </p>
               </div>
-              <div className="text-center">
-                <div className="text-4xl mb-2">⚡</div>
-                <h3 className="font-semibold text-white mb-2">Fast Delivery</h3>
-                <p className="text-gray-300 text-sm">Meeting deadlines</p>
-              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Trust points */}
+        <section className="border-t border-white/10 bg-[#0B0D10] py-14">
+          <div className="mx-auto max-w-5xl px-6">
+            <h2 className="mb-10 text-center text-xl font-bold text-white">
+              Why{' '}
+              <span className="bg-gradient-to-r from-cyan-300 to-violet-300 bg-clip-text text-transparent">Unitiv?</span>
+            </h2>
+            <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-5">
+              {trustPoints.map((p) => (
+                <div key={p.title} className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 text-center">
+                  <div className="mb-2 text-3xl">{p.icon}</div>
+                  <h3 className="text-sm font-bold text-white">{p.title}</h3>
+                  <p className="mt-1 text-xs text-white/55">{p.desc}</p>
+                </div>
+              ))}
             </div>
           </div>
+        </section>
 
-          <div className="mt-8 text-center">
-            <Link href="/freelancers" className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-cyan-400 to-violet-500 text-white rounded-xl font-semibold hover:opacity-90 transition">
-              Browse Freelancers
-            </Link>
+        {/* Bottom CTA banner */}
+        <section className="mx-auto max-w-4xl px-6 py-16">
+          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-violet-500/10 p-8 md:p-10 text-center shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_80%_at_50%_0%,rgba(0,198,255,0.08),transparent)]" />
+            <p className="relative text-xs font-semibold uppercase tracking-widest text-white/40 mb-2">Need help choosing?</p>
+            <h2 className="relative text-2xl md:text-3xl font-extrabold text-white tracking-tight">
+              Didn't find the perfect match?{' '}
+              <span className="bg-gradient-to-r from-cyan-300 to-violet-300 bg-clip-text text-transparent">We'll shortlist great freelancers for you.</span>
+            </h2>
+            <p className="relative mt-2 text-sm text-white/55">
+              Tell us what you need, and our team will send you a few vetted options.
+            </p>
+            <div className="relative mt-6 flex flex-wrap items-center justify-center gap-3">
+              <div className="flex flex-wrap justify-center gap-2 mb-4 w-full">
+                {['✨ We do the matching', '✓ Identity verified', '🔒 Escrow-ready'].map((tag) => (
+                  <span key={tag} className="rounded-full border border-white/15 bg-white/[0.06] px-3 py-1 text-xs text-white/70">{tag}</span>
+                ))}
+              </div>
+              <button
+                onClick={handleClientCTA}
+                className="inline-flex h-11 items-center gap-2 rounded-full bg-gradient-to-r from-cyan-400 to-violet-500 px-6 text-sm font-bold text-white shadow-lg transition hover:-translate-y-0.5"
+              >
+                Post a Project →
+              </button>
+              <Link
+                href="/contact"
+                className="inline-flex h-11 items-center gap-2 rounded-full border border-white/20 bg-white/[0.06] px-6 text-sm font-semibold text-white/85 transition hover:bg-white/[0.1] hover:text-white"
+              >
+                💬 Talk to a talent advisor
+              </Link>
+            </div>
+            <p className="relative mt-4 text-[10px] uppercase tracking-widest text-white/30">
+              Free to post · No obligation · Most projects matched within 24h
+            </p>
           </div>
-
-          <div className="mt-8 text-center">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm rounded-full bg-white/5 border border-white/10 text-white/90 hover:bg-white/10 hover:text-white transition-colors"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-              Back to Home
-            </Link>
-          </div>
-        </div>
+        </section>
       </div>
     </>
   );
 }
-

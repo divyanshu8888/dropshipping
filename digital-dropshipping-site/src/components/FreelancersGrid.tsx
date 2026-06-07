@@ -242,7 +242,7 @@ export default function FreelancersGrid({
                     </svg>
                     {isNewFreelancer ? (
                       <span className="rounded-full border border-cyan-300/35 bg-cyan-400/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-100">
-                        New to Uniti
+                        New to Unitiv
                       </span>
                     ) : (
                       <>
@@ -314,7 +314,7 @@ export default function FreelancersGrid({
                       subtitle: freelancer.headline || freelancer.title || undefined,
                       badge: freelancer.country || undefined,
                       meta: isNewFreelancer
-                        ? 'New to Uniti'
+                        ? 'New to Unitiv'
                         : `${formatRating(numOrNull(freelancer.rating))} · ${formatInteger(projectCount)} projects`,
                       category: serviceFilter !== 'all' ? serviceFilter : undefined
                     })}

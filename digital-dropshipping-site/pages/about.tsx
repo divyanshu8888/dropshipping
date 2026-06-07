@@ -6,8 +6,8 @@ export default function AboutPage() {
   return (
     <>
       <Head>
-        <title>About Us - Uniti</title>
-        <meta name="description" content="Learn about Uniti and our mission to connect verified freelancers with clients" />
+        <title>About Us - Unitiv</title>
+        <meta name="description" content="Learn about Unitiv and our mission to connect verified freelancers with clients" />
       </Head>
 
       <div className="min-h-screen bg-[#0B0C0F]">
@@ -18,7 +18,7 @@ export default function AboutPage() {
           <div className="max-w-4xl mx-auto px-6 text-center">
             <h1 className="text-xs text-white/60 font-bold tracking-wide uppercase mb-2">About Us</h1>
             <p className="text-2xl md:text-3xl font-black text-white leading-tight tracking-tight">
-              Where ideas unite with{" "}
+              Where ideas unite your vision with{" "}
               <span className="bg-gradient-to-r from-[#00C6FF] to-[#7D2AE8] bg-clip-text text-transparent">expert talent</span>
             </p>
           </div>
@@ -30,8 +30,8 @@ export default function AboutPage() {
             <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8 mb-8">
               <h2 className="text-2xl font-bold text-white mb-4">Our Mission</h2>
               <p className="text-gray-300 leading-relaxed">
-                Uniti was born from a simple idea: <strong>Unity</strong> (bringing people together) + <strong>Idea</strong>
-                {' '}(creative solutions) = Uniti. We connect verified professionals with clients worldwide, creating a secure,
+                Unitiv was born from a simple idea: <strong>Unity</strong> (bringing people together) + <strong>Idea</strong>
+                {' '}(creative solutions) = Unitiv. We connect verified professionals with clients worldwide, creating a secure,
                 transparent marketplace for quality work delivery.
               </p>
             </div>
@@ -76,7 +76,7 @@ export default function AboutPage() {
               <h2 className="text-2xl font-bold text-white mb-4">Get Started</h2>
               <p className="text-gray-300 leading-relaxed mb-6">
                 Whether you're a client looking for expert help or a freelancer ready to grow your business,
-                Uniti is here to support your journey.
+                Unitiv is here to support your journey.
               </p>
               <div className="flex flex-wrap gap-4">
                 <Link href="/freelancers" className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-cyan-400 to-violet-500 text-white rounded-xl font-semibold hover:opacity-90 transition">

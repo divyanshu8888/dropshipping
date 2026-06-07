@@ -4,6 +4,7 @@ import { useRouter } from 'next/router';
 import dynamic from 'next/dynamic';
 const Header = dynamic(() => import('../../src/components/Header'));
 import { useAuth } from '../../src/contexts/AuthContext';
+import { useRoleGuard } from '../../src/lib/useRoleGuard';
 import { useToast } from '../../src/components/Toast';
 import { 
   Calendar,
@@ -37,7 +38,9 @@ import {
   MapPin,
   Lock,
   Trash2,
-  Info
+  Info,
+  Mail,
+  Phone
 } from 'lucide-react';
 
 // Milestone definitions from template
@@ -317,6 +320,7 @@ const TIMEZONES = [
 export default function FreelancerDashboard() {
   const router = useRouter();
   const { user, isFreelancer, loading: authLoading, verified: authVerified } = useAuth();
+  useRoleGuard(['FREELANCER'], { CLIENT: '/clients/dashboard', ADMIN: '/admin', TEAM_MEMBER: '/admin' });
   const { addToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
@@ -326,6 +330,16 @@ export default function FreelancerDashboard() {
   const [totalReviews, setTotalReviews] = useState<number | null>(null);
   const [profileName, setProfileName] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [profileEditMode, setProfileEditMode] = useState(false);
+  const [emailChangeMode, setEmailChangeMode] = useState(false);
+  const [phoneChangeMode, setPhoneChangeMode] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [newPhone, setNewPhone] = useState('');
+  const [emailOtp, setEmailOtp] = useState('');
+  const [phoneOtp, setPhoneOtp] = useState('');
+  const [emailOtpSent, setEmailOtpSent] = useState(false);
+  const [phoneOtpSent, setPhoneOtpSent] = useState(false);
+  const [contactChangeSaving, setContactChangeSaving] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const [editingMilestone, setEditingMilestone] = useState<{ id: string; field: 'description' | 'dueDate' } | null>(null);
@@ -664,7 +678,7 @@ export default function FreelancerDashboard() {
       if (match) {
         return { 
           valid: false, 
-          error: `Payment information cannot be shared. Use Uniti's payment system instead.` 
+          error: `Payment information cannot be shared. Use Unitiv's payment system instead.` 
         };
       }
     }
@@ -674,7 +688,7 @@ export default function FreelancerDashboard() {
     if (currencyMatch && message.split(/\s+/).length <= 3) {
       return { 
         valid: false, 
-        error: `Payment information cannot be shared. Use Uniti's payment system instead.` 
+        error: `Payment information cannot be shared. Use Unitiv's payment system instead.` 
       };
     }
 
@@ -685,7 +699,7 @@ export default function FreelancerDashboard() {
         // Mask phone number for privacy
         return {
           valid: false,
-          error: `Phone numbers cannot be shared. Keep communication within Uniti.`
+          error: `Phone numbers cannot be shared. Keep communication within Unitiv.`
         };
       }
     }
@@ -695,7 +709,7 @@ export default function FreelancerDashboard() {
     if (emailMatch) {
       return {
         valid: false,
-        error: `Email addresses cannot be shared. Keep communication within Uniti.`
+        error: `Email addresses cannot be shared. Keep communication within Unitiv.`
       };
     }
 
@@ -704,7 +718,7 @@ export default function FreelancerDashboard() {
       if (pattern.test(message)) {
         return { 
           valid: false, 
-          error: 'Contact information cannot be shared. Keep communication within Uniti.' 
+          error: 'Contact information cannot be shared. Keep communication within Unitiv.' 
         };
       }
     }
@@ -715,7 +729,7 @@ export default function FreelancerDashboard() {
     if (spelledNumberMatches.length >= 2 && words.length <= 5) {
       return { 
         valid: false, 
-        error: 'Contact information cannot be shared. Keep communication within Uniti.' 
+        error: 'Contact information cannot be shared. Keep communication within Unitiv.' 
       };
     }
 
@@ -737,7 +751,7 @@ export default function FreelancerDashboard() {
         if (!hasPaymentContext) {
           return { 
             valid: false, 
-            error: 'Phone numbers cannot be shared. Keep communication within Uniti.' 
+            error: 'Phone numbers cannot be shared. Keep communication within Unitiv.' 
           };
         }
       }
@@ -756,7 +770,7 @@ export default function FreelancerDashboard() {
         if (totalChars > 0 && numberChars / totalChars > 0.5) {
           return { 
             valid: false, 
-            error: 'Phone numbers cannot be shared. Keep communication within Uniti.' 
+            error: 'Phone numbers cannot be shared. Keep communication within Unitiv.' 
           };
         }
       }
@@ -773,7 +787,7 @@ export default function FreelancerDashboard() {
         if (digitGroups && digitGroups.length >= 2) {
           return { 
             valid: false, 
-            error: 'Phone numbers cannot be shared. Keep communication within Uniti.' 
+            error: 'Phone numbers cannot be shared. Keep communication within Unitiv.' 
           };
         }
       }
@@ -1379,7 +1393,7 @@ export default function FreelancerDashboard() {
   return (
     <>
       <Head>
-        <title>Freelancer Dashboard - Uniti</title>
+        <title>Freelancer Dashboard - Unitiv</title>
         <meta name="description" content="Manage your projects, communicate with clients, and track your progress" />
       </Head>
 
@@ -1398,7 +1412,7 @@ export default function FreelancerDashboard() {
                 <div className="flex items-center gap-3 mt-2">
                   <p className="text-white/70">Welcome back, {displayName}</p>
                   <button
-                    onClick={() => setActiveTab('availability')}
+                    onClick={() => setActiveTab('calendar')}
                     className={`px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide flex items-center space-x-2 transition-all hover:scale-105 ${
                       !availability.isAvailable 
                         ? 'bg-rose-500/15 text-rose-300 border border-rose-400/20 hover:bg-rose-500/20' 
@@ -1412,17 +1426,17 @@ export default function FreelancerDashboard() {
                 </div>
               <div className="flex items-center space-x-3">
                 <button
-                  onClick={() => router.push('/products')}
+                  onClick={() => router.push('/freelancers')}
                   className="rounded-xl border border-white/10 bg-white/5 text-white/70 px-4 py-2 text-sm hover:bg-white/10 transition"
                 >
                   New Proposal
                 </button>
                 <button
-                  onClick={() => router.push('/products')}
+                  onClick={() => setActiveTab('playbooks')}
                   className="rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold px-4 py-2 text-sm flex items-center space-x-2 transition"
                 >
                   <Plus className="w-4 h-4" />
-                  <span>Create Playbook</span>
+                  <span>Playbooks</span>
                 </button>
               </div>
             </div>
@@ -1473,6 +1487,27 @@ export default function FreelancerDashboard() {
           {/* Tab Content */}
           {activeTab === 'overview' && (
             <div className="space-y-6">
+
+              {/* Welcome Banner — only shown when user has no projects yet */}
+              {projects.length === 0 && (
+                <div className="relative rounded-2xl overflow-hidden border border-cyan-500/30 bg-gradient-to-r from-cyan-500/10 via-violet-500/10 to-transparent backdrop-blur-sm p-6">
+                  <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 to-violet-500/5 pointer-events-none" />
+                  <div className="relative flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500/30 to-violet-500/30 flex items-center justify-center shrink-0 text-2xl">
+                      👋
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-bold text-white mb-1">
+                        Welcome to Unitiv{displayName ? `, ${displayName}` : ''}!
+                      </h2>
+                      <p className="text-sm text-white/60 max-w-xl">
+                        You&apos;re all set up. Complete the steps below to land your first project — it only takes a few minutes.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* KPI Metrics Grid — premium cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
 
@@ -1488,7 +1523,11 @@ export default function FreelancerDashboard() {
                     {dashboardMetrics ? formatCurrency((dashboardMetrics.openMilestones.totalCents || 0) / 100) : '$0'}
                   </p>
                   <p className="text-[11px] font-medium text-white/60 mb-1">Open Milestones</p>
-                  <p className="text-[10px] text-white/40">{dashboardMetrics?.openMilestones.dueIn7Days || 0} due in 7 days</p>
+                  <p className="text-[10px] text-white/40">
+                    {(dashboardMetrics?.openMilestones.totalCents || 0) === 0
+                      ? 'Win projects to see milestones'
+                      : `${dashboardMetrics?.openMilestones.dueIn7Days || 0} due in 7 days`}
+                  </p>
                   <div className="metric-bar bg-gradient-to-r from-cyan-400 to-blue-500" />
                 </button>
 
@@ -1503,9 +1542,10 @@ export default function FreelancerDashboard() {
                   <p className="text-xl font-bold text-white mb-0.5 count-animate">
                     {dashboardMetrics ? formatCurrency((dashboardMetrics.earnings.unbilledCents || 0) / 100) : '$0'}
                   </p>
-                  <p className="text-[11px] font-medium text-white/60 mb-2">Unbilled / In Escrow</p>
-                  {/* Earnings split bar */}
-                  {dashboardMetrics && (() => {
+                  <p className="text-[11px] font-medium text-white/60 mb-1">Unbilled / In Escrow</p>
+                  {(dashboardMetrics?.earnings.unbilledCents || 0) === 0 && (dashboardMetrics?.earnings.escrowCents || 0) === 0 ? (
+                    <p className="text-[10px] text-white/40">Complete projects to earn</p>
+                  ) : dashboardMetrics && (() => {
                     const total = (dashboardMetrics.earnings.unbilledCents || 0) + (dashboardMetrics.earnings.escrowCents || 0) + (dashboardMetrics.earnings.pendingCents || 0) || 1;
                     const unbilledW = ((dashboardMetrics.earnings.unbilledCents || 0) / total * 100).toFixed(1);
                     const escrowW = ((dashboardMetrics.earnings.escrowCents || 0) / total * 100).toFixed(1);
@@ -1542,10 +1582,13 @@ export default function FreelancerDashboard() {
                     {dashboardMetrics ? dashboardMetrics.onTimeDelivery.percentage : 0}%
                   </p>
                   <p className="text-[11px] font-medium text-white/60 mb-1">On-time Delivery</p>
-                  {/* Mini progress bar */}
-                  <div className="h-1.5 rounded-full bg-white/10 mt-1 overflow-hidden">
-                    <div className="h-full rounded-full bg-gradient-to-r from-amber-400 to-orange-400 transition-all" style={{ width: `${dashboardMetrics?.onTimeDelivery.percentage ?? 0}%` }} />
-                  </div>
+                  {(dashboardMetrics?.onTimeDelivery.percentage ?? 0) === 0 ? (
+                    <p className="text-[10px] text-white/40">Deliver projects on time</p>
+                  ) : (
+                    <div className="h-1.5 rounded-full bg-white/10 mt-1 overflow-hidden">
+                      <div className="h-full rounded-full bg-gradient-to-r from-amber-400 to-orange-400 transition-all" style={{ width: `${dashboardMetrics?.onTimeDelivery.percentage ?? 0}%` }} />
+                    </div>
+                  )}
                   <div className="metric-bar bg-gradient-to-r from-amber-400 to-orange-500" />
                 </div>
 
@@ -1557,9 +1600,16 @@ export default function FreelancerDashboard() {
                   <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-fuchsia-500/15 mb-3">
                     <Award className="w-4 h-4 text-fuchsia-300" />
                   </div>
-                  <p className="text-xl font-bold text-white mb-0.5">
-                    {dashboardMetrics ? dashboardMetrics.profileStrength.percentage : 0}%
-                  </p>
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <p className="text-xl font-bold text-white">
+                      {dashboardMetrics ? dashboardMetrics.profileStrength.percentage : 0}%
+                    </p>
+                    {(dashboardMetrics?.profileStrength.percentage ?? 0) < 100 && (
+                      <span className="text-[10px] font-semibold text-fuchsia-400 bg-fuchsia-500/15 px-1.5 py-0.5 rounded-full border border-fuchsia-500/30">
+                        Improve →
+                      </span>
+                    )}
+                  </div>
                   <p className="text-[11px] font-medium text-white/60 mb-1">Profile Strength</p>
                   <div className="h-1.5 rounded-full bg-white/10 mt-1 overflow-hidden">
                     <div className="h-full rounded-full bg-gradient-to-r from-fuchsia-400 to-purple-500 transition-all" style={{ width: `${dashboardMetrics?.profileStrength.percentage ?? 0}%` }} />
@@ -1577,11 +1627,101 @@ export default function FreelancerDashboard() {
                   </p>
                   <p className="text-[11px] font-medium text-white/60 mb-1">Win Rate</p>
                   <p className="text-[10px] text-white/40">
-                    {dashboardMetrics ? `${dashboardMetrics.winRate.won}/${dashboardMetrics.winRate.total} proposals` : '0/0'}
+                    {dashboardMetrics && dashboardMetrics.winRate.total > 0
+                      ? `${dashboardMetrics.winRate.won}/${dashboardMetrics.winRate.total} proposals`
+                      : 'Send proposals to track'}
                   </p>
                   <div className="metric-bar bg-gradient-to-r from-indigo-400 to-blue-500" />
                 </div>
               </div>
+
+              {/* Getting Started Checklist — shown only when user has no projects */}
+              {projects.length === 0 && (
+                <div className="rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-500/5 to-cyan-500/5 backdrop-blur-sm p-6">
+                  <div className="flex items-center gap-3 mb-5">
+                    <div className="w-8 h-8 rounded-lg bg-violet-500/20 flex items-center justify-center">
+                      <CheckCircle className="w-4 h-4 text-violet-400" />
+                    </div>
+                    <div>
+                      <h2 className="text-base font-bold text-white">Get Started Checklist</h2>
+                      <p className="text-xs text-white/50">Complete these steps to land your first project</p>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    {/* Step 1 — always done */}
+                    <div className="flex items-center gap-3 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                      <div className="w-6 h-6 rounded-full bg-emerald-500/20 border-2 border-emerald-500 flex items-center justify-center shrink-0">
+                        <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-emerald-300 line-through decoration-emerald-500/50">Create your account</p>
+                        <p className="text-xs text-white/40">You&apos;re in — account created successfully</p>
+                      </div>
+                      <span className="text-xs font-semibold text-emerald-400 bg-emerald-500/15 px-2 py-0.5 rounded-full">Done</span>
+                    </div>
+
+                    {/* Step 2 — Complete profile */}
+                    <button
+                      onClick={() => setActiveTab('profile')}
+                      className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/10 hover:border-violet-500/40 hover:bg-violet-500/5 transition-all text-left group"
+                    >
+                      <div className="w-6 h-6 rounded-full border-2 border-white/20 group-hover:border-violet-400 flex items-center justify-center shrink-0 transition-colors">
+                        <div className="w-2 h-2 rounded-full bg-white/20 group-hover:bg-violet-400 transition-colors" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-white/80 group-hover:text-white transition-colors">Complete your profile</p>
+                        <p className="text-xs text-white/40">Add your headline, bio, skills and hourly rate</p>
+                      </div>
+                      <span className="text-xs text-violet-400 opacity-0 group-hover:opacity-100 transition-opacity">Go →</span>
+                    </button>
+
+                    {/* Step 3 — Add portfolio */}
+                    <button
+                      onClick={() => setActiveTab('profile')}
+                      className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/10 hover:border-cyan-500/40 hover:bg-cyan-500/5 transition-all text-left group"
+                    >
+                      <div className="w-6 h-6 rounded-full border-2 border-white/20 group-hover:border-cyan-400 flex items-center justify-center shrink-0 transition-colors">
+                        <div className="w-2 h-2 rounded-full bg-white/20 group-hover:bg-cyan-400 transition-colors" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-white/80 group-hover:text-white transition-colors">Add portfolio samples</p>
+                        <p className="text-xs text-white/40">Showcase past work to attract more clients</p>
+                      </div>
+                      <span className="text-xs text-cyan-400 opacity-0 group-hover:opacity-100 transition-opacity">Go →</span>
+                    </button>
+
+                    {/* Step 4 — Browse projects */}
+                    <a
+                      href="/freelancers"
+                      className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/10 hover:border-blue-500/40 hover:bg-blue-500/5 transition-all group"
+                    >
+                      <div className="w-6 h-6 rounded-full border-2 border-white/20 group-hover:border-blue-400 flex items-center justify-center shrink-0 transition-colors">
+                        <div className="w-2 h-2 rounded-full bg-white/20 group-hover:bg-blue-400 transition-colors" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-white/80 group-hover:text-white transition-colors">Browse open projects</p>
+                        <p className="text-xs text-white/40">Find projects that match your skills</p>
+                      </div>
+                      <span className="text-xs text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity">Go →</span>
+                    </a>
+
+                    {/* Step 5 — Send proposal */}
+                    <a
+                      href="/freelancers"
+                      className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/10 hover:border-amber-500/40 hover:bg-amber-500/5 transition-all group"
+                    >
+                      <div className="w-6 h-6 rounded-full border-2 border-white/20 group-hover:border-amber-400 flex items-center justify-center shrink-0 transition-colors">
+                        <div className="w-2 h-2 rounded-full bg-white/20 group-hover:bg-amber-400 transition-colors" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-white/80 group-hover:text-white transition-colors">Send your first proposal</p>
+                        <p className="text-xs text-white/40">Apply to a project and start your freelance journey</p>
+                      </div>
+                      <span className="text-xs text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity">Go →</span>
+                    </a>
+                  </div>
+                </div>
+              )}
 
               {/* Recent Activity & Quick Stats */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1594,10 +1734,55 @@ export default function FreelancerDashboard() {
                   </div>
                   <div className="space-y-4">
                     {projects.length === 0 ? (
-                      <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-sm text-white/40 space-y-2">
-                        <FileText className="w-10 h-10 text-white/20 mx-auto" />
-                        <p>No recent activity</p>
-                        <p>Projects will appear here once assigned</p>
+                      <div className="space-y-3">
+                        {/* Empty state action cards */}
+                        <button
+                          onClick={() => setActiveTab('profile')}
+                          className="w-full flex items-center gap-4 p-4 rounded-xl border border-white/10 bg-white/[0.03] hover:border-fuchsia-500/40 hover:bg-fuchsia-500/5 transition-all text-left group"
+                        >
+                          <div className="w-10 h-10 rounded-xl bg-fuchsia-500/15 flex items-center justify-center shrink-0 group-hover:bg-fuchsia-500/25 transition-colors">
+                            <User className="w-5 h-5 text-fuchsia-400" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-white/90">Complete your profile</p>
+                            <p className="text-xs text-white/50 mt-0.5">A complete profile gets 3x more views from clients</p>
+                          </div>
+                          <span className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30 group-hover:bg-fuchsia-500/30 transition-colors shrink-0">
+                            Go to Profile
+                          </span>
+                        </button>
+
+                        <a
+                          href="/freelancers"
+                          className="flex items-center gap-4 p-4 rounded-xl border border-white/10 bg-white/[0.03] hover:border-cyan-500/40 hover:bg-cyan-500/5 transition-all group"
+                        >
+                          <div className="w-10 h-10 rounded-xl bg-cyan-500/15 flex items-center justify-center shrink-0 group-hover:bg-cyan-500/25 transition-colors">
+                            <Globe className="w-5 h-5 text-cyan-400" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-white/90">Browse open projects</p>
+                            <p className="text-xs text-white/50 mt-0.5">New projects are posted every day — find your first match</p>
+                          </div>
+                          <span className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 group-hover:bg-cyan-500/30 transition-colors shrink-0">
+                            Browse Projects
+                          </span>
+                        </a>
+
+                        <a
+                          href="/freelancers"
+                          className="flex items-center gap-4 p-4 rounded-xl border border-white/10 bg-white/[0.03] hover:border-blue-500/40 hover:bg-blue-500/5 transition-all group"
+                        >
+                          <div className="w-10 h-10 rounded-xl bg-blue-500/15 flex items-center justify-center shrink-0 group-hover:bg-blue-500/25 transition-colors">
+                            <Send className="w-5 h-5 text-blue-400" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-white/90">Send a proposal</p>
+                            <p className="text-xs text-white/50 mt-0.5">Write a compelling proposal to stand out from the crowd</p>
+                          </div>
+                          <span className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-500/20 text-blue-300 border border-blue-500/30 group-hover:bg-blue-500/30 transition-colors shrink-0">
+                            Get Started
+                          </span>
+                        </a>
                       </div>
                     ) : (
                       projects.slice(0, 5).map(project => (
@@ -1613,7 +1798,7 @@ export default function FreelancerDashboard() {
                               'bg-gray-400'
                             }`}></div>
                             <div>
-                              <p 
+                              <p
                                 onClick={() => {
                                   setSelectedProject(project);
                                   setActiveTab('inbox');
@@ -1623,16 +1808,16 @@ export default function FreelancerDashboard() {
                                 {project.title}
                               </p>
                               <p className="text-xs text-white/50">{project.client} • {formatDate(project.createdAt)}</p>
-                </div>
-              </div>
+                            </div>
+                          </div>
                           <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(project.status)}`}>
                             {formatStatusLabel(project.status)}
                           </span>
-            </div>
+                        </div>
                       ))
                     )}
+                  </div>
                 </div>
-              </div>
 
                 <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-sm p-6">
                   <h2 className="text-lg font-semibold text-white mb-4 flex items-center space-x-2">
@@ -1640,23 +1825,63 @@ export default function FreelancerDashboard() {
                     <span>Quick Stats</span>
                   </h2>
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-white/70">Total Projects</span>
-                      <span className="font-semibold">{projects.length}</span>
-                  </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-white/70">Messages</span>
-                      <span className="font-semibold">{metrics.totalMessages}</span>
-                  </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-white/70">Unread</span>
-                      <span className="font-semibold text-cyan-400">{metrics.unreadMessages}</span>
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <button onClick={() => setActiveTab('pipeline')} className="text-sm text-white/70 hover:text-cyan-400 transition-colors text-left">Total Projects</button>
+                        <span className="font-semibold">{projects.length}</span>
+                      </div>
+                      {projects.length === 0 && (
+                        <p className="text-[10px] text-white/35 mt-0.5">
+                          <a href="/freelancers" className="text-cyan-400/70 hover:text-cyan-400 underline underline-offset-2 transition-colors">Browse open projects</a> to get started
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <button onClick={() => setActiveTab('inbox')} className="text-sm text-white/70 hover:text-cyan-400 transition-colors text-left">Messages</button>
+                        <span className="font-semibold">{metrics.totalMessages}</span>
+                      </div>
+                      {metrics.totalMessages === 0 && (
+                        <p className="text-[10px] text-white/35 mt-0.5">Messages from clients appear here</p>
+                      )}
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-white/70">Deliverables</span>
-                      <span className="font-semibold">
-                        {projects.reduce((sum, p) => sum + (p.deliverables?.length || 0), 0)}
-                      </span>
+                      <button onClick={() => setActiveTab('inbox')} className="text-sm text-white/70 hover:text-cyan-400 transition-colors text-left">Unread</button>
+                      <span className={`font-semibold ${metrics.unreadMessages > 0 ? 'text-cyan-400' : ''}`}>{metrics.unreadMessages}</span>
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-white/70">Deliverables</span>
+                        <span className="font-semibold">
+                          {projects.reduce((sum, p) => sum + (p.deliverables?.length || 0), 0)}
+                        </span>
+                      </div>
+                      {projects.reduce((sum, p) => sum + (p.deliverables?.length || 0), 0) === 0 && (
+                        <p className="text-[10px] text-white/35 mt-0.5">Uploaded files will appear here</p>
+                      )}
+                    </div>
+                    <div className="pt-3 mt-1 border-t border-white/10">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-white/30 mb-3">Profile</p>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-white/70">Strength</span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold">{dashboardMetrics?.profileStrength.percentage ?? 0}%</span>
+                          {(dashboardMetrics?.profileStrength.percentage ?? 0) < 100 && (
+                            <button
+                              onClick={() => setActiveTab('profile')}
+                              className="text-[10px] font-semibold text-fuchsia-400 hover:text-fuchsia-300 transition-colors"
+                            >
+                              Improve →
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-white/10 mt-2 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-fuchsia-400 to-violet-500 transition-all duration-500"
+                          style={{ width: `${dashboardMetrics?.profileStrength.percentage ?? 0}%` }}
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -2617,7 +2842,7 @@ export default function FreelancerDashboard() {
               <div className="px-6 py-4 border-b border-white/10 bg-white/5 flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-white">Your Playbooks</h2>
                 <button
-                  onClick={() => router.push('/products')}
+                  onClick={() => router.push('/freelancers/profile-setup')}
                   className="rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold px-4 py-2 text-sm flex items-center space-x-2 transition"
                 >
                   <Plus className="w-4 h-4" />
@@ -2627,19 +2852,19 @@ export default function FreelancerDashboard() {
               <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-sm text-white/40 space-y-2 m-4">
                 <Code className="w-12 h-12 text-white/20 mx-auto" />
                 <p className="text-white/50 font-medium text-base">No playbooks yet</p>
-                <p>Create reusable service templates to streamline proposals and sales.</p>
+                <p>Create reusable proposal templates to streamline how you pitch your services to clients.</p>
                 <div className="flex items-center justify-center gap-3">
                   <button
-                    onClick={() => router.push('/products')}
+                    onClick={() => router.push('/freelancers/profile-setup')}
                     className="rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold px-6 py-2.5 transition"
                   >
                     Create Playbook
                   </button>
                   <button
-                    onClick={() => setActiveTab('pipeline')}
+                    onClick={() => router.push('/freelancers')}
                     className="rounded-xl border border-white/10 bg-white/5 text-white/70 px-6 py-2.5 hover:bg-white/10 transition"
                   >
-                    New Proposal
+                    Browse Projects
                   </button>
                 </div>
               </div>
@@ -2760,10 +2985,16 @@ export default function FreelancerDashboard() {
                                     <span className="text-xs text-white/50">
                                       {formatDate(deliverable.uploadedAt)}
                                     </span>
-                                    <button className="text-cyan-300 hover:text-cyan-200 text-sm flex items-center space-x-1 transition-colors">
+                                    <a
+                                      href={deliverable.url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      download
+                                      className="text-cyan-300 hover:text-cyan-200 text-sm flex items-center space-x-1 transition-colors"
+                                    >
                                       <Download className="w-4 h-4" />
                                       <span>Download</span>
-                                    </button>
+                                    </a>
                                   </div>
                                 </div>
                               ))}
@@ -2786,10 +3017,215 @@ export default function FreelancerDashboard() {
 
           {activeTab === 'profile' && (
             <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-sm p-6">
-              <h2 className="text-lg font-semibold text-white mb-6 flex items-center space-x-2">
-                <User className="w-5 h-5 text-cyan-400" />
-                <span>Edit Profile</span>
-              </h2>
+              {/* Header with Edit toggle */}
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg font-semibold text-white flex items-center space-x-2">
+                  <User className="w-5 h-5 text-cyan-400" />
+                  <span>{profileEditMode ? 'Edit Profile' : 'My Profile'}</span>
+                </h2>
+                {!profileEditMode && (
+                  <button
+                    onClick={() => setProfileEditMode(true)}
+                    className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white/80 hover:bg-white/10 hover:text-white transition"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                    Edit Profile
+                  </button>
+                )}
+              </div>
+
+              {/* Email & Phone — changeable via OTP verification */}
+              <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Email */}
+                <div className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-4">
+                  <p className="text-xs text-white/40 mb-2 flex items-center gap-1">
+                    <Mail className="w-3 h-3" /> Email address
+                  </p>
+                  {!emailChangeMode ? (
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm text-white/80 truncate">{user?.email || '—'}</p>
+                      <button
+                        onClick={() => { setEmailChangeMode(true); setEmailOtpSent(false); setNewEmail(''); setEmailOtp(''); }}
+                        className="shrink-0 text-xs font-semibold text-cyan-400 hover:text-cyan-300 transition"
+                      >
+                        Change
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {!emailOtpSent ? (
+                        <>
+                          <input
+                            type="email"
+                            value={newEmail}
+                            onChange={(e) => setNewEmail(e.target.value)}
+                            placeholder="New email address"
+                            className="w-full bg-white/5 border border-white/10 rounded-lg text-white text-sm px-3 py-2 placeholder:text-white/30 focus:border-cyan-400/70 focus:outline-none"
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              onClick={async () => {
+                                if (!newEmail) return;
+                                setContactChangeSaving(true);
+                                try {
+                                  const res = await fetch('/api/auth/send-change-otp', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ userId: user?.id, type: 'email', newValue: newEmail }),
+                                  });
+                                  if (res.ok) { setEmailOtpSent(true); addToast('Verification code sent to your new email', 'success'); }
+                                  else { const d = await res.json(); addToast(d.error || 'Failed to send code', 'error'); }
+                                } catch { addToast('Network error', 'error'); }
+                                finally { setContactChangeSaving(false); }
+                              }}
+                              disabled={contactChangeSaving || !newEmail}
+                              className="flex-1 text-xs font-semibold bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 rounded-lg px-3 py-1.5 transition disabled:opacity-50"
+                            >
+                              {contactChangeSaving ? 'Sending…' : 'Send code'}
+                            </button>
+                            <button onClick={() => setEmailChangeMode(false)} className="text-xs text-white/40 hover:text-white/70 transition">Cancel</button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-xs text-white/50">Code sent to <span className="text-cyan-400">{newEmail}</span></p>
+                          <input
+                            type="text"
+                            value={emailOtp}
+                            onChange={(e) => setEmailOtp(e.target.value)}
+                            placeholder="Enter 6-digit code"
+                            maxLength={6}
+                            className="w-full bg-white/5 border border-white/10 rounded-lg text-white text-sm px-3 py-2 placeholder:text-white/30 focus:border-cyan-400/70 focus:outline-none tracking-widest"
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              onClick={async () => {
+                                if (!emailOtp) return;
+                                setContactChangeSaving(true);
+                                try {
+                                  const res = await fetch('/api/auth/verify-change-otp', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ userId: user?.id, type: 'email', otp: emailOtp, newValue: newEmail }),
+                                  });
+                                  if (res.ok) {
+                                    addToast('Email updated successfully', 'success');
+                                    setEmailChangeMode(false);
+                                    setEmailOtpSent(false);
+                                    await fetchFreelancerData();
+                                  } else { const d = await res.json(); addToast(d.error || 'Invalid code', 'error'); }
+                                } catch { addToast('Network error', 'error'); }
+                                finally { setContactChangeSaving(false); }
+                              }}
+                              disabled={contactChangeSaving || emailOtp.length < 6}
+                              className="flex-1 text-xs font-semibold bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 rounded-lg px-3 py-1.5 transition disabled:opacity-50"
+                            >
+                              {contactChangeSaving ? 'Verifying…' : 'Verify & update'}
+                            </button>
+                            <button onClick={() => { setEmailOtpSent(false); setEmailOtp(''); }} className="text-xs text-white/40 hover:text-white/70 transition">Back</button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Phone */}
+                <div className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-4">
+                  <p className="text-xs text-white/40 mb-2 flex items-center gap-1">
+                    <Phone className="w-3 h-3" /> Mobile number
+                  </p>
+                  {!phoneChangeMode ? (
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm text-white/80 truncate">{(user as any)?.phone || 'Not set'}</p>
+                      <button
+                        onClick={() => { setPhoneChangeMode(true); setPhoneOtpSent(false); setNewPhone(''); setPhoneOtp(''); }}
+                        className="shrink-0 text-xs font-semibold text-cyan-400 hover:text-cyan-300 transition"
+                      >
+                        Change
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {!phoneOtpSent ? (
+                        <>
+                          <input
+                            type="tel"
+                            value={newPhone}
+                            onChange={(e) => setNewPhone(e.target.value)}
+                            placeholder="+1 234 567 8900"
+                            className="w-full bg-white/5 border border-white/10 rounded-lg text-white text-sm px-3 py-2 placeholder:text-white/30 focus:border-cyan-400/70 focus:outline-none"
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              onClick={async () => {
+                                if (!newPhone) return;
+                                setContactChangeSaving(true);
+                                try {
+                                  const res = await fetch('/api/auth/send-change-otp', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ userId: user?.id, type: 'phone', newValue: newPhone }),
+                                  });
+                                  if (res.ok) { setPhoneOtpSent(true); addToast('Verification code sent to your email', 'success'); }
+                                  else { const d = await res.json(); addToast(d.error || 'Failed to send code', 'error'); }
+                                } catch { addToast('Network error', 'error'); }
+                                finally { setContactChangeSaving(false); }
+                              }}
+                              disabled={contactChangeSaving || !newPhone}
+                              className="flex-1 text-xs font-semibold bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 rounded-lg px-3 py-1.5 transition disabled:opacity-50"
+                            >
+                              {contactChangeSaving ? 'Sending…' : 'Send code'}
+                            </button>
+                            <button onClick={() => setPhoneChangeMode(false)} className="text-xs text-white/40 hover:text-white/70 transition">Cancel</button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-xs text-white/50">Code sent to your <span className="text-cyan-400">current email</span></p>
+                          <input
+                            type="text"
+                            value={phoneOtp}
+                            onChange={(e) => setPhoneOtp(e.target.value)}
+                            placeholder="Enter 6-digit code"
+                            maxLength={6}
+                            className="w-full bg-white/5 border border-white/10 rounded-lg text-white text-sm px-3 py-2 placeholder:text-white/30 focus:border-cyan-400/70 focus:outline-none tracking-widest"
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              onClick={async () => {
+                                if (!phoneOtp) return;
+                                setContactChangeSaving(true);
+                                try {
+                                  const res = await fetch('/api/auth/verify-change-otp', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ userId: user?.id, type: 'phone', otp: phoneOtp, newValue: newPhone }),
+                                  });
+                                  if (res.ok) {
+                                    addToast('Phone number updated successfully', 'success');
+                                    setPhoneChangeMode(false);
+                                    setPhoneOtpSent(false);
+                                    await fetchFreelancerData();
+                                  } else { const d = await res.json(); addToast(d.error || 'Invalid code', 'error'); }
+                                } catch { addToast('Network error', 'error'); }
+                                finally { setContactChangeSaving(false); }
+                              }}
+                              disabled={contactChangeSaving || phoneOtp.length < 6}
+                              className="flex-1 text-xs font-semibold bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 rounded-lg px-3 py-1.5 transition disabled:opacity-50"
+                            >
+                              {contactChangeSaving ? 'Verifying…' : 'Verify & update'}
+                            </button>
+                            <button onClick={() => { setPhoneOtpSent(false); setPhoneOtp(''); }} className="text-xs text-white/40 hover:text-white/70 transition">Back</button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {profileEditMode ? (
               <form
                 onSubmit={async (e) => {
                   e.preventDefault();
@@ -2798,15 +3234,13 @@ export default function FreelancerDashboard() {
                     const res = await fetch('/api/freelancers/update-profile', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        freelancerId: user?.id,
-                        ...profileForm,
-                      }),
+                      body: JSON.stringify({ freelancerId: user?.id, ...profileForm }),
                     });
                     if (res.ok) {
                       const data = await res.json();
                       setProfileName(data?.freelancer?.display_name || profileName);
                       addToast('Profile updated successfully', 'success');
+                      setProfileEditMode(false);
                       await fetchFreelancerData();
                     } else {
                       const error = await res.json();
@@ -2830,7 +3264,7 @@ export default function FreelancerDashboard() {
                     required
                     placeholder="Your name"
                   />
-        </div>
+                </div>
                 <div>
                   <label className="block text-sm font-medium text-white mb-2">Headline</label>
                   <input
@@ -2841,25 +3275,50 @@ export default function FreelancerDashboard() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-white mb-2">Title</label>
+                  <label className="block text-sm font-medium text-white mb-2">Title <span className="text-white/40 text-xs">(pick or type your own)</span></label>
+                  <datalist id="title-suggestions">
+                    {['Full Stack Developer','Frontend Developer','Backend Developer','Mobile Developer',
+                      'iOS Developer','Android Developer','React Native Developer','Flutter Developer',
+                      'UI/UX Designer','Graphic Designer','Motion Designer','Brand Designer','Logo Designer',
+                      'Illustrator','3D Designer','Print Designer','Packaging Designer',
+                      'Content Writer','Copywriter','Technical Writer','SEO Specialist','Blog Writer',
+                      'Digital Marketer','Social Media Manager','PPC Specialist','Email Marketer',
+                      'Affiliate Marketer','Growth Hacker','PR Specialist',
+                      'Data Scientist','Data Analyst','Machine Learning Engineer','AI Engineer',
+                      'Business Intelligence Analyst','Data Engineer',
+                      'DevOps Engineer','Cloud Architect','Site Reliability Engineer','QA Engineer',
+                      'Cybersecurity Specialist','Network Engineer','Systems Administrator',
+                      'Product Manager','Business Analyst','Project Manager','Scrum Master',
+                      'Video Editor','Animator','Videographer','Photographer','Voice Over Artist',
+                      'Podcast Editor','Subtitle & Caption Writer',
+                      'WordPress Developer','Shopify Developer','WooCommerce Developer',
+                      'E-Commerce Specialist','Dropshipping Consultant','Amazon FBA Specialist',
+                      'Financial Analyst','Accountant','Bookkeeper','Tax Consultant',
+                      'Legal Consultant','Contract Writer','HR Consultant','Recruiter',
+                      'Virtual Assistant','Customer Support Specialist','Translation & Localization',
+                    ].map(t => <option key={t} value={t} />)}
+                  </datalist>
                   <input
+                    list="title-suggestions"
                     className="bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
                     value={profileForm.title}
                     onChange={(e) => setProfileForm({ ...profileForm, title: e.target.value })}
-                    placeholder="Your professional title"
+                    placeholder="Type or select your title"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-white mb-2 flex items-center space-x-2">
-                    <MapPin className="w-4 h-4" />
-                    <span>Country</span>
+                  <label className="block text-sm font-medium text-white mb-2 flex items-center gap-2">
+                    <MapPin className="w-4 h-4" /> Country
                   </label>
-                  <input
-                    className="bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
+                  <select
+                    className="bg-[#0f1117] border border-white/10 rounded-xl text-white px-4 py-2.5 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
                     value={profileForm.country}
                     onChange={(e) => setProfileForm({ ...profileForm, country: e.target.value })}
-                    placeholder="Your country"
-                  />
+                  >
+                    <option value="">Select your country</option>
+                    {['Afghanistan','Albania','Algeria','Andorra','Angola','Antigua and Barbuda','Argentina','Armenia','Australia','Austria','Azerbaijan','Bahamas','Bahrain','Bangladesh','Barbados','Belarus','Belgium','Belize','Benin','Bhutan','Bolivia','Bosnia and Herzegovina','Botswana','Brazil','Brunei','Bulgaria','Burkina Faso','Burundi','Cabo Verde','Cambodia','Cameroon','Canada','Central African Republic','Chad','Chile','China','Colombia','Comoros','Congo (DRC)','Congo (Republic)','Costa Rica','Croatia','Cuba','Cyprus','Czech Republic','Denmark','Djibouti','Dominica','Dominican Republic','Ecuador','Egypt','El Salvador','Equatorial Guinea','Eritrea','Estonia','Eswatini','Ethiopia','Fiji','Finland','France','Gabon','Gambia','Georgia','Germany','Ghana','Greece','Grenada','Guatemala','Guinea','Guinea-Bissau','Guyana','Haiti','Honduras','Hungary','Iceland','India','Indonesia','Iran','Iraq','Ireland','Israel','Italy','Jamaica','Japan','Jordan','Kazakhstan','Kenya','Kiribati','Kuwait','Kyrgyzstan','Laos','Latvia','Lebanon','Lesotho','Liberia','Libya','Liechtenstein','Lithuania','Luxembourg','Madagascar','Malawi','Malaysia','Maldives','Mali','Malta','Marshall Islands','Mauritania','Mauritius','Mexico','Micronesia','Moldova','Monaco','Mongolia','Montenegro','Morocco','Mozambique','Myanmar','Namibia','Nauru','Nepal','Netherlands','New Zealand','Nicaragua','Niger','Nigeria','North Korea','North Macedonia','Norway','Oman','Pakistan','Palau','Panama','Papua New Guinea','Paraguay','Peru','Philippines','Poland','Portugal','Qatar','Romania','Russia','Rwanda','Saint Kitts and Nevis','Saint Lucia','Saint Vincent and the Grenadines','Samoa','San Marino','Saudi Arabia','Senegal','Serbia','Seychelles','Sierra Leone','Singapore','Slovakia','Slovenia','Solomon Islands','Somalia','South Africa','South Korea','South Sudan','Spain','Sri Lanka','Sudan','Suriname','Sweden','Switzerland','Syria','Taiwan','Tajikistan','Tanzania','Thailand','Timor-Leste','Togo','Tonga','Trinidad and Tobago','Tunisia','Turkey','Turkmenistan','Tuvalu','UAE','Uganda','Ukraine','United Kingdom','United States','Uruguay','Uzbekistan','Vanuatu','Venezuela','Vietnam','Yemen','Zambia','Zimbabwe']
+                      .map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
                 </div>
 
                 <div className="md:col-span-2">
@@ -2872,7 +3331,6 @@ export default function FreelancerDashboard() {
                     placeholder="A short bio about yourself"
                   />
                 </div>
-
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-white mb-2">Description</label>
                   <textarea
@@ -2883,7 +3341,6 @@ export default function FreelancerDashboard() {
                     placeholder="A detailed description of your skills and experience"
                   />
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-white mb-2">Skills (comma separated)</label>
                   <input
@@ -2896,9 +3353,7 @@ export default function FreelancerDashboard() {
                 <div>
                   <label className="block text-sm font-medium text-white mb-2">Hourly Rate (USD)</label>
                   <input
-                    type="number"
-                    min="0"
-                    step="0.01"
+                    type="number" min="0" step="0.01"
                     className="bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
                     value={profileForm.hourly_rate_cents ? (Number(profileForm.hourly_rate_cents) / 100).toFixed(2) : ''}
                     onChange={(e) => setProfileForm({ ...profileForm, hourly_rate_cents: String(Math.round(Number(e.target.value) * 100)) })}
@@ -2906,26 +3361,57 @@ export default function FreelancerDashboard() {
                   />
                 </div>
 
-                <div className="md:col-span-2">
+                <div className="md:col-span-2 flex items-center gap-3">
                   <button
                     type="submit"
                     disabled={saving}
                     className="rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold px-6 py-3 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
                   >
                     {saving ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                        <span>Saving...</span>
-                      </>
+                      <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /><span>Saving...</span></>
                     ) : (
-                      <>
-                        <Save className="w-4 h-4" />
-                        <span>Save Profile</span>
-                      </>
+                      <><Save className="w-4 h-4" /><span>Save Profile</span></>
                     )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setProfileEditMode(false)}
+                    className="rounded-xl border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-white/70 hover:bg-white/10 hover:text-white transition"
+                  >
+                    Cancel
                   </button>
                 </div>
               </form>
+              ) : (
+                /* Read-only view */
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {[
+                    { label: 'Display Name', value: profileForm.display_name },
+                    { label: 'Headline', value: profileForm.headline },
+                    { label: 'Title', value: profileForm.title },
+                    { label: 'Country', value: profileForm.country },
+                    { label: 'Hourly Rate', value: profileForm.hourly_rate_cents ? `$${(Number(profileForm.hourly_rate_cents)/100).toFixed(2)}/hr` : '—' },
+                    { label: 'Skills', value: profileForm.skills },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                      <p className="text-xs text-white/40 mb-1">{label}</p>
+                      <p className="text-sm text-white/90">{value || <span className="text-white/30 italic">Not set</span>}</p>
+                    </div>
+                  ))}
+                  {profileForm.bio && (
+                    <div className="md:col-span-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                      <p className="text-xs text-white/40 mb-1">Bio</p>
+                      <p className="text-sm text-white/90">{profileForm.bio}</p>
+                    </div>
+                  )}
+                  {profileForm.description && (
+                    <div className="md:col-span-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                      <p className="text-xs text-white/40 mb-1">Description</p>
+                      <p className="text-sm text-white/90">{profileForm.description}</p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* KYC Documents Section */}
               <div className="mt-8 pt-8 border-t border-white/10">

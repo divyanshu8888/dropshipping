@@ -39,8 +39,8 @@ export default function WhyChooseUsPage() {
   return (
     <>
       <Head>
-        <title>Why Choose Us - Uniti</title>
-        <meta name="description" content="Discover why Uniti is the trusted platform for connecting clients with verified freelancers" />
+        <title>Why Choose Us - Unitiv</title>
+        <meta name="description" content="Discover why Unitiv is the trusted platform for connecting clients with verified freelancers" />
       </Head>
 
       <div className="min-h-screen bg-[#0B0C0F]">
@@ -74,7 +74,7 @@ export default function WhyChooseUsPage() {
             <div className="bg-white/[0.05] backdrop-blur-sm border border-white/10 rounded-xl p-6">
               <h2 className="text-xl font-bold text-white mb-3">Ready to Get Started?</h2>
               <p className="text-sm text-white/70 mb-5 max-w-2xl mx-auto">
-                Join thousands of clients and freelancers who trust Uniti for their projects.
+                Join thousands of clients and freelancers who trust Unitiv for their projects.
               </p>
               <div className="flex flex-wrap items-center justify-center gap-3">
                 <Link 

@@ -35,7 +35,7 @@ const ProductDetail = ({ product }: ProductDetailProps) => {
   const serviceHighlights = [
     'Milestone-based delivery with QA checkpoints',
     'Operator-led communication and weekly syncs',
-    'Escrow-backed payments & Uniti compliance',
+    'Escrow-backed payments & Unitiv compliance',
     'Switch to retainer or pause with 7-day notice'
   ];
   const assurancePoints = [
@@ -47,7 +47,7 @@ const ProductDetail = ({ product }: ProductDetailProps) => {
       title: 'Dedicated operator',
       copy: product.freelancer_name
         ? `${product.freelancer_name} owns the engagement end-to-end.`
-        : 'A verified Uniti operator drives execution and reporting.'
+        : 'A verified Unitiv operator drives execution and reporting.'
     },
     {
       title: 'Post-handoff support',
@@ -58,7 +58,7 @@ const ProductDetail = ({ product }: ProductDetailProps) => {
     return (
         <>
             <Head>
-        <title>{displayTitle} - Uniti</title>
+        <title>{displayTitle} - Unitiv</title>
         <meta name="description" content={product.description || product.summary || ''} />
             </Head>
 
@@ -104,7 +104,7 @@ const ProductDetail = ({ product }: ProductDetailProps) => {
                     <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-4">
                       <p className="text-xs text-white/60">Operated by</p>
                       <p className="mt-2 text-white font-semibold">
-                        {product.freelancer_name || 'Verified Uniti Operator'}
+                        {product.freelancer_name || 'Verified Unitiv Operator'}
                       </p>
                     </div>
                     <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-4">
@@ -258,7 +258,7 @@ const ProductDetail = ({ product }: ProductDetailProps) => {
                     </span>
                     <div>
                       <p className="font-semibold text-white">Client success partner</p>
-                      <p className="text-xs text-white/70">Uniti success managers keep work on track.</p>
+                      <p className="text-xs text-white/70">Unitiv success managers keep work on track.</p>
                     </div>
                         </div>
                     </div>

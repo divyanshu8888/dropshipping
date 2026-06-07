@@ -200,7 +200,7 @@ export default function FreelancerProfileSetup() {
   return (
     <>
       <Head>
-        <title>Complete Your Profile - Uniti</title>
+        <title>Complete Your Profile - Unitiv</title>
         <meta name="description" content="Complete your freelancer profile to start getting clients" />
       </Head>
 

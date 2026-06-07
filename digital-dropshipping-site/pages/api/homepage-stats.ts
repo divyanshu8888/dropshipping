@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { supabase } from '../../src/lib/supabase';
+import { query } from '../../src/lib/mysql';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -7,59 +7,44 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Fetch real statistics from Supabase
-    const [
-      totalFreelancers,
-      totalProjects,
-      totalReviews,
-      countriesData
-    ] = await Promise.all([
-      // Count active freelancers
-      supabase
-        .from('freelancers_public')
-        .select('*', { count: 'exact', head: true }),
-      
-      // Count completed projects
-      supabase
-        .from('projects')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'completed'),
-      
-      // Count total reviews/testimonials
-      supabase
-        .from('testimonials')
-        .select('*', { count: 'exact', head: true }),
-      
-      // Get unique countries from freelancers
-      supabase
-        .from('freelancers_public')
-        .select('country')
-        .not('country', 'is', null)
+    const results = await Promise.allSettled([
+      query<{ count: number | string }>(
+        'SELECT COUNT(*) as count FROM freelancers WHERE status = "approved" AND verification_state = "verified"'
+      ),
+      query<{ count: number | string }>('SELECT COUNT(*) as count FROM projects WHERE status = "completed"'),
+      query<{ count: number | string }>('SELECT COUNT(*) as count FROM testimonials WHERE is_active = "TRUE"'),
+      query<{ country: string | null }>(
+        'SELECT DISTINCT country FROM freelancers WHERE country IS NOT NULL AND status = "approved" AND verification_state = "verified"'
+      ),
+      query<{ count: number | string }>(
+        'SELECT COUNT(*) as count FROM projects WHERE status = "completed" AND created_at >= DATE_SUB(NOW(), INTERVAL 90 DAY)'
+      ),
     ]);
 
-    // Extract counts from Supabase responses
-    const freelancerCount = totalFreelancers.count || 0;
-    const projectCount = totalProjects.count || 0;
-    const reviewCount = totalReviews.count || 0;
-    const uniqueCountries = new Set(countriesData.data?.map(f => f.country)).size || 0;
-
-    const stats = {
-      totalFreelancers: freelancerCount,
-      totalProjects: projectCount,
-      totalReviews: reviewCount,
-      countries: uniqueCountries
+    const readCount = (index: number) => {
+      const result = results[index];
+      if (result.status !== 'fulfilled') return 0;
+      const rows = result.value as Array<{ count?: number | string }>;
+      return Number(rows[0]?.count) || 0;
     };
 
-    res.status(200).json(stats);
+    const countries = results[3].status === 'fulfilled' ? results[3].value : [];
+
+    return res.status(200).json({
+      totalFreelancers: readCount(0),
+      totalProjects: readCount(1),
+      totalReviews: readCount(2),
+      countries: countries.length,
+      projectsLast90Days: readCount(4),
+    });
   } catch (error) {
     console.error('Error fetching homepage stats:', error);
-    
-    // Return zero stats when database is not connected
-    res.status(200).json({
+    return res.status(200).json({
       totalFreelancers: 0,
       totalProjects: 0,
       totalReviews: 0,
-      countries: 0
+      countries: 0,
+      projectsLast90Days: 0,
     });
   }
 }

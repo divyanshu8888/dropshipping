@@ -33,7 +33,7 @@ export default async function handler(
       );
 
       const errorMessage = isPricingViolation
-        ? 'Payment information cannot be included in milestones. For your security and protection, all payments must be processed through Uniti\'s secure payment system.'
+        ? 'Payment information cannot be included in milestones. For your security and protection, all payments must be processed through Unitiv\'s secure payment system.'
         : 'For safety, milestones cannot contain phone numbers, email addresses, external links, or personal contact details.';
 
       return res.status(400).json({ 

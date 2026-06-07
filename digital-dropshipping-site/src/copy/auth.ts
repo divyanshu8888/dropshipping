@@ -1,5 +1,5 @@
 export const brand = {
-  name: 'Uniti'
+  name: 'Unitiv'
 };
 
 export const loginCopy = {
@@ -51,7 +51,7 @@ export const loginCopy = {
 
   form: {
     heading: 'Welcome back',
-    noAccount: 'New to Uniti?',
+    noAccount: 'New to Unitiv?',
     createCta: 'Create your profile',
     fields: {
       emailLabel: 'Email address',
@@ -109,7 +109,7 @@ export const signupCopy = {
 
   alerts: {
     success: 'Account created successfully! Redirecting…',
-    emailTaken: 'This email is already connected to a Uniti profile. Try signing in.',
+    emailTaken: 'This email is already connected to a Unitiv profile. Try signing in.',
     invalidEmail: 'Please use a valid email.',
     shortPassword: 'Password must be at least 6 characters.',
     generic: 'We couldn’t create your account. Please review the details and try again.'

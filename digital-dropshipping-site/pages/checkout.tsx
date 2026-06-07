@@ -73,7 +73,7 @@ const Checkout = () => {
     return (
         <>
             <Head>
-                <title>Checkout - Uniti Store</title>
+                <title>Checkout - Unitiv Store</title>
                 <meta name="description" content="Complete your order securely" />
             </Head>
 

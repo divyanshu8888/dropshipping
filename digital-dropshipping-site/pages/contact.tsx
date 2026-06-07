@@ -22,8 +22,8 @@ export default function ContactPage() {
   return (
     <>
       <Head>
-        <title>Contact Us - Uniti</title>
-        <meta name="description" content="Get in touch with Uniti support team" />
+        <title>Contact Us - Unitiv</title>
+        <meta name="description" content="Get in touch with Unitiv support team" />
       </Head>
 
       <div className="min-h-screen bg-[#0B0C0F]">

@@ -138,8 +138,8 @@ export default function ApplyPage() {
     return (
       <>
         <Head>
-          <title>Apply as Freelancer - Uniti</title>
-          <meta name="description" content="Join Uniti and connect with clients worldwide" />
+          <title>Apply as Freelancer - Unitiv</title>
+          <meta name="description" content="Join Unitiv and connect with clients worldwide" />
         </Head>
         <div className="min-h-screen bg-[#0B0D10]">
           <Header />
@@ -157,8 +157,8 @@ export default function ApplyPage() {
   return (
     <>
       <Head>
-        <title>Apply as Freelancer - Uniti</title>
-        <meta name="description" content="Join Uniti and connect with clients worldwide" />
+        <title>Apply as Freelancer - Unitiv</title>
+        <meta name="description" content="Join Unitiv and connect with clients worldwide" />
       </Head>
 
       <div className="min-h-screen bg-[#0B0D10]">
@@ -171,7 +171,7 @@ export default function ApplyPage() {
             <h1 className="font-display text-4xl text-white mb-4">
               Join{' '}
               <span className="bg-gradient-to-r from-cyan-300 to-violet-300 bg-clip-text text-transparent">
-                Uniti
+                Unitiv
               </span>
             </h1>
             <p className="text-white/70 text-lg">

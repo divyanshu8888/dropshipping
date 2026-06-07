@@ -1,6 +1,6 @@
 # Documentation Index
 
-Welcome to the Uniti documentation! All guides are organized here for easy access.
+Welcome to the Unitiv documentation! All guides are organized here for easy access.
 
 ## 📚 Getting Started
 

@@ -1,0 +1,7 @@
+-- Add columns for email/phone change OTP verification
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS phone VARCHAR(30) DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS change_otp VARCHAR(6) DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS change_otp_expires_at DATETIME DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS change_otp_type VARCHAR(10) DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS change_otp_new_value VARCHAR(255) DEFAULT NULL;

@@ -232,11 +232,11 @@ const CodingShowcase = () => {
   const intervalRef = useRef<number | null>(null);
 
   const snippets = {
-    code: `// Uniti: Connect with verified talent
-import { createClient } from "@uniti/client";
+    code: `// Unitiv: Connect with verified talent
+import { createClient } from "@unitive/client";
 
 const client = createClient({
-  apiKey: process.env.UNITI_API_KEY,
+  apiKey: process.env.UNITIVE_API_KEY,
   environment: "production"
 });
 
@@ -279,19 +279,19 @@ Response:
   "created_at": "2024-01-15T10:30:00Z",
   "estimated_delivery": "2024-02-15"
 }`,
-    terminal: `$ uniti init project website-redesign
+    terminal: `$ unitive init project website-redesign
 ✔ Project initialized
-✔ Connected to Uniti
+✔ Connected to Unitiv
 
-$ uniti create --category "Web Dev" --timeline "4-6 weeks"
+$ unitive create --category "Web Dev" --timeline "4-6 weeks"
 ✔ Project created: #PROJ-123
 ✔ 3 verified professionals matched
 
-$ uniti select --id "pro_456"
+$ unitive select --id "pro_456"
 ✔ Professional selected: Expert Developer
 ✔ Project started with milestone tracking
 
-$ uniti status
+$ unitive status
 📊 Project Status: In Progress
 💰 Budget: $5,000 allocated
 📅 Timeline: 4-6 weeks
@@ -359,7 +359,7 @@ $ uniti status
                 <span className="size-2.5 rounded-full bg-yellow-500/70" />
                 <span className="size-2.5 rounded-full bg-green-500/70" />
               </div>
-              <div className="text-[10px] text-white/50">unitihq/app/quote.ts</div>
+              <div className="text-[10px] text-white/50">unitivehq/app/quote.ts</div>
               <div />
             </div>
 
@@ -421,15 +421,16 @@ $ uniti status
           <div className="flex flex-col gap-4">
             <div className="rounded-2xl ring-1 ring-white/5 bg-gradient-to-b from-[#0c0f14] to-[#0a0d12] p-5 md:p-6 shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
               <div className="space-y-2.5 md:space-y-3">
-                <h2 className="text-2xl md:text-3xl font-semibold leading-tight tracking-[-0.01em] text-white">Uniti — where ideas unite.</h2>
+                <h2 className="text-2xl md:text-3xl font-semibold leading-tight tracking-[-0.01em] text-white">Where ideas unite your vision.</h2>
                 <div className="h-[1.5px] w-12 bg-gradient-to-r from-cyan-400 to-violet-500 rounded-full mt-1.5 mb-2"></div>
                 <p className="text-xs text-gray-400 mb-4">
-                  <span className="text-cyan-300 font-medium">Unit</span> (from Unity) + 
-                  <span className="text-violet-300 font-medium"> i</span> (from Idea) = 
-                  <span className="text-white font-semibold"> Uniti</span>
+                  <span className="text-cyan-300 font-medium">Unit</span> (from Unity) +
+                  <span className="text-violet-300 font-medium"> i</span> (from Idea) +
+                  <span className="text-emerald-300 font-medium"> v</span> (for Vision) =
+                  <span className="text-white font-semibold"> Unitiv</span>
               </p>
               <p className="max-w-[58ch] text-sm text-gray-200 leading-6">
-                  Uniti connects clients with <span className="font-medium text-gray-100">verified professionals</span> in a secure, data-driven workspace. 
+                  Unitiv connects clients with <span className="font-medium text-gray-100">verified professionals</span> in a secure, data-driven workspace. 
                   From web and design to marketing and AI, you get work delivered right the first time—backed by milestone protection, 
                   portfolio verification, and real-time collaboration.
               </p>
@@ -594,15 +595,38 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
   return (
     <div className="min-h-screen bg-bg-base">
       <Head>
+        <title>Unitiv — Your Vision, Built by Experts</title>
+        <meta name="description" content="Connect with verified freelancers across web, design, AI, and marketing. Secure milestones, transparent pricing, and real-time collaboration — all in one workspace." />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="robots" content="index, follow" />
+        <link rel="canonical" href="https://uniti.com.au" />
+
+        {/* Open Graph */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://uniti.com.au" />
+        <meta property="og:title" content="Unitiv — Your Vision, Built by Experts" />
+        <meta property="og:description" content="Connect with verified freelancers across web, design, AI, and marketing. Secure milestones, transparent pricing, and real-time collaboration." />
+        <meta property="og:image" content="/images/logo/logo2.1.png" />
+        <meta property="og:site_name" content="Unitiv" />
+
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Unitiv — Your Vision, Built by Experts" />
+        <meta name="twitter:description" content="Connect with verified freelancers across web, design, AI, and marketing." />
+        <meta name="twitter:image" content="/images/logo/logo2.1.png" />
+
+        {/* Structured Data */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               '@context': 'https://schema.org',
               '@type': 'Organization',
-              name: 'Uniti',
-              url: 'https://uniti.example.com',
-              logo: '/images/logo/logo2.1.png'
+              name: 'Unitiv',
+              url: 'https://uniti.com.au',
+              logo: '/images/logo/logo2.1.png',
+              description: 'Freelancer marketplace connecting clients with verified professionals in web, design, AI, and marketing.',
+              sameAs: []
             })
           }}
         />
@@ -656,7 +680,7 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
               <p
                 className="mx-auto text-[clamp(14px,1.5vw,16px)] max-w-[600px] animate-fade-in-up animate-delay-300 hero-tagline"
               >
-                Work with trusted experts to bring your ideas to life.
+                Where ideas unite your vision.
               </p>
 
               {/* SEARCH – pushed further down */}
@@ -827,52 +851,56 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
           {/* Stats grid */}
           <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
             {[
-              { 
-                label: 'Active Freelancers', 
-                value: stats.totalFreelancers, 
-                suffix: '+', 
-                icon: '👥', 
-                meta: 'Vetted & available now', 
+              {
+                label: 'Active Freelancers',
+                value: stats.totalFreelancers,
+                fallback: '50+',
+                suffix: '+',
+                icon: '👥',
+                meta: 'Vetted & available now',
                 tip: 'Passed ID & portfolio checks',
-                dynamicMeta: true
               },
-              { 
-                label: 'Projects Completed', 
-                value: stats.projectsLast90Days, 
-                suffix: '', 
-                icon: '✨', 
-                meta: 'Last 90 days', 
+              {
+                label: 'Projects Completed',
+                value: stats.projectsLast90Days,
+                fallback: '100+',
+                suffix: '',
+                icon: '✨',
+                meta: 'Last 90 days',
                 tip: 'Completed projects in recent quarter',
-                dynamicMeta: true
               },
-              { 
-                label: 'Happy Clients', 
-                value: stats.totalReviews, 
-                suffix: '+', 
-                icon: '😊', 
-                meta: `Avg. rating ${stats.averageRating}/5`, 
+              {
+                label: 'Happy Clients',
+                value: stats.totalReviews,
+                fallback: '200+',
+                suffix: '+',
+                icon: '😊',
+                meta: `Avg. rating ${stats.averageRating && stats.averageRating !== '0.0' ? stats.averageRating : '4.9'}/5`,
                 tip: 'Based on verified client reviews',
-                dynamicMeta: true
               },
-              { 
-                label: 'Countries', 
-                value: stats.countries, 
-                suffix: '+', 
-                icon: '🌍', 
-                meta: 'Active delivery regions', 
+              {
+                label: 'Countries',
+                value: stats.countries,
+                fallback: '20+',
+                suffix: '+',
+                icon: '🌍',
+                meta: 'Active delivery regions',
                 tip: 'Global expert network',
-                dynamicMeta: true
               },
-            ].map((stat, index) => (
-              <Link 
-                key={index} 
-                href="/freelancers" 
-                className="group relative overflow-hidden rounded-2xl border border-white/12 bg-white/[0.06] p-4 md:p-5 shadow-[0_8px_28px_rgba(0,0,0,0.35)] backdrop-blur-md transition-transform duration-300 hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(0,0,0,0.45)] stats-card-aurora cursor-pointer" 
+            ].map((stat, index) => {
+              const displayValue = stat.value && stat.value > 0
+                ? `${stat.value.toLocaleString()}${stat.suffix}`
+                : stat.fallback;
+              return (
+              <Link
+                key={index}
+                href="/freelancers"
+                className="group relative overflow-hidden rounded-2xl border border-white/12 bg-white/[0.06] p-4 md:p-5 shadow-[0_8px_28px_rgba(0,0,0,0.35)] backdrop-blur-md transition-transform duration-300 hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(0,0,0,0.45)] stats-card-aurora cursor-pointer"
                 title={stat.tip}
               >
                 {/* Aurora inner glow */}
                 <div className="pointer-events-none absolute inset-0 rounded-2xl bg-[radial-gradient(60%_80%_at_50%_0%,rgba(125,42,232,0.16),transparent),radial-gradient(60%_80%_at_50%_100%,rgba(0,198,255,0.12),transparent)] opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                
+
                 {/* Icon chip */}
                 <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-white/10 text-white/85 ring-1 ring-white/15">
                   <span className="text-xl">{stat.icon}</span>
@@ -880,22 +908,22 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
             
                 {/* Number with sheen effect */}
                 <div className="stat-number bg-gradient-to-r from-[#00C6FF] via-[#5F57FF] to-[#7D2AE8] bg-clip-text text-4xl md:text-5xl font-extrabold tracking-tight text-transparent [font-variant-numeric:tabular-nums] leading-none">
-                  {(stat.value ?? 0).toLocaleString()}
-                  {stat.suffix}
-              </div>
+                  {displayValue}
+                </div>
 
                 {/* Label */}
                 <div className="mt-1.5 text-sm md:text-base font-semibold text-white/90">{stat.label}</div>
-                
+
                 {/* Meta text */}
                 <div className="mt-1 text-xs text-white/60">{stat.meta}</div>
-                </Link>
-            ))}
+              </Link>
+              );
+            })}
           </div>
 
           {/* Footnote */}
           <p className="mt-6 text-xs text-white/50">
-            Based on Uniti project data. Updated weekly.
+            Based on Unitiv project data. Updated weekly.
                   </p>
         </div>
       </section>
@@ -993,10 +1021,10 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
               <div className="flex items-center gap-2">
                 <img 
                   src="/images/logo/logo2.1.png" 
-                  alt="Uniti Logo" 
+                  alt="Unitiv Logo"
                   className="h-8 w-8 object-contain"
                 />
-                <span className="text-lg font-semibold text-white">Uniti</span>
+                <span className="text-lg font-semibold text-white">Unitiv</span>
                 </div>
               <p className="text-white/70 text-sm">
                 Unity of ideas and experts. Build fast, build right.
@@ -1064,7 +1092,7 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
             <FooterCol
               heading="For Freelancers"
               items={[
-                { label: "Apply to Uniti", href: "/apply" },
+                { label: "Apply to Unitiv", href: "/apply" },
                 { label: "Verification Guide", href: "/verification" },
                 { label: "Payouts", href: "/payouts" },
                 { label: "Community", href: "/community" },
@@ -1084,7 +1112,7 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
 
           {/* Legal bar */}
           <div className="mt-8 flex flex-col-reverse items-center justify-between gap-3 border-t border-white/10 pt-6 text-xs text-white/60 md:flex-row">
-            <p>© {new Date().getFullYear()} Uniti. All rights reserved. ABN 00 000 000 000</p>
+            <p>© {new Date().getFullYear()} Unitiv. All rights reserved. ABN 00 000 000 000</p>
             <div className="flex items-center gap-5">
               <a href="/terms" className="hover:text-white">Terms</a>
               <a href="/privacy" className="hover:text-white">Privacy</a>

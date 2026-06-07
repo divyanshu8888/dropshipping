@@ -20,8 +20,8 @@ export default function PrivacyPage() {
   return (
     <>
       <Head>
-        <title>Privacy Policy - Uniti</title>
-        <meta name="description" content="Privacy Policy for Uniti platform" />
+        <title>Privacy Policy - Unitiv</title>
+        <meta name="description" content="Privacy Policy for Unitiv platform" />
       </Head>
 
       <div className="min-h-screen bg-[#0B0C0F]">
@@ -74,7 +74,7 @@ export default function PrivacyPage() {
               </h2>
               <p className="text-white/80 leading-relaxed">
                 We implement industry-standard security measures including encryption, secure payment processing,
-                and regular security audits. Your data is stored securely with partners like Supabase and Stripe.
+                and regular security audits. Your data is stored securely in our SQL backend and with payment partners like Stripe.
               </p>
             </section>
 
@@ -132,7 +132,7 @@ export default function PrivacyPage() {
                 8. Children's Privacy
               </h2>
               <p className="text-white/80 leading-relaxed">
-                Uniti is not intended for users under 18. We do not knowingly collect information from minors.
+                Unitiv is not intended for users under 18. We do not knowingly collect information from minors.
                 If we discover such information, we will delete it immediately.
               </p>
             </section>
@@ -143,7 +143,7 @@ export default function PrivacyPage() {
                 9. International Users
               </h2>
               <p className="text-white/80 leading-relaxed">
-                Our platform serves users globally. By using Uniti, you consent to data processing in accordance
+                Our platform serves users globally. By using Unitiv, you consent to data processing in accordance
                 with Australian privacy laws and international data protection standards.
               </p>
             </section>
