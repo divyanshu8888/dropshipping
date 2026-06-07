@@ -1,1 +1,6 @@
-node_modules
+digital-dropshipping-site/.env.local
+digital-dropshipping-site/.env
+digital-dropshipping-site/.next/
+digital-dropshipping-site/node_modules/
+digital-dropshipping-site/*.tsbuildinfo
+node_modules/
