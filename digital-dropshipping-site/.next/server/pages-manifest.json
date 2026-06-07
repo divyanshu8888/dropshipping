@@ -1,0 +1,13 @@
+{
+  "/_app": "pages/_app.js",
+  "/_error": "pages/_error.js",
+  "/_document": "pages/_document.js",
+  "/api/auth/verify": "pages/api/auth/verify.js",
+  "/api/freelancers/me": "pages/api/freelancers/me.js",
+  "/api/freelancers/kyc-documents": "pages/api/freelancers/kyc-documents.js",
+  "/freelancers/dashboard": "pages/freelancers/dashboard.js",
+  "/api/freelancers/dashboard-metrics": "pages/api/freelancers/dashboard-metrics.js",
+  "/api/freelancers/projects/[freelancerId]": "pages/api/freelancers/projects/[freelancerId].js",
+  "/api/auth/send-change-otp": "pages/api/auth/send-change-otp.js",
+  "/api/freelancers/update-availability": "pages/api/freelancers/update-availability.js"
+}
