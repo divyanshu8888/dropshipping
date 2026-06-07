@@ -1,1 +1,0 @@
-self.__REACT_LOADABLE_MANIFEST="{\"pages\\\\freelancers\\\\dashboard.tsx -> ../../src/components/Header\":{\"id\":\"pages\\\\freelancers\\\\dashboard.tsx -> ../../src/components/Header\",\"files\":[\"static/chunks/src_components_Header_tsx.js\"]}}"
