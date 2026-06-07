@@ -233,10 +233,10 @@ const CodingShowcase = () => {
 
   const snippets = {
     code: `// Unitiv: Connect with verified talent
-import { createClient } from "@unitive/client";
+import { createClient } from "@unitiv/client";
 
 const client = createClient({
-  apiKey: process.env.UNITIVE_API_KEY,
+  apiKey: process.env.UNITIV_API_KEY,
   environment: "production"
 });
 
@@ -279,19 +279,19 @@ Response:
   "created_at": "2024-01-15T10:30:00Z",
   "estimated_delivery": "2024-02-15"
 }`,
-    terminal: `$ unitive init project website-redesign
+    terminal: `$ unitiv init project website-redesign
 ✔ Project initialized
 ✔ Connected to Unitiv
 
-$ unitive create --category "Web Dev" --timeline "4-6 weeks"
+$ unitiv create --category "Web Dev" --timeline "4-6 weeks"
 ✔ Project created: #PROJ-123
 ✔ 3 verified professionals matched
 
-$ unitive select --id "pro_456"
+$ unitiv select --id "pro_456"
 ✔ Professional selected: Expert Developer
 ✔ Project started with milestone tracking
 
-$ unitive status
+$ unitiv status
 📊 Project Status: In Progress
 💰 Budget: $5,000 allocated
 📅 Timeline: 4-6 weeks
@@ -359,7 +359,7 @@ $ unitive status
                 <span className="size-2.5 rounded-full bg-yellow-500/70" />
                 <span className="size-2.5 rounded-full bg-green-500/70" />
               </div>
-              <div className="text-[10px] text-white/50">unitivehq/app/quote.ts</div>
+              <div className="text-[10px] text-white/50">unitiv-hq/app/quote.ts</div>
               <div />
             </div>
 
