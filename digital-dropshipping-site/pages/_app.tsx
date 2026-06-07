@@ -6,6 +6,7 @@ import ErrorBoundary from '../src/components/ErrorBoundary'
 import { AuthProvider } from '../src/contexts/AuthContext'
 import { NotificationProvider } from '../src/contexts/NotificationContext'
 import { ToastProvider } from '../src/components/Toast'
+import Footer from '../src/components/Footer'
 
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter()
@@ -13,6 +14,7 @@ export default function App({ Component, pageProps }: AppProps) {
   const path = router.asPath.split(/[?#]/)[0] || '/'
   const canonicalUrl = siteUrl ? `${siteUrl}${path}` : undefined
   const isPrivateRoute = /^\/(admin|cart|checkout|dashboard|clients\/dashboard|freelancers\/dashboard)/.test(path)
+  const showFooter = !isPrivateRoute
 
   return (
     <ErrorBoundary>
@@ -37,6 +39,7 @@ export default function App({ Component, pageProps }: AppProps) {
         <NotificationProvider>
           <ToastProvider>
             <Component {...pageProps} />
+            {showFooter && <Footer />}
           </ToastProvider>
         </NotificationProvider>
       </AuthProvider>
