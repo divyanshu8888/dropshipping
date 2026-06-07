@@ -1246,8 +1246,7 @@ export default function AdminDashboard({
                     editable
                     onEdit={(value) => handleKPIEdit('netRevenueAfterRefunds', value)}
                     fastActions={[
-                      { label: 'Adjust Platform Fee', action: 'adjust_platform_fee', icon: '⚙️' },
-                      { label: 'Process Refunds', action: 'process_refunds', icon: '💳' },
+{ label: 'Process Refunds', action: 'process_refunds', icon: '💳' },
                     ]}
                     onFastAction={handleActionExecute}
                   />

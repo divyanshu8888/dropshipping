@@ -39,8 +39,7 @@ export default function TermsPage() {
 
             <h2 className="text-2xl font-bold text-white mb-4">4. Payment & Milestones</h2>
             <p className="text-gray-300 leading-relaxed mb-6">
-              Payments are held in escrow until milestones are approved. Unitiv charges a platform fee as outlined in the
-              pricing section. Refund policies apply based on project completion status and quality standards.
+              Payments are held in escrow until milestones are approved. Refund policies apply based on project completion status and quality standards.
             </p>
 
             <h2 className="text-2xl font-bold text-white mb-4">5. Intellectual Property</h2>

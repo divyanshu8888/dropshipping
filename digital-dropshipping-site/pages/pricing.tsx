@@ -32,7 +32,6 @@ const plans = [
       { label: 'Browse all freelancers', included: true },
       { label: 'Milestone-based payments', included: true },
       { label: 'Basic messaging & file sharing', included: true },
-      { label: 'Platform fee: 8%', included: true },
       { label: 'Priority talent matching', included: false },
       { label: 'Analytics dashboard', included: false },
       { label: 'Team workspace', included: false },
@@ -55,7 +54,6 @@ const plans = [
       { label: 'Browse all freelancers', included: true },
       { label: 'Milestone-based payments', included: true },
       { label: 'Messaging, video calls & file sharing', included: true },
-      { label: 'Reduced platform fee: 4%', included: true },
       { label: 'Priority talent matching', included: true },
       { label: 'Analytics dashboard', included: true },
       { label: 'Team workspace (up to 5 seats)', included: true },
@@ -78,7 +76,6 @@ const plans = [
       { label: 'Browse all freelancers', included: true },
       { label: 'Milestone-based payments', included: true },
       { label: 'Messaging, video calls & file sharing', included: true },
-      { label: 'Platform fee: negotiated (as low as 2%)', included: true },
       { label: 'Priority matching + dedicated SLA', included: true },
       { label: 'Advanced analytics & reporting', included: true },
       { label: 'Unlimited team workspace', included: true },
@@ -91,10 +88,6 @@ const faqs = [
   {
     q: 'Is there a free trial?',
     a: 'Yes — Pro comes with a 14-day free trial, no credit card required. Cancel any time before the trial ends and you won\'t be charged.',
-  },
-  {
-    q: 'What is the platform fee?',
-    a: 'The platform fee is a small percentage charged on each project and covers milestone escrow, payment protection, and dispute resolution. Starter: 8%, Pro: 4%, Enterprise: negotiated (as low as 2%).',
   },
   {
     q: 'How does milestone payment protection work?',
