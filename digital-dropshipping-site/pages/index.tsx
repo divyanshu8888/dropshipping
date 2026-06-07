@@ -348,7 +348,7 @@ $ unitive status
         }}
       />
 
-      <div className="mx-auto max-w-7xl px-6">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className="grid md:grid-cols-2 gap-6 items-stretch">
           {/* Left: editor */}
           <div className="relative rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-xl shadow-[inset_0_1px_0_rgba(255,255,255,.06),0_30px_80px_rgba(0,0,0,.35)]">
@@ -665,8 +665,8 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
             <div className="relative z-10 mx-auto max-w-[900px] px-6 pt-[16vh] pb-12 text-center">
               {/* HEADLINE */}
               <h1
-                className="mx-auto font-extrabold 
-                           text-[clamp(32px,5.5vw,48px)] leading-[1.15] whitespace-nowrap
+                className="mx-auto font-extrabold
+                           text-[clamp(26px,5.5vw,48px)] leading-[1.15]
                            animate-fade-in-up animate-delay-100 tracking-tight"
                 style={{ color: '#FFFFFF' }}
               >
@@ -685,7 +685,7 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
 
               {/* SEARCH – pushed further down */}
               <div className="mt-6 flex items-center justify-center animate-fade-in-up animate-delay-500 search-container-wrap">
-                <form onSubmit={handleSearchSubmit} className="relative flex w-full max-w-[680px] items-center gap-3 rounded-full px-4 h-[50px] search-form-airglass">
+                <form onSubmit={handleSearchSubmit} className="relative flex w-full max-w-[680px] items-center gap-2 sm:gap-3 rounded-full px-3 sm:px-4 h-[50px] search-form-airglass">
                   <svg className="h-5 w-5 text-white/70 shrink-0" viewBox="0 0 24 24" fill="none">
                     <path d="M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
                   </svg>
@@ -748,7 +748,7 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
             </div>
           
               {/* TRUST INDICATORS - Matching Freelancer Page Style */}
-              <div className="mt-7 flex flex-wrap items-center justify-center gap-6 mb-14 text-white/80 text-sm animate-fade-in-up animate-delay-600">
+              <div className="mt-7 flex flex-wrap items-center justify-center gap-4 sm:gap-6 mb-8 sm:mb-14 text-white/80 text-xs sm:text-sm animate-fade-in-up animate-delay-600">
                 {/* Fast quotes */}
                 <div className="flex items-center gap-2">
                   <svg className="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -930,7 +930,7 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
 
       {/* Testimonials Section - Professional Design */}
       <section className="relative bg-gradient-to-b from-bg-surface/80 via-bg-surface/60 to-bg-surface/80 backdrop-blur-sm py-20 md:py-24 overflow-hidden">
-        <div className="max-w-7xl mx-auto px-6 relative z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
           {/* Section Header */}
           <div className="text-center mb-12">
             <h2 className="text-xl sm:text-2xl font-semibold tracking-tight">
@@ -1014,11 +1014,11 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
         {/* Soft brand wash */}
         <div className="pointer-events-none absolute inset-0 opacity-60 bg-[radial-gradient(40%_60%_at_10%_0%,rgba(0,198,255,.06),transparent),radial-gradient(40%_60%_at_90%_100%,rgba(125,42,232,.08),transparent)]" />
         
-        <div className="relative mx-auto max-w-6xl px-6 py-10">
+        <div className="relative mx-auto max-w-6xl px-4 sm:px-6 py-10">
           {/* Top row: brand + newsletter */}
-          <div className="grid gap-6 md:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-3 text-center md:text-left">
             <div className="space-y-2">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 justify-center md:justify-start">
                 <img 
                   src="/images/logo/logo2.1.png" 
                   alt="Unitiv Logo"
@@ -1034,7 +1034,7 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
             <div className="md:col-span-2">
               <form
                 aria-label="Subscribe to product updates"
-                className="flex w-full max-w-2xl items-center gap-2 rounded-xl border border-white/15 bg-white/[0.06] px-3 py-2 backdrop-blur-md"
+                className="flex w-full max-w-2xl flex-wrap sm:flex-nowrap items-center gap-2 rounded-xl border border-white/15 bg-white/[0.06] px-3 py-2 backdrop-blur-md"
                 onSubmit={handleNewsletterSubmit}
               >
                 <label htmlFor="newsletter" className="sr-only">Email address</label>
@@ -1070,7 +1070,7 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
           </div>
 
           {/* Link columns */}
-          <div className="mt-10 grid gap-8 sm:grid-cols-2 md:grid-cols-4">
+          <div className="mt-10 grid grid-cols-2 gap-6 sm:grid-cols-2 md:grid-cols-4">
             <FooterCol
               heading="Products"
               items={[

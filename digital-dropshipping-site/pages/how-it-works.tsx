@@ -90,16 +90,16 @@ export default function HowItWorksPage() {
         {/* Hero */}
         <section className="relative pt-24 pb-14 text-center overflow-hidden">
           <div className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-[500px] h-[300px] rounded-full bg-gradient-to-b from-cyan-500/10 via-violet-500/8 to-transparent blur-3xl" />
-          <div className="relative mx-auto max-w-3xl px-6">
+          <div className="relative mx-auto max-w-3xl px-4 sm:px-6">
             <span className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.06] px-3 py-1 text-[11px] font-semibold uppercase tracking-widest text-white/60 mb-4">
               How It Works
             </span>
-            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-white leading-tight">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-white leading-tight">
               Simple.{' '}
               <span className="bg-gradient-to-r from-cyan-300 to-violet-300 bg-clip-text text-transparent">Secure.</span>{' '}
               Professional.
             </h1>
-            <p className="mt-4 text-base text-white/60 max-w-lg mx-auto">
+            <p className="mt-4 text-sm sm:text-base text-white/60 max-w-lg mx-auto">
               Whether you're hiring talent or offering your skills, Unitiv makes it straightforward.
             </p>
 
@@ -107,7 +107,7 @@ export default function HowItWorksPage() {
             <div className="mt-8 inline-flex rounded-full border border-white/12 bg-white/[0.05] p-1">
               <button
                 onClick={() => setTab('client')}
-                className={`rounded-full px-5 py-2 text-sm font-semibold transition-all ${
+                className={`rounded-full px-3 sm:px-5 py-2 text-xs sm:text-sm font-semibold transition-all ${
                   tab === 'client' ? 'bg-gradient-to-r from-cyan-400 to-violet-500 text-white shadow-lg' : 'text-white/55 hover:text-white/80'
                 }`}
               >
@@ -115,7 +115,7 @@ export default function HowItWorksPage() {
               </button>
               <button
                 onClick={() => setTab('freelancer')}
-                className={`rounded-full px-5 py-2 text-sm font-semibold transition-all ${
+                className={`rounded-full px-3 sm:px-5 py-2 text-xs sm:text-sm font-semibold transition-all ${
                   tab === 'freelancer' ? 'bg-gradient-to-r from-cyan-400 to-violet-500 text-white shadow-lg' : 'text-white/55 hover:text-white/80'
                 }`}
               >
@@ -126,12 +126,12 @@ export default function HowItWorksPage() {
         </section>
 
         {/* Steps */}
-        <section className="mx-auto max-w-4xl px-6 pb-16">
+        <section className="mx-auto max-w-4xl px-4 sm:px-6 pb-16">
           <div className="space-y-5">
             {steps.map((step) => (
               <div
                 key={step.n}
-                className="flex items-start gap-6 rounded-2xl border border-white/10 bg-white/[0.04] p-7 backdrop-blur-sm transition hover:border-white/20 hover:bg-white/[0.06]"
+                className="flex items-start gap-4 sm:gap-6 rounded-2xl border border-white/10 bg-white/[0.04] p-5 sm:p-7 backdrop-blur-sm transition hover:border-white/20 hover:bg-white/[0.06]"
               >
                 <div className="grid h-12 w-12 flex-shrink-0 place-items-center rounded-full bg-gradient-to-br from-cyan-400 to-violet-500 text-lg font-extrabold text-white shadow-lg shadow-cyan-950/30">
                   {step.n}
@@ -194,18 +194,18 @@ export default function HowItWorksPage() {
         </section>
 
         {/* Bottom CTA banner */}
-        <section className="mx-auto max-w-4xl px-6 py-16">
-          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-violet-500/10 p-8 md:p-10 text-center shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
+        <section className="mx-auto max-w-4xl px-4 sm:px-6 py-16">
+          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-violet-500/10 p-6 sm:p-8 md:p-10 text-center shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_80%_at_50%_0%,rgba(0,198,255,0.08),transparent)]" />
             <p className="relative text-xs font-semibold uppercase tracking-widest text-white/40 mb-2">Need help choosing?</p>
-            <h2 className="relative text-2xl md:text-3xl font-extrabold text-white tracking-tight">
+            <h2 className="relative text-xl sm:text-2xl md:text-3xl font-extrabold text-white tracking-tight">
               Didn't find the perfect match?{' '}
               <span className="bg-gradient-to-r from-cyan-300 to-violet-300 bg-clip-text text-transparent">We'll shortlist great freelancers for you.</span>
             </h2>
             <p className="relative mt-2 text-sm text-white/55">
               Tell us what you need, and our team will send you a few vetted options.
             </p>
-            <div className="relative mt-6 flex flex-wrap items-center justify-center gap-3">
+            <div className="relative mt-6 flex flex-col sm:flex-row flex-wrap items-center justify-center gap-3">
               <div className="flex flex-wrap justify-center gap-2 mb-4 w-full">
                 {['✨ We do the matching', '✓ Identity verified', '🔒 Escrow-ready'].map((tag) => (
                   <span key={tag} className="rounded-full border border-white/15 bg-white/[0.06] px-3 py-1 text-xs text-white/70">{tag}</span>
@@ -213,13 +213,13 @@ export default function HowItWorksPage() {
               </div>
               <button
                 onClick={handleClientCTA}
-                className="inline-flex h-11 items-center gap-2 rounded-full bg-gradient-to-r from-cyan-400 to-violet-500 px-6 text-sm font-bold text-white shadow-lg transition hover:-translate-y-0.5"
+                className="w-full sm:w-auto inline-flex h-11 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-cyan-400 to-violet-500 px-6 text-sm font-bold text-white shadow-lg transition hover:-translate-y-0.5"
               >
                 Post a Project →
               </button>
               <Link
                 href="/contact"
-                className="inline-flex h-11 items-center gap-2 rounded-full border border-white/20 bg-white/[0.06] px-6 text-sm font-semibold text-white/85 transition hover:bg-white/[0.1] hover:text-white"
+                className="w-full sm:w-auto inline-flex h-11 items-center justify-center gap-2 rounded-full border border-white/20 bg-white/[0.06] px-6 text-sm font-semibold text-white/85 transition hover:bg-white/[0.1] hover:text-white"
               >
                 💬 Talk to a talent advisor
               </Link>

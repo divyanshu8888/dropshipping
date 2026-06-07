@@ -551,7 +551,7 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
         <Header />
 
         {/* Hero Section - Enhanced Professional Design */}
-        <section className="relative overflow-hidden text-white pt-24 pb-18 md:pt-28 md:pb-24 min-h-[78vh]">
+        <section className="relative overflow-hidden text-white pt-24 pb-16 md:pt-28 md:pb-24 min-h-[78vh]">
           <div className="absolute inset-0 bg-[radial-gradient(900px_520px_at_50%_-20%,rgba(255,255,255,0.05),transparent)]" />
           <div className="absolute inset-0 bg-gradient-to-b from-[#0a1019]/90 via-[#080d17]/75 to-[#060910]/95" />
           <div className={`absolute inset-0 ${styles.heroImageOverlay}`} />
@@ -714,7 +714,7 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
         />
 
         {/* Freelancers Grid */}
-        <section className={`${styles.resultsSection} max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 pb-12 md:pt-3`}>
+        <section className={`${styles.resultsSection} max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 pt-2 pb-12 md:pt-3`}>
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm md:text-base text-white/70">
               Showing{' '}
@@ -1008,7 +1008,7 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
           <div className="pointer-events-none absolute -left-28 top-1/2 h-[18rem] w-[18rem] -translate-y-1/2 rounded-full bg-[radial-gradient(circle,_rgba(0,198,255,0.25)_0%,rgba(13,17,28,0)_72%)] blur-3xl" />
           <div className="pointer-events-none absolute -right-16 top-12 h-[16rem] w-[16rem] rounded-full bg-[radial-gradient(circle,_rgba(125,42,232,0.28)_0%,rgba(13,17,28,0)_68%)] blur-3xl" />
 
-          <div className="relative mx-auto flex max-w-6xl flex-col gap-10 px-6 md:flex-row md:items-center md:justify-between">
+          <div className="relative mx-auto flex max-w-6xl flex-col gap-10 px-4 sm:px-6 md:flex-row md:items-center md:justify-between">
             <div className="max-w-xl space-y-4">
               <p className="text-[11px] uppercase tracking-[0.36em] text-white/55">Need help choosing?</p>
               <h2 className="bg-gradient-to-r from-[#E3F6FF] via-white to-[#C6D5FF] bg-clip-text text-3xl font-semibold leading-tight text-transparent md:text-[32px]">
@@ -1031,7 +1031,7 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
               <div className="flex flex-col gap-3 pt-4 sm:flex-row sm:items-center sm:gap-4">
             <button
               onClick={handlePostProject}
-              className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#00C6FF] to-[#7D2AE8] px-6 py-3 text-sm font-semibold tracking-[0.16em] text-white shadow-[0_18px_40px_-22px_rgba(0,198,255,0.65)] transition hover:shadow-[0_28px_70px_-26px_rgba(125,42,232,0.55)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300"
+              className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#00C6FF] to-[#7D2AE8] px-6 py-3 text-sm font-semibold tracking-[0.16em] text-white shadow-[0_18px_40px_-22px_rgba(0,198,255,0.65)] transition hover:shadow-[0_28px_70px_-26px_rgba(125,42,232,0.55)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300"
             >
               Post a Project
               <svg className="ml-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1040,7 +1040,7 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
             </button>
                 <Link
                   href="/contact"
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-white/80 transition hover:border-white/30 hover:text-white"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-white/80 transition hover:border-white/30 hover:text-white"
                 >
                   <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-sm">💬</span>
                   Talk to a talent advisor
@@ -1051,7 +1051,7 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
               </p>
             </div>
 
-            <div className="relative w-full max-w-sm overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl backdrop-blur-md md:ml-auto">
+            <div className="relative w-full md:max-w-sm overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl backdrop-blur-md md:ml-auto">
               <div className="mb-5 flex items-center justify-between">
                 <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/30 px-3 py-1 text-[11px] uppercase tracking-[0.32em] text-white/65">
                   Match queue

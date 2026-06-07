@@ -137,14 +137,14 @@ export default function PricingPage() {
             <span className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.06] px-3 py-1 text-[11px] font-semibold uppercase tracking-widest text-white/60 mb-4">
               Pricing
             </span>
-            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-white leading-tight">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-white leading-tight">
               Simple,{' '}
               <span className="bg-gradient-to-r from-cyan-300 to-violet-300 bg-clip-text text-transparent">
                 transparent
               </span>{' '}
               pricing
             </h1>
-            <p className="mt-4 text-base text-white/65 max-w-xl mx-auto leading-relaxed">
+            <p className="mt-4 text-sm sm:text-base text-white/65 max-w-xl mx-auto leading-relaxed">
               No hidden fees. Start free, scale when you're ready. Every plan includes milestone payment protection.
             </p>
 
@@ -174,8 +174,8 @@ export default function PricingPage() {
         </section>
 
         {/* Pricing cards */}
-        <section className="mx-auto max-w-6xl px-6 pb-20">
-          <div className="grid md:grid-cols-3 gap-5 items-stretch">
+        <section className="mx-auto max-w-6xl px-4 sm:px-6 pb-20">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-stretch">
             {plans.map((plan) => (
               <div
                 key={plan.name}
@@ -268,7 +268,7 @@ export default function PricingPage() {
         </section>
 
         {/* FAQ */}
-        <section className="mx-auto max-w-2xl px-6 py-16">
+        <section className="mx-auto max-w-2xl px-4 sm:px-6 py-16">
           <h2 className="mb-8 text-center text-xl font-bold text-white">
             Frequently asked{' '}
             <span className="bg-gradient-to-r from-cyan-300 to-violet-300 bg-clip-text text-transparent">questions</span>
@@ -302,19 +302,19 @@ export default function PricingPage() {
         </section>
 
         {/* CTA banner */}
-        <section className="mx-auto max-w-4xl px-6 pb-20">
-          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-violet-500/10 p-8 md:p-10 text-center shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
+        <section className="mx-auto max-w-4xl px-4 sm:px-6 pb-20">
+          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-violet-500/10 p-6 sm:p-8 md:p-10 text-center shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_80%_at_50%_0%,rgba(0,198,255,0.08),transparent)]" />
-            <h2 className="relative text-2xl md:text-3xl font-extrabold text-white tracking-tight">
+            <h2 className="relative text-xl sm:text-2xl md:text-3xl font-extrabold text-white tracking-tight">
               Start building today
             </h2>
             <p className="relative mt-2 text-sm text-white/60">
               No commitment required. Get matched with a verified professional in minutes.
             </p>
-            <div className="relative mt-6 flex flex-wrap items-center justify-center gap-3">
+            <div className="relative mt-6 flex flex-col sm:flex-row flex-wrap items-center justify-center gap-3">
               <Link
                 href="/login?mode=signup"
-                className="inline-flex h-11 items-center gap-2 rounded-full bg-gradient-to-r from-cyan-400 to-violet-500 px-6 text-sm font-bold text-white shadow-lg shadow-cyan-950/30 transition hover:-translate-y-0.5 hover:shadow-violet-900/30"
+                className="w-full sm:w-auto inline-flex h-11 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-cyan-400 to-violet-500 px-6 text-sm font-bold text-white shadow-lg shadow-cyan-950/30 transition hover:-translate-y-0.5 hover:shadow-violet-900/30"
               >
                 Get started free
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -323,7 +323,7 @@ export default function PricingPage() {
               </Link>
               <Link
                 href="/contact"
-                className="inline-flex h-11 items-center rounded-full border border-white/20 bg-white/[0.06] px-6 text-sm font-semibold text-white/85 transition hover:bg-white/[0.1] hover:text-white"
+                className="w-full sm:w-auto inline-flex h-11 items-center justify-center rounded-full border border-white/20 bg-white/[0.06] px-6 text-sm font-semibold text-white/85 transition hover:bg-white/[0.1] hover:text-white"
               >
                 Talk to sales
               </Link>
