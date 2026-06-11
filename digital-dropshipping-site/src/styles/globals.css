@@ -706,7 +706,8 @@ header, .navbar, .your-header-class {
 /* Gradient-border card — glows on hover */
 .premium-card {
   position: relative;
-  background: rgba(255,255,255,0.04);
+  /* Why: flat translucent bg read as gray; layered dark gradient adds depth per design system */
+  background: linear-gradient(180deg, #101722 0%, #0c121d 55%, #060910 100%);
   border-radius: 24px;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }

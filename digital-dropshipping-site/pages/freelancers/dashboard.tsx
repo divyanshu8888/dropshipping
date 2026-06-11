@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, Fragment } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import dynamic from 'next/dynamic';
@@ -305,10 +305,10 @@ interface Availability {
   workingHoursTo?: string;
 }
 
-// Why: canonical tab ids — used to validate ?tab deep links (header dropdown, bookmarks) before applying them.
+// Why: canonical tab ids - used to validate ?tab deep links before applying them.
 const VALID_TABS = ['overview', 'pipeline', 'playbooks', 'inbox', 'calendar', 'deliverables', 'earnings', 'profile'];
 
-// Why: playbooks have no backend API — they are client-side proposal templates persisted in localStorage.
+// Why: playbooks have no backend API - they are client-side proposal templates persisted in localStorage.
 interface Playbook {
   id: string;
   title: string;
@@ -353,6 +353,18 @@ export default function FreelancerDashboard() {
   const [emailOtpSent, setEmailOtpSent] = useState(false);
   const [phoneOtpSent, setPhoneOtpSent] = useState(false);
   const [contactChangeSaving, setContactChangeSaving] = useState(false);
+  // Why: in-dashboard password change (verifies current password server-side).
+  const [pwChangeMode, setPwChangeMode] = useState(false);
+  const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' });
+  const [pwSaving, setPwSaving] = useState(false);
+  const [pwVisible, setPwVisible] = useState(false);
+  const [pwError, setPwError] = useState<string | null>(null);
+  // Why: time-aware greeting set after mount to avoid SSR/client hydration mismatch.
+  const [greeting, setGreeting] = useState('Welcome back');
+  useEffect(() => {
+    const h = new Date().getHours();
+    setGreeting(h < 5 ? 'Welcome back' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening');
+  }, []);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const [editingMilestone, setEditingMilestone] = useState<{ id: string; field: 'description' | 'dueDate' } | null>(null);
@@ -368,17 +380,17 @@ export default function FreelancerDashboard() {
   const [editingPlaybookId, setEditingPlaybookId] = useState<string | null>(null);
   const [playbookForm, setPlaybookForm] = useState({ title: '', body: '' });
 
-  // Why: deep-link support — /freelancers/dashboard?tab=earnings opens that tab directly (header menu relies on this).
+  // Why: deep-link support - /freelancers/dashboard?tab=earnings opens that tab directly.
   useEffect(() => {
     if (!router.isReady) return;
     const tab = typeof router.query.tab === 'string' ? router.query.tab : '';
-    // Why: guard against invalid/missing values so a bad ?tab never blanks the dashboard.
+    // Why: guard against invalid values so a bad ?tab never blanks the dashboard.
     if (VALID_TABS.includes(tab)) {
       setActiveTab(prev => (prev === tab ? prev : tab));
     }
   }, [router.isReady, router.query.tab]);
 
-  // Why: keep the URL in sync on tab clicks so tabs are shareable and survive refresh (shallow — no data refetch).
+  // Why: keep the URL in sync on tab clicks so tabs survive refresh (shallow - no data refetch).
   const setTab = useCallback((id: string) => {
     if (!VALID_TABS.includes(id)) return;
     setActiveTab(id);
@@ -1556,28 +1568,36 @@ export default function FreelancerDashboard() {
   };
 
   return (
-    <>
+    <Fragment>
       <Head>
         <title>Freelancer Dashboard - Unitiv</title>
-        <meta name="description" content="Manage your projects, communicate with clients, and track your progress" />
-        {/* Why: private dashboard — keep it out of search indexes. */}
+        <meta name="description" content="Manage your projects, communicate with clients, and track your progress." />
+        {/* Why: private dashboard - keep it out of search indexes. */}
         <meta name="robots" content="noindex,nofollow" />
       </Head>
 
       <div className="min-h-screen bg-[#0B0D10] text-white">
         <Header />
-
-        {/* Hero Row */}
-        <div className="relative border-b border-white/10 bg-[radial-gradient(120%_200%_at_60%_-10%,rgba(6,182,212,0.12)_0%,rgba(15,15,20,1)_65%)] backdrop-blur-sm overflow-hidden">
-          <div className="absolute -top-20 right-0 h-48 w-48 rounded-full bg-cyan-400/10 blur-[100px] pointer-events-none" />
+        {/* Hero row */}
+        <div className="relative border-b border-white/10 bg-[radial-gradient(120%_200%_at_60%_-10%,rgba(6,182,212,0.16)_0%,rgba(15,15,20,1)_65%)] backdrop-blur-sm overflow-hidden">
+          {/* Why: dual cyan/violet glows give the flat hero the aurora depth used on public pages. */}
+          <div className="absolute -top-24 right-[10%] h-56 w-56 rounded-full bg-cyan-400/15 blur-[110px] pointer-events-none" />
+          <div className="absolute -bottom-32 left-[30%] h-56 w-72 rounded-full bg-violet-500/10 blur-[120px] pointer-events-none" />
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between py-6 gap-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between py-8 gap-4">
               <div>
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-white to-white/80 bg-clip-text text-transparent">
-                  Freelancer Dashboard
+                <p className="text-xs uppercase tracking-[0.4em] text-cyan-300/70 mb-2">Freelancer Dashboard</p>
+                {/* Why: the page greeted the user twice; the H1 is now the single, personal greeting. */}
+                <h1 className="text-3xl sm:text-4xl font-extrabold tracking-[-0.02em] bg-gradient-to-r from-white to-white/75 bg-clip-text text-transparent">
+                  {greeting}{displayName ? `, ${displayName.split(' ')[0]}` : ''}
                 </h1>
                 <div className="flex items-center gap-3 mt-2">
-                  <p className="text-white/70">Welcome back, {displayName}</p>
+                  {/* Why: replace a static welcome line with live workspace context. */}
+                  <p className="text-white/70">
+                    {projects.length === 0
+                      ? "Let's get your profile in front of clients."
+                      : `${metrics.activeProjects} active ${metrics.activeProjects === 1 ? 'project' : 'projects'} · ${metrics.unreadMessages} unread ${metrics.unreadMessages === 1 ? 'message' : 'messages'}`}
+                  </p>
                   <button
                     onClick={() => setTab('calendar')}
                     title="Manage availability"
@@ -1674,26 +1694,12 @@ export default function FreelancerDashboard() {
             <div className="space-y-6">
 
               {/* Welcome Banner — only shown when user has no projects yet */}
-              {projects.length === 0 && (
-                <div className="relative rounded-2xl overflow-hidden border border-cyan-500/30 bg-gradient-to-r from-cyan-500/10 via-violet-500/10 to-transparent backdrop-blur-sm p-6">
-                  <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 to-violet-500/5 pointer-events-none" />
-                  <div className="relative flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500/30 to-violet-500/30 flex items-center justify-center shrink-0 text-2xl">
-                      👋
-                    </div>
-                    <div>
-                      <h2 className="text-lg font-bold text-white mb-1">
-                        Welcome to Unitiv{displayName ? `, ${displayName}` : ''}!
-                      </h2>
-                      <p className="text-sm text-white/60 max-w-xl">
-                        You&apos;re all set up. Complete the steps below to land your first project — it only takes a few minutes.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
+              {/* Why: the welcome banner repeated the hero greeting AND the checklist's purpose — removed.
+                  The Get Started checklist below is now the first thing new users see. */}
 
-              {/* KPI Metrics Grid — premium cards */}
+              {/* Why: six all-zero KPI cards are demoralizing noise for a brand-new account;
+                  metrics appear once there is at least one project to measure. */}
+              {projects.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
 
                 {/* Open Milestones */}
@@ -1704,7 +1710,7 @@ export default function FreelancerDashboard() {
                   <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-cyan-500/15 mb-3">
                     <Target className="w-4 h-4 text-cyan-300" />
                   </div>
-                  <p className="text-xl font-bold text-white mb-0.5 count-animate">
+                  <p className="text-2xl font-extrabold tracking-tight text-white mb-0.5 count-animate">
                     {dashboardMetrics ? formatCurrency((dashboardMetrics.openMilestones.totalCents || 0) / 100) : '$0'}
                   </p>
                   <p className="text-[11px] font-medium text-white/60 mb-1">Open Milestones</p>
@@ -1724,7 +1730,7 @@ export default function FreelancerDashboard() {
                   <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-emerald-500/15 mb-3">
                     <DollarSign className="w-4 h-4 text-emerald-300" />
                   </div>
-                  <p className="text-xl font-bold text-white mb-0.5 count-animate">
+                  <p className="text-2xl font-extrabold tracking-tight text-white mb-0.5 count-animate">
                     {dashboardMetrics ? formatCurrency((dashboardMetrics.earnings.unbilledCents || 0) / 100) : '$0'}
                   </p>
                   <p className="text-[11px] font-medium text-white/60 mb-1">Unbilled / In Escrow</p>
@@ -1750,7 +1756,7 @@ export default function FreelancerDashboard() {
                   <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-purple-500/15 mb-3">
                     <Clock className="w-4 h-4 text-purple-300" />
                   </div>
-                  <p className="text-xl font-bold text-white mb-0.5">
+                  <p className="text-2xl font-extrabold tracking-tight text-white mb-0.5">
                     {dashboardMetrics ? (Number(dashboardMetrics.avgResponseTime.hours) || 0).toFixed(1) : '0'}h
                   </p>
                   <p className="text-[11px] font-medium text-white/60 mb-1">Avg Response</p>
@@ -1763,7 +1769,7 @@ export default function FreelancerDashboard() {
                   <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-amber-500/15 mb-3">
                     <CheckCircle className="w-4 h-4 text-amber-300" />
                   </div>
-                  <p className="text-xl font-bold text-white mb-0.5">
+                  <p className="text-2xl font-extrabold tracking-tight text-white mb-0.5">
                     {dashboardMetrics ? dashboardMetrics.onTimeDelivery.percentage : 0}%
                   </p>
                   <p className="text-[11px] font-medium text-white/60 mb-1">On-time Delivery</p>
@@ -1807,7 +1813,7 @@ export default function FreelancerDashboard() {
                   <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-indigo-500/15 mb-3">
                     <TrendingUp className="w-4 h-4 text-indigo-300" />
                   </div>
-                  <p className="text-xl font-bold text-white mb-0.5">
+                  <p className="text-2xl font-extrabold tracking-tight text-white mb-0.5">
                     {dashboardMetrics ? dashboardMetrics.winRate.percentage : 0}%
                   </p>
                   <p className="text-[11px] font-medium text-white/60 mb-1">Win Rate</p>
@@ -1819,6 +1825,7 @@ export default function FreelancerDashboard() {
                   <div className="metric-bar bg-gradient-to-r from-indigo-400 to-blue-500" />
                 </div>
               </div>
+              )}
 
               {/* Getting Started Checklist — shown only when user has no projects */}
               {projects.length === 0 && (
@@ -2123,7 +2130,6 @@ export default function FreelancerDashboard() {
                     <p>{projectSearch || projectFilter !== 'all' ? 'Try adjusting your filters or search terms' : 'Win your first contract and it will show up here'}</p>
                     {/* Why: empty states should offer a next step, not a dead end. */}
                     {!projectSearch && projectFilter === 'all' && (
-                      {/* Why: align with the cyan→blue primary-action gradient used everywhere else in this file. */}
                       <a
                         href="/open-projects"
                         className="inline-flex items-center gap-2 min-h-[44px] mt-2 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 px-5 py-2.5 text-sm font-semibold text-slate-900 transition hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
@@ -3017,7 +3023,6 @@ export default function FreelancerDashboard() {
                       setAvailability(newState);
                       updateAvailability(newState);
                     }}
-                    /* Why: native dropdown rendered white — color-scheme:dark makes Chromium paint the popup dark, and options get explicit dark bg. */
                     className="[color-scheme:dark] bg-white/5 border border-white/10 rounded-xl text-white px-3 py-2.5 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
                   >
                     {TIMEZONES.map(tz => (
@@ -3503,6 +3508,108 @@ export default function FreelancerDashboard() {
                     </div>
                   )}
                 </div>
+              </div>
+
+              {/* Why: freelancers had no way to change their password without the email reset flow. */}
+              <div className="mb-6 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-4">
+                <p className="text-xs text-white/40 mb-2 flex items-center gap-1">
+                  <Lock className="w-3 h-3" aria-hidden="true" /> Password
+                </p>
+                {!pwChangeMode ? (
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm text-white/80">••••••••</p>
+                    <button
+                      onClick={() => { setPwChangeMode(true); setPwForm({ current: '', next: '', confirm: '' }); setPwError(null); setPwVisible(false); }}
+                      className="shrink-0 text-xs font-semibold text-cyan-400 hover:text-cyan-300 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 rounded"
+                    >
+                      Change
+                    </button>
+                  </div>
+                ) : (
+                  <form
+                    className="space-y-2 max-w-md"
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      setPwError(null);
+                      if (pwForm.next.length < 8) { setPwError('New password must be at least 8 characters.'); return; }
+                      if (pwForm.next !== pwForm.confirm) { setPwError('New passwords do not match.'); return; }
+                      setPwSaving(true);
+                      try {
+                        const res = await fetch('/api/auth/change-password', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ currentPassword: pwForm.current, newPassword: pwForm.next }),
+                        });
+                        const data = await res.json();
+                        if (res.ok) {
+                          addToast('Password updated successfully', 'success');
+                          setPwChangeMode(false);
+                          setPwForm({ current: '', next: '', confirm: '' });
+                        } else {
+                          setPwError(data?.error || 'Failed to update password.');
+                        }
+                      } catch {
+                        setPwError('Network error - please try again.');
+                      } finally {
+                        setPwSaving(false);
+                      }
+                    }}
+                  >
+                    <input
+                      type={pwVisible ? 'text' : 'password'}
+                      value={pwForm.current}
+                      onChange={(e) => setPwForm({ ...pwForm, current: e.target.value })}
+                      placeholder="Current password"
+                      autoComplete="current-password"
+                      maxLength={128}
+                      required
+                      className="w-full bg-white/5 border border-white/10 rounded-lg text-white text-sm px-3 py-2 placeholder:text-white/30 focus:border-cyan-400/70 focus:outline-none"
+                    />
+                    <input
+                      type={pwVisible ? 'text' : 'password'}
+                      value={pwForm.next}
+                      onChange={(e) => setPwForm({ ...pwForm, next: e.target.value })}
+                      placeholder="New password (min 8 characters)"
+                      autoComplete="new-password"
+                      maxLength={128}
+                      required
+                      className="w-full bg-white/5 border border-white/10 rounded-lg text-white text-sm px-3 py-2 placeholder:text-white/30 focus:border-cyan-400/70 focus:outline-none"
+                    />
+                    <input
+                      type={pwVisible ? 'text' : 'password'}
+                      value={pwForm.confirm}
+                      onChange={(e) => setPwForm({ ...pwForm, confirm: e.target.value })}
+                      placeholder="Confirm new password"
+                      autoComplete="new-password"
+                      maxLength={128}
+                      required
+                      className="w-full bg-white/5 border border-white/10 rounded-lg text-white text-sm px-3 py-2 placeholder:text-white/30 focus:border-cyan-400/70 focus:outline-none"
+                    />
+                    <label className="flex items-center gap-2 text-xs text-white/50 select-none cursor-pointer">
+                      <input type="checkbox" checked={pwVisible} onChange={(e) => setPwVisible(e.target.checked)} className="accent-cyan-400" />
+                      Show passwords
+                    </label>
+                    {pwError && (
+                      <p role="alert" className="text-xs text-rose-300">{pwError}</p>
+                    )}
+                    <div className="flex gap-2 pt-1">
+                      <button
+                        type="submit"
+                        disabled={pwSaving || !pwForm.current || !pwForm.next || !pwForm.confirm}
+                        className="text-xs font-semibold bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 rounded-lg px-4 py-2 transition disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+                      >
+                        {pwSaving ? 'Updating…' : 'Update password'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setPwChangeMode(false); setPwError(null); }}
+                        className="text-xs text-white/40 hover:text-white/70 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 rounded"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                )}
               </div>
 
               {profileEditMode ? (
@@ -4117,6 +4224,6 @@ export default function FreelancerDashboard() {
           )}
         </main>
       </div>
-    </>
+    </Fragment>
   );
 }
