@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { query } from 'lib/mysql';
+import { internalError } from '../../../src/lib/apiAuth';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -121,10 +122,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     return res.status(200).json({ success: true, projects });
   } catch (error) {
-    console.error('Error fetching open projects:', error);
-    return res.status(500).json({
-      error: 'Failed to fetch projects',
-      details: error instanceof Error ? error.message : 'Unknown error',
-    });
+    // Why: do not leak error internals; route stays public (open marketplace listing).
+    return internalError(res, 'projects/open', error);
   }
 }

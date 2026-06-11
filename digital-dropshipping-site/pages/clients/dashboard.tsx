@@ -108,6 +108,8 @@ export default function ClientDashboard() {
   const [newMessage, setNewMessage] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
   const [creatingProject, setCreatingProject] = useState(false);
+  // Why: separate in-flight flag — reusing the modal-visibility flag kept the submit button permanently disabled.
+  const [submittingProject, setSubmittingProject] = useState(false);
   const [projectForm, setProjectForm] = useState({
     title: '',
     description: '',
@@ -579,12 +581,15 @@ export default function ClientDashboard() {
       return;
     }
 
-    // Only redirect if auth is verified and user is not a client
-    if (!user || !isClient()) {
-      router.push('/login');
+    // Why: only unauthenticated visitors go to /login; wrong-role users (e.g. freelancers) are routed to their own dashboard by useRoleGuard.
+    if (!user) {
+      router.replace('/login');
       return;
     }
-    
+    if (!['CLIENT', 'ADMIN', 'TEAM_MEMBER'].includes(user.role)) {
+      return;
+    }
+
     let active = true;
     const controller = new AbortController();
     const run = async () => {
@@ -725,6 +730,12 @@ export default function ClientDashboard() {
       const metricsRes = results[1].status === 'fulfilled' ? results[1].value : null;
       let unreadFromProjects: number | undefined;
 
+      // Why: backend infers identity from the session cookie; a 401 means the session expired, so send the user back to login.
+      if (projectsRes?.status === 401 || metricsRes?.status === 401) {
+        router.replace('/login');
+        return;
+      }
+
       if (projectsRes && projectsRes.ok) {
         const data = await projectsRes.json();
         const projectList = Array.isArray(data.projects) ? data.projects : [];
@@ -738,8 +749,10 @@ export default function ClientDashboard() {
               : prev
           );
         }
-      } else if (projectsRes && !projectsRes.ok) {
-        setProjects([]);
+      } else {
+        // Why: a rejected/failed projects request should surface an inline error, not silently render an empty dashboard.
+        if (projectsRes && !projectsRes.ok) setProjects([]);
+        setError('Unable to load your dashboard right now. Please try again shortly.');
       }
 
       if (metricsRes && metricsRes.ok) {
@@ -1119,7 +1132,7 @@ export default function ClientDashboard() {
       return;
     }
 
-    setCreatingProject(true);
+    setSubmittingProject(true);
     try {
       const response = await fetch(`/api/clients/projects?userId=${user.id}`, {
         method: 'POST',
@@ -1164,7 +1177,8 @@ export default function ClientDashboard() {
       console.error('Error creating project:', error);
       addToast('Failed to create project', 'error');
     } finally {
-      setCreatingProject(false);
+      // Why: only clear the in-flight flag — keep the modal open on failure so the form is not lost.
+      setSubmittingProject(false);
     }
   };
 
@@ -1180,13 +1194,48 @@ export default function ClientDashboard() {
     });
   };
 
-  if (loading) {
+  // Why: while useRoleGuard navigates wrong-role/unauthenticated visitors away, show a brief notice instead of flashing this dashboard.
+  if (!authLoading && authVerified && (!user || !['CLIENT', 'ADMIN', 'TEAM_MEMBER'].includes(user.role))) {
     return (
-      <div className="min-h-screen bg-[#0B0D10] flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-2 border-cyan-400/30 border-t-cyan-400 mx-auto"></div>
-          <p className="mt-4 text-white/70 text-sm">Loading your dashboard…</p>
+      <div className="min-h-screen bg-[#0B0D10] flex items-center justify-center text-white">
+        <Head>
+          <title>Client Dashboard - Unitiv</title>
+          <meta name="robots" content="noindex,nofollow" />
+        </Head>
+        <div className="text-center text-white/70" role="status" aria-live="polite">
+          <div className="animate-spin rounded-full h-10 w-10 border-2 border-cyan-400/30 border-t-cyan-400 mx-auto mb-4" aria-hidden="true" />
+          <p className="text-sm">Redirecting…</p>
         </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    // Why: skeleton card shapes signal the upcoming layout better than a lone spinner.
+    return (
+      <div className="min-h-screen bg-[#0B0D10] text-white">
+        <Head>
+          <title>Client Dashboard - Unitiv</title>
+          <meta name="robots" content="noindex,nofollow" />
+        </Head>
+        <Header />
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" aria-busy="true">
+          <h1 className="sr-only">Client Dashboard</h1>
+          <p className="sr-only" role="status">Loading your dashboard…</p>
+          <div className="animate-pulse space-y-6 max-w-[1200px] mx-auto">
+            <div className="h-9 w-72 rounded-xl bg-white/10" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="h-28 rounded-2xl border border-white/10 bg-white/[0.04]" />
+              ))}
+            </div>
+            <div className="h-64 rounded-[32px] border border-white/10 bg-white/[0.04]" />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="h-48 rounded-2xl border border-white/10 bg-white/[0.04]" />
+              <div className="h-48 rounded-2xl border border-white/10 bg-white/[0.04]" />
+            </div>
+          </div>
+        </main>
       </div>
     );
   }
@@ -1234,12 +1283,15 @@ export default function ClientDashboard() {
       <Head>
         <title>Client Dashboard - Unitiv</title>
         <meta name="description" content="Manage your projects and collaborate with freelancers" />
+        {/* Why: private dashboard — keep it out of search indexes. */}
+        <meta name="robots" content="noindex,nofollow" />
       </Head>
 
       <div className="min-h-screen bg-[#0B0D10] text-white">
         <Header />
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Why: semantic landmark for the dashboard content. */}
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="max-w-[1200px] mx-auto space-y-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
@@ -1644,21 +1696,31 @@ export default function ClientDashboard() {
 
           {/* Error Display */}
           {error && (
-            <div className="mb-6 p-4 bg-red-500/20 border border-red-500/30 rounded-lg text-red-300">
-              <div className="flex items-center justify-between">
+            <div role="alert" className="mb-6 p-4 bg-red-500/20 border border-red-500/30 rounded-lg text-red-300">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <AlertCircle className="w-5 h-5" />
+                  <AlertCircle className="w-5 h-5 shrink-0" aria-hidden="true" />
                   <p>{error}</p>
                 </div>
-                <button
-                  onClick={() => {
-                    setError(null);
-                    fetchClientData();
-                  }}
-                  className="text-red-300 hover:text-red-200"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-2">
+                  {/* Why: an explicit Retry label is clearer than an icon-only control. */}
+                  <button
+                    onClick={() => {
+                      setError(null);
+                      fetchClientData();
+                    }}
+                    className="min-h-[44px] rounded-xl border border-red-400/40 bg-red-500/15 px-4 py-2 text-sm font-semibold text-red-100 hover:bg-red-500/25 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+                  >
+                    Retry
+                  </button>
+                  <button
+                    onClick={() => setError(null)}
+                    aria-label="Dismiss error"
+                    className="p-2 text-red-300 hover:text-red-200 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+                  >
+                    <X className="w-4 h-4" aria-hidden="true" />
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -2223,14 +2285,15 @@ export default function ClientDashboard() {
                   ))}
                 </div>
               ) : (
-                <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-sm text-white/40">
-                  <Briefcase className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                  <p className="mb-4">No projects found</p>
+                <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-sm text-white/70">
+                  <Briefcase className="w-16 h-16 mx-auto mb-4 opacity-50" aria-hidden="true" />
+                  <p className="text-white font-medium mb-1">{projectSearch || projectFilter !== 'all' ? 'No projects match your filters' : 'No projects yet'}</p>
+                  <p className="mb-4">{projectSearch || projectFilter !== 'all' ? 'Try adjusting your search or filters' : 'Post a project to start working with vetted freelancers'}</p>
                   <button
                     onClick={() => setCreatingProject(true)}
-                    className="rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold px-4 py-2 text-sm"
+                    className="min-h-[44px] rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold px-4 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
                   >
-                    Create Your First Project
+                    {projectSearch || projectFilter !== 'all' ? 'Post a project' : 'Create Your First Project'}
                   </button>
                 </div>
               )}
@@ -2246,10 +2309,11 @@ export default function ClientDashboard() {
                   <h3 className="text-lg font-semibold text-white">Projects</h3>
                   <button
                     onClick={() => fetchClientData()}
-                    className="text-xs text-cyan-400 hover:text-cyan-300"
+                    aria-label="Refresh conversations"
+                    className="p-2 text-cyan-400 hover:text-cyan-300 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
                     title="Refresh"
                   >
-                    <Activity className="w-4 h-4" />
+                    <Activity className="w-4 h-4" aria-hidden="true" />
                   </button>
                 </div>
                 {projects.length > 0 ? (
@@ -2287,17 +2351,18 @@ export default function ClientDashboard() {
                     })}
                   </div>
                 ) : (
-                  <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-sm text-white/40">
-                    <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                    <p>No projects yet</p>
+                  <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-sm text-white/70">
+                    <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-50" aria-hidden="true" />
+                    <p className="text-white font-medium mb-1">No conversations yet</p>
+                    <p>Post a project to start chatting with freelancers.</p>
                     <button
                       onClick={() => {
                         setActiveTab('projects');
                         setCreatingProject(true);
                       }}
-                      className="mt-4 rounded-xl border border-white/10 bg-white/5 text-white/70 px-4 py-2 text-sm hover:bg-white/10 transition"
+                      className="mt-4 min-h-[44px] rounded-xl border border-white/10 bg-white/5 text-white/70 px-4 py-2 text-sm hover:bg-white/10 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
                     >
-                      Create Project
+                      Post a project
                     </button>
                   </div>
                 )}
@@ -2349,9 +2414,11 @@ export default function ClientDashboard() {
                           <div ref={messagesEndRef} />
                         </>
                       ) : (
-                        <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-sm text-white/40">
-                          <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                          <p>No messages yet</p>
+                        <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-sm text-white/70">
+                          <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-50" aria-hidden="true" />
+                          <p className="text-white font-medium mb-1">No messages yet</p>
+                          {/* Why: point to the composer below so the empty thread is actionable. */}
+                          <p>Say hello — send the first message using the box below.</p>
                         </div>
                       )}
                     </div>
@@ -2400,7 +2467,8 @@ export default function ClientDashboard() {
           {/* Create Project Modal */}
           {creatingProject && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
-              <div className="relative w-full max-w-2xl rounded-2xl border border-white/20 bg-[#0B0D12] backdrop-blur-xl shadow-2xl p-6">
+              {/* Why: cap height so the dialog stays usable on small screens. */}
+              <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-white/20 bg-[#0B0D12] backdrop-blur-xl shadow-2xl p-6" role="dialog" aria-modal="true" aria-label="Create new project">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-xl font-semibold">Create New Project</h3>
                   <button
@@ -2415,9 +2483,10 @@ export default function ClientDashboard() {
                         freelancerId: ''
                       });
                     }}
-                    className="text-white/50 hover:text-white transition"
+                    aria-label="Close create project dialog"
+                    className="p-2 -m-2 text-white/70 hover:text-white transition rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
                   >
-                    <X className="w-5 h-5" />
+                    <X className="w-5 h-5" aria-hidden="true" />
                   </button>
                 </div>
                 <div className="space-y-4">
@@ -2494,10 +2563,10 @@ export default function ClientDashboard() {
                     </button>
                     <button
                       onClick={createProject}
-                      disabled={creatingProject || !projectForm.title.trim()}
-                      className="flex-1 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold px-4 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={submittingProject || !projectForm.title.trim()}
+                      className="flex-1 min-h-[44px] rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold px-4 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
                     >
-                      {creatingProject ? 'Creating...' : 'Create Project'}
+                      {submittingProject ? 'Creating...' : 'Create Project'}
                     </button>
                   </div>
                 </div>
@@ -2505,7 +2574,7 @@ export default function ClientDashboard() {
             </div>
           )}
           </div>
-        </div>
+        </main>
       </div>
     </>
   );

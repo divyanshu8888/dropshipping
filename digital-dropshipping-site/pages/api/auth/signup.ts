@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import bcrypt from 'bcryptjs';
 import type { ResultSetHeader } from 'mysql2';
 import { queryOne, transaction } from '../../../src/lib/mysql';
+import { checkRateLimit } from '../../../src/lib/rateLimit';
 
 type DbUser = {
   id: number;
@@ -29,6 +30,15 @@ export default async function handler(
 ) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // Why: signup had no rate limiting — bot account-creation abuse vector.
+  const fwd = req.headers['x-forwarded-for'];
+  const ip = (typeof fwd === 'string' ? fwd.split(',')[0].trim() : req.socket?.remoteAddress) ?? 'unknown';
+  const rl = checkRateLimit(`signup:${ip}`);
+  if (!rl.allowed) {
+    res.setHeader('Retry-After', String(Math.ceil((rl.retryAfterMs ?? 60000) / 1000)));
+    return res.status(429).json({ error: 'Too many signup attempts. Please try again later.' });
   }
 
   try {

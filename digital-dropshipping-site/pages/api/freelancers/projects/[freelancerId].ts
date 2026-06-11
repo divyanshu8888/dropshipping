@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { query } from 'lib/mysql';
+import { requireRole, internalError } from '../../../../src/lib/apiAuth';
 
 export default async function handler(
   req: NextApiRequest,
@@ -9,17 +10,17 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // Why: identity must come from the session cookie; the path freelancerId is ignored.
+  const user = await requireRole(req, res, ['FREELANCER']);
+  if (!user) return;
+
   try {
-    const { freelancerId } = req.query;
+    const freelancerId = user.id;
 
-    if (!freelancerId) {
-      return res.status(400).json({ error: 'Freelancer ID is required' });
-    }
-
-    // Get freelancer database ID from user_id
+    // Get freelancer database ID from the authenticated user's id
     const freelancer = await query<{ id: number; user_id: number }>(
       `SELECT id, user_id FROM freelancers WHERE user_id = ? LIMIT 1`,
-      [Number(freelancerId)]
+      [freelancerId]
     );
 
     if (!freelancer || freelancer.length === 0) {
@@ -86,7 +87,7 @@ export default async function handler(
               JOIN users u ON u.id = m.sender_id
               WHERE m.conversation_id = ?
               ORDER BY m.created_at ASC`,
-              [Number(freelancerId), convId]
+              [freelancerId, convId]
             );
           }
         } catch (e) {
@@ -183,10 +184,6 @@ export default async function handler(
     });
 
   } catch (error) {
-    console.error('Error fetching freelancer projects:', error);
-    return res.status(500).json({
-      error: 'Failed to fetch freelancer projects',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return internalError(res, 'freelancers/projects/[freelancerId]', error);
   }
 }

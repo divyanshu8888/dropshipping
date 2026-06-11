@@ -1,7 +1,8 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { GetServerSideProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import Header from '../src/components/Header';
 import { QuoteRequestContext } from '../src/components/QuoteRequestForm';
 import { buildQuoteHref } from '../src/lib/quoteLink';
@@ -29,6 +30,15 @@ const categoryChips = [
 export default function ProductsPage({ products, selectedCategory }: ProductsPageProps) {
   const { isFreelancer } = useAuth();
   const viewerIsFreelancer = isFreelancer();
+  const router = useRouter();
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // Why: honor ?search= passed from the home page hero search, which previously went nowhere
+  useEffect(() => {
+    if (router.isReady && typeof router.query.search === 'string') {
+      setSearchTerm(router.query.search);
+    }
+  }, [router.isReady, router.query.search]);
 
   const pageTitle = useMemo(() => {
     if (selectedCategory) {
@@ -41,19 +51,39 @@ export default function ProductsPage({ products, selectedCategory }: ProductsPag
 
   const renderedProducts = products ?? [];
 
+  // Why: client-side text filter so visitors can narrow the catalog without a round trip
+  const visibleProducts = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    if (!q) return renderedProducts;
+    return renderedProducts.filter((p) =>
+      [p.service_name, p.title, p.summary, p.description, p.category].some(
+        (field) => (field || '').toLowerCase().includes(q)
+      )
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [products, searchTerm]);
+
   return (
     <>
       <Head>
         <title>{pageTitle}</title>
+        {/* Why: 150-160 char description + og tags (og:type/twitter:card are global in _app.tsx) */}
         <meta
           name="description"
-          content="Discover professional services and digital products from our verified freelancers. Get custom quotes and view detailed service information."
+          content="Discover professional services and digital products from verified freelancers on Unitiv. Compare playbooks, get custom quotes, and launch with milestones."
+        />
+        <meta property="og:title" content={pageTitle} />
+        <meta
+          property="og:description"
+          content="Discover professional services and digital products from verified freelancers on Unitiv. Compare playbooks, get custom quotes, and launch with milestones."
         />
       </Head>
 
       <div className="min-h-screen bg-bg-base">
         <Header />
 
+        {/* Why: semantic <main> landmark for screen readers and SEO */}
+        <main>
         <section>
           <div className="relative overflow-hidden rounded-none border-y border-white/5 bg-gradient-to-r from-[#05060c] via-[#0b1023] to-[#070812] shadow-[0_30px_120px_-60px_rgba(65,110,255,0.6)]">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(91,143,254,0.3),_transparent_60%)] pointer-events-none" />
@@ -63,7 +93,8 @@ export default function ProductsPage({ products, selectedCategory }: ProductsPag
               </p>
               <h1 className="mt-5 text-[clamp(36px,5.5vw,68px)] font-extrabold tracking-[-0.03em] leading-[1.08] text-white">
                 Find the{' '}
-                <span className="gradient-text">Perfect Playbook</span>
+                {/* Why: design system mandates hero-gradient-refined (solid cyan, no animated gradient) for hero headings */}
+                <span className="hero-gradient-refined">Perfect Playbook</span>
               </h1>
               <p className="mt-4 text-lg text-white/80 leading-relaxed">
                 Browse done-for-you service playbooks delivered by verified operators. Every package includes onboarding, QA, and milestone-based delivery.
@@ -129,7 +160,7 @@ export default function ProductsPage({ products, selectedCategory }: ProductsPag
             </div>
           </div>
 
-          <nav className="mb-8 text-sm">
+          <nav aria-label="Breadcrumb" className="mb-8 text-sm">
             <ol className="flex items-center space-x-2 text-text-mute">
               <li>
                 <Link href="/" className="hover:text-white transition-colors">
@@ -158,7 +189,41 @@ export default function ProductsPage({ products, selectedCategory }: ProductsPag
             </div>
           )}
 
-          {renderedProducts.length === 0 ? (
+          {/* Why: search box + live result count so visitors can narrow the catalog (also serves home-page ?search= links) */}
+          <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+            <div className="relative flex h-12 w-full items-center gap-3 rounded-full border border-white/15 bg-white/[0.06] px-4 transition focus-within:border-cyan-400/40 sm:max-w-md">
+              <svg className="h-5 w-5 shrink-0 text-white/70" viewBox="0 0 24 24" fill="none">
+                <path d="M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+              </svg>
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                maxLength={200}
+                aria-label="Search services"
+                placeholder="Search services…"
+                className="h-full flex-1 bg-transparent text-white outline-none search-input-field"
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  aria-label="Clear search"
+                  className="shrink-0 rounded-full p-2 text-white/70 hover:text-white hover:bg-white/10 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+                >
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+            <p className="text-sm text-white/70">
+              <span className="font-semibold text-white">{visibleProducts.length}</span>{' '}
+              {visibleProducts.length === 1 ? 'service' : 'services'} found
+            </p>
+          </div>
+
+          {visibleProducts.length === 0 ? (
             <div className="text-center py-16">
               <svg
                 className="mx-auto h-24 w-24 text-gray-400"
@@ -173,14 +238,36 @@ export default function ProductsPage({ products, selectedCategory }: ProductsPag
                   d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0V6a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2V6"
                 />
               </svg>
-              <h2 className="mt-4 text-xl font-semibold text-white">No services available</h2>
+              <h2 className="mt-4 text-xl font-semibold text-white">
+                {searchTerm || selectedCategory ? 'No services match your search' : 'No services available'}
+              </h2>
               <p className="mt-2 text-text-soft">
-                Our freelancers are preparing amazing services for you. Check back soon!
+                {searchTerm || selectedCategory
+                  ? 'Try a different keyword or browse the full catalog.'
+                  : 'Our freelancers are preparing amazing services for you. Check back soon!'}
               </p>
+              {/* Why: empty state needs an action CTA, not just a message */}
+              <div className="mt-6 flex flex-wrap justify-center gap-3">
+                {searchTerm && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchTerm('')}
+                    className="inline-flex items-center justify-center rounded-xl border border-white/15 px-6 py-3 text-sm font-semibold text-white/90 hover:text-white hover:border-white/40 hover:bg-white/5 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+                  >
+                    Clear search
+                  </button>
+                )}
+                <Link
+                  href="/freelancers"
+                  className="inline-flex items-center justify-center rounded-xl border border-white/15 px-6 py-3 text-sm font-semibold text-white/90 hover:text-white hover:border-white/40 hover:bg-white/5 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+                >
+                  Browse freelancers instead
+                </Link>
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {renderedProducts.map((product) => (
+              {visibleProducts.map((product) => (
                 <div
                   key={product.slug}
                   className="group relative overflow-hidden rounded-[28px] border border-white/10 bg-white/5 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-cyan-400/40"
@@ -271,6 +358,7 @@ export default function ProductsPage({ products, selectedCategory }: ProductsPag
             </div>
           )}
         </div>
+        </main>
       </div>
     </>
   );

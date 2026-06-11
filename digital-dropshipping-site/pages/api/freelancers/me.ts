@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { queryOne } from 'lib/mysql';
+import { requireAuth, internalError } from '../../../src/lib/apiAuth';
 
 export default async function handler(
   req: NextApiRequest,
@@ -9,13 +10,12 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  try {
-    const userIdRaw = req.query.userId;
-    const userId = Array.isArray(userIdRaw) ? Number(userIdRaw[0]) : Number(userIdRaw);
+  // Why: identity must come from the session cookie, not a client-supplied userId.
+  const user = await requireAuth(req, res);
+  if (!user) return;
 
-    if (!userId || Number.isNaN(userId)) {
-      return res.status(400).json({ error: 'Missing or invalid userId' });
-    }
+  try {
+    const userId = user.id;
 
     const row = await queryOne<{
       id: number;
@@ -51,8 +51,7 @@ export default async function handler(
       },
     });
   } catch (error) {
-    console.error('Error fetching freelancer profile summary:', error);
-    return res.status(500).json({ error: 'Failed to fetch profile' });
+    return internalError(res, 'freelancers/me', error);
   }
 }
 

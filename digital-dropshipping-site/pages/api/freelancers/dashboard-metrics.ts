@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { query } from 'lib/mysql';
+import { requireRole, internalError } from '../../../src/lib/apiAuth';
 
 export default async function handler(
   req: NextApiRequest,
@@ -9,14 +10,12 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  try {
-    const { freelancerId } = req.query;
-    
-    if (!freelancerId) {
-      return res.status(400).json({ error: 'Missing freelancerId' });
-    }
+  // Why: metrics are private; identity comes from the session cookie, not query params.
+  const user = await requireRole(req, res, ['FREELANCER']);
+  if (!user) return;
 
-    const userId = Number(freelancerId);
+  try {
+    const userId = user.id;
 
     // Get freelancer record
     const freelancer = await query<{ id: number; user_id: number }>(
@@ -203,11 +202,7 @@ export default async function handler(
     });
 
   } catch (error) {
-    console.error('Error fetching dashboard metrics:', error);
-    return res.status(500).json({
-      error: 'Failed to fetch metrics',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return internalError(res, 'freelancers/dashboard-metrics', error);
   }
 }
 

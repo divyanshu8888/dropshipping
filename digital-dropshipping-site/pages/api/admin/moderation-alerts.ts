@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { query } from '../../../src/lib/mysql';
+import { requireAdmin, internalError } from '../../../src/lib/apiAuth';
 
 export default async function handler(
   req: NextApiRequest,
@@ -8,6 +9,10 @@ export default async function handler(
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+
+  // Why: admin endpoints were callable without any authentication.
+  const adminUser = await requireAdmin(req, res);
+  if (!adminUser) return;
 
   try {
     const { limit = '50', offset = '0', severity, isRead, type } = req.query;
@@ -70,11 +75,8 @@ export default async function handler(
     });
 
   } catch (error) {
-    console.error('Error fetching moderation alerts:', error);
-    return res.status(500).json({
-      error: 'Failed to fetch moderation alerts',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
+    // Why: 500 response leaked error.message to clients.
+    return internalError(res, 'moderation-alerts', error);
   }
 }
 

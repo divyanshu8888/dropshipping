@@ -7,17 +7,28 @@ export default function PayoutsPage() {
     <>
       <Head>
         <title>Payouts - Unitiv</title>
-        <meta name="description" content="Fast, secure payout options for freelancers" />
+        {/* Why: full SEO/social meta with 150-160 char description */}
+        <meta
+          name="description"
+          content="Learn how Unitiv payouts work for freelancers: instant release on milestone approval with Stripe Instant, bank transfer, and PayPal options worldwide."
+        />
+        <meta property="og:title" content="Payouts - Unitiv" />
+        <meta
+          property="og:description"
+          content="Instant payout release on milestone approval with Stripe Instant, bank transfer, and PayPal options."
+        />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary" />
       </Head>
 
       <div className="min-h-screen bg-bg-base">
         <Header />
 
-        <div className="max-w-4xl mx-auto px-6 py-16 pt-24">
+        <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 pt-24">
           <h1 className="text-4xl font-bold text-white mb-4">Payouts</h1>
           <p className="text-xl text-gray-300 mb-12">Get paid fast and securely</p>
 
-          <div className="grid md:grid-cols-2 gap-6 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
             <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
               <h2 className="text-2xl font-bold text-white mb-4">How Payouts Work</h2>
               <div className="space-y-4">
@@ -116,18 +127,25 @@ export default function PayoutsPage() {
             </div>
           </div>
 
-          <div className="mt-8 text-center">
-            <Link href="/apply" className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-cyan-400 to-violet-500 text-white rounded-xl font-semibold hover:opacity-90 transition">
+          {/* Why: internal links to apply, protection, and community */}
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 text-center">
+            <Link href="/apply" className="inline-flex items-center min-h-[44px] px-8 py-4 bg-gradient-to-r from-cyan-500 via-fuchsia-500 to-rose-500 text-white rounded-xl font-semibold hover:opacity-90 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70">
               Become a Freelancer
+            </Link>
+            <Link href="/protection" className="inline-flex items-center min-h-[44px] px-8 py-4 border border-white/15 text-white rounded-xl font-semibold hover:bg-white/10 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70">
+              Milestone Protection
+            </Link>
+            <Link href="/community" className="inline-flex items-center min-h-[44px] px-8 py-4 border border-white/15 text-white rounded-xl font-semibold hover:bg-white/10 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70">
+              Freelancer Community
             </Link>
           </div>
 
           <div className="mt-8 text-center">
-            <Link href="/" className="inline-flex items-center text-cyan-400 hover:text-cyan-300">
+            <Link href="/" className="inline-flex items-center min-h-[44px] px-4 text-cyan-400 hover:text-cyan-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 rounded-lg">
               ← Back to Home
             </Link>
           </div>
-        </div>
+        </main>
       </div>
     </>
   );

@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { query, queryOne } from 'lib/mysql';
 import { guardMessage } from '../../../src/lib/moderation/contactGuard';
+import { requireAuth, internalError } from '../../../src/lib/apiAuth';
 
 export default async function handler(
   req: NextApiRequest,
@@ -10,11 +11,30 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // Why: identity must come from the session cookie; body userId/clientUserId are ignored.
+  const user = await requireAuth(req, res);
+  if (!user) return;
+
   try {
-    const { projectId, content, sender, userId } = req.body;
+    const { projectId, content, sender } = req.body;
 
     if (!projectId || !content || !sender) {
       return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Why: only a participant (project freelancer or client owner) may message this project.
+    const participant = await queryOne<{ id: number }>(
+      `SELECT p.id
+       FROM projects p
+       LEFT JOIN freelancers f ON f.id = p.freelancer_id
+       LEFT JOIN clients cl ON cl.id = p.client_id
+       WHERE p.id = ? AND (f.user_id = ? OR cl.owner_id = ?)
+       LIMIT 1`,
+      [Number(projectId), user.id, user.id]
+    );
+
+    if (!participant) {
+      return res.status(403).json({ error: 'Not authorized to send messages for this project' });
     }
 
     // Use the new contact guard for validation
@@ -38,11 +58,12 @@ export default async function handler(
           [Number(projectId)]
         );
 
-        const senderUserId = sender === 'freelancer' ? userId : req.body.clientUserId;
-        const userInfo = senderUserId ? await queryOne<{ id: number; email: string; display_name: string | null; name: string | null }>(
+        // Why: report the authenticated sender, not a client-supplied id.
+        const senderUserId = user.id;
+        const userInfo = await queryOne<{ id: number; email: string; display_name: string | null; name: string | null }>(
           `SELECT id, email, display_name, name FROM users WHERE id = ? LIMIT 1`,
-          [Number(senderUserId)]
-        ) : null;
+          [senderUserId]
+        );
 
         // Create admin notification record with specific type for pricing violations
         const notificationType = isPricingViolation ? 'moderation_pricing_violation' : 'moderation_blocked_message';
@@ -129,14 +150,8 @@ export default async function handler(
       return res.status(500).json({ error: 'Failed to create or find conversation' });
     }
 
-    // Get sender user_id - need to get it from the request context or pass it
-    // For now, we'll need to get the user from the session
-    // This is a simplified version - you may need to get userId from auth context
-    const senderUserId = sender === 'freelancer' ? req.body.userId : req.body.clientUserId;
-    
-    if (!senderUserId) {
-      return res.status(400).json({ error: 'Missing sender user ID' });
-    }
+    // Why: sender identity comes from the authenticated session, never the body.
+    const senderUserId = user.id;
 
     // Insert message
     await query(
@@ -176,10 +191,6 @@ export default async function handler(
     });
 
   } catch (error) {
-    console.error('Error sending message:', error);
-    return res.status(500).json({
-      error: 'Failed to send message',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return internalError(res, 'freelancers/send-message', error);
   }
 }

@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { query, queryOne } from 'lib/mysql';
+import { requireRole, internalError } from '../../../src/lib/apiAuth';
 
 export default async function handler(
   req: NextApiRequest,
@@ -9,16 +10,17 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  try {
-    const userId = req.query.clientId || req.query.userId || req.headers['x-user-id'];
-    if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
+  // Why: identity must come from the session cookie, not query params/headers.
+  const user = await requireRole(req, res, ['CLIENT']);
+  if (!user) return;
 
-    // Get client ID from user_id
+  try {
+    const userId = user.id;
+
+    // Get client ID from the authenticated user's id
     const client = await queryOne<{ id: number }>(
       `SELECT id FROM clients WHERE owner_id = ? LIMIT 1`,
-      [Number(userId)]
+      [userId]
     );
 
     if (!client) {
@@ -99,7 +101,7 @@ export default async function handler(
             FROM messages
             WHERE conversation_id IN (${convPlaceholders})
             AND sender_id != ?`,
-            [...convIds, Number(userId)]
+            [...convIds, userId]
           );
 
           if (messages) {
@@ -128,11 +130,7 @@ export default async function handler(
     });
 
   } catch (error) {
-    console.error('Error fetching client dashboard metrics:', error);
-    return res.status(500).json({
-      error: 'Failed to fetch dashboard metrics',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return internalError(res, 'clients/dashboard-metrics', error);
   }
 }
 

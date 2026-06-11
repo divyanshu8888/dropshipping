@@ -5,7 +5,8 @@ export const brand = {
 export const loginCopy = {
   seo: {
     title: `Login - ${brand.name}`,
-    description: `Sign in to ${brand.name} to pick up where you left off, manage collaborators, and keep work moving.`
+    // Why: 150-160 char description for healthier SERP snippets
+    description: `Sign in to your ${brand.name} account to manage projects, collaborate with vetted freelancers and clients, track milestones, and keep payments moving securely.`
   },
 
   hero: {
@@ -75,7 +76,8 @@ export const loginCopy = {
 export const signupCopy = {
   seo: {
     title: `Create an account - ${brand.name}`,
-    description: `Join ${brand.name}: build projects, collaborate with talent, and track deliverables in one place.`
+    // Why: 150-160 char description for healthier SERP snippets
+    description: `Create your free ${brand.name} account as a client or freelancer to post briefs, build your profile, collaborate on projects, and get paid securely in one place.`
   },
 
   hero: {

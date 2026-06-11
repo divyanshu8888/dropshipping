@@ -34,6 +34,12 @@ const ProductDetail = ({ product }: ProductDetailProps) => {
 
   const categoryLabel = product.category || product.service_name;
   const displayTitle = product.service_name || product.title;
+  // Why: meta description capped near 160 chars with a sensible fallback when the product copy is empty
+  const metaDescription = (
+    product.summary ||
+    product.description ||
+    `Request a custom quote for ${displayTitle} on Unitiv — scoped, milestone-based delivery by a verified operator.`
+  ).slice(0, 160);
   const timelineLabel = product.delivery_days ? `${product.delivery_days} day delivery` : 'Flexible delivery';
   const serviceHighlights = [
     'Milestone-based delivery with QA checkpoints',
@@ -62,14 +68,18 @@ const ProductDetail = ({ product }: ProductDetailProps) => {
         <>
             <Head>
         <title>{displayTitle} - Unitiv</title>
-        <meta name="description" content={product.description || product.summary || ''} />
+        <meta name="description" content={metaDescription} />
+        {/* Why: per-page og tags (og:type/twitter:card are global in _app.tsx) */}
+        <meta property="og:title" content={`${displayTitle} - Unitiv`} />
+        <meta property="og:description" content={metaDescription} />
             </Head>
 
       <div className="min-h-screen bg-bg-base">
                 <Header />
 
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 pt-28">
-                    <nav className="mb-8">
+        {/* Why: semantic <main> landmark for screen readers and SEO */}
+        <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 pt-28">
+                    <nav aria-label="Breadcrumb" className="mb-8">
                         <ol className="flex items-center space-x-2 text-sm">
                             <li>
                 <Link href="/" className="text-text-mute hover:text-white">
@@ -219,7 +229,7 @@ const ProductDetail = ({ product }: ProductDetailProps) => {
                         freelancerId: product.freelancer_id ?? undefined,
                         freelancerName: product.freelancer_name ?? undefined
                       })}
-                      className="mt-6 inline-flex w-full justify-center rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+                      className="mt-6 inline-flex w-full justify-center rounded-2xl bg-gradient-to-r from-cyan-500 via-fuchsia-500 to-rose-500 px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
                     >
                       Start quote
                     </Link>
@@ -272,7 +282,7 @@ const ProductDetail = ({ product }: ProductDetailProps) => {
                 </div>
             </div>
           </div>
-        </div>
+        </main>
       </div>
 
         </>

@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { query } from 'lib/mysql';
 import { promises as fs } from 'fs';
 import path from 'path';
+import { requireRole, internalError } from '../../../src/lib/apiAuth';
 
 // Helper function to check if file exists
 async function fileExists(filePath: string): Promise<boolean> {
@@ -37,17 +38,15 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  try {
-    // Get user from session (simplified - you may need to add proper auth)
-    const userId = req.query.userId || req.headers['x-user-id'];
-    if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
+  // Why: KYC docs are private; identity comes from the session cookie, not query params.
+  const user = await requireRole(req, res, ['FREELANCER']);
+  if (!user) return;
 
-    // Get freelancer ID from user_id
+  try {
+    // Get freelancer ID from the authenticated user's id
     const freelancer = await query<{ id: number }>(
       `SELECT id FROM freelancers WHERE user_id = ? LIMIT 1`,
-      [userId]
+      [user.id]
     );
 
     if (!freelancer || freelancer.length === 0) {
@@ -90,11 +89,7 @@ export default async function handler(
       documents: serialized
     });
   } catch (error: any) {
-    console.error('Error fetching KYC documents:', error);
-    return res.status(500).json({
-      error: 'Failed to fetch KYC documents',
-      details: error.message
-    });
+    return internalError(res, 'freelancers/kyc-documents', error);
   }
 }
 

@@ -40,26 +40,39 @@ export default function WhyChooseUsPage() {
     <>
       <Head>
         <title>Why Choose Us - Unitiv</title>
-        <meta name="description" content="Discover why Unitiv is the trusted platform for connecting clients with verified freelancers" />
+        {/* Why: full SEO/social meta with 150-160 char description */}
+        <meta
+          name="description"
+          content="Discover why clients choose Unitiv: verified freelancers, secure escrow payments, quality guarantees, fast delivery, and a global network of trusted talent."
+        />
+        <meta property="og:title" content="Why Choose Us - Unitiv" />
+        <meta
+          property="og:description"
+          content="Verified freelancers, secure escrow payments, quality guarantees, and a global talent network."
+        />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary" />
       </Head>
 
       <div className="min-h-screen bg-[#0B0C0F]">
         <Header />
 
+        <main>
         {/* Hero Section */}
         <section className="relative border-b border-white/10 bg-gradient-to-b from-[#0B0C0F] to-[#0B0C0F] pt-24 pb-8">
-          <div className="max-w-4xl mx-auto px-6 text-center">
-            <h1 className="text-xs text-white/60 font-bold tracking-wide uppercase mb-2">Why Choose Us</h1>
-            <p className="text-2xl md:text-3xl font-black text-white leading-tight tracking-tight">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            {/* Why: proper heading hierarchy — eyebrow is a span, the headline is the h1 */}
+            <span className="block text-xs text-white/60 font-semibold tracking-[0.4em] uppercase mb-2">Why Choose Us</span>
+            <h1 className="text-2xl md:text-3xl font-black text-white leading-tight tracking-tight">
               Everything you need to{" "}
               <span className="bg-gradient-to-r from-[#00C6FF] to-[#7D2AE8] bg-clip-text text-transparent">succeed</span>
-            </p>
+            </h1>
           </div>
         </section>
 
         {/* Features Grid */}
-        <div className="max-w-7xl mx-auto px-6 py-12">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {features.map((feature, index) => (
               <div key={index} className="relative p-4 rounded-xl bg-white/[0.05] backdrop-blur-sm border border-white/10 hover:bg-white/[0.08] transition-all duration-300">
                 <div className="text-3xl mb-3">{feature.icon}</div>
@@ -77,15 +90,22 @@ export default function WhyChooseUsPage() {
                 Join thousands of clients and freelancers who trust Unitiv for their projects.
               </p>
               <div className="flex flex-wrap items-center justify-center gap-3">
-                <Link 
-                  href="/freelancers" 
-                  className="inline-flex items-center px-5 py-2.5 text-sm bg-gradient-to-r from-[#00C6FF] to-[#7D2AE8] text-white rounded-full font-semibold hover:shadow-[0_0_18px_rgba(125,42,232,.45)] transition"
+                {/* Why: ≥44px targets, focus rings, extra link to protection */}
+                <Link
+                  href="/freelancers"
+                  className="inline-flex items-center min-h-[44px] px-5 py-2.5 text-sm bg-gradient-to-r from-[#00C6FF] to-[#7D2AE8] text-white rounded-full font-semibold hover:shadow-[0_0_18px_rgba(125,42,232,.45)] transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
                 >
                   Browse Freelancers
                 </Link>
-                <Link 
-                  href="/apply" 
-                  className="inline-flex items-center px-5 py-2.5 text-sm border border-white/25 text-white rounded-full font-semibold hover:bg-white/10 transition"
+                <Link
+                  href="/protection"
+                  className="inline-flex items-center min-h-[44px] px-5 py-2.5 text-sm border border-white/15 text-white rounded-full font-semibold hover:bg-white/10 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+                >
+                  Payment Protection
+                </Link>
+                <Link
+                  href="/apply"
+                  className="inline-flex items-center min-h-[44px] px-5 py-2.5 text-sm border border-white/15 text-white rounded-full font-semibold hover:bg-white/10 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
                 >
                   Apply as Freelancer
                 </Link>
@@ -105,7 +125,8 @@ export default function WhyChooseUsPage() {
               Back to Home
             </Link>
           </div>
-        </div>
+        </section>
+        </main>
       </div>
     </>
   );

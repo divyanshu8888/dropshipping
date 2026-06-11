@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { query, queryOne } from '../../../src/lib/mysql';
+import { internalError } from '../../../src/lib/apiAuth';
 
 /**
  * Auto-approval endpoint for milestones
@@ -16,6 +17,13 @@ export default async function handler(
   // Only allow POST requests (or GET for manual testing)
   if (req.method !== 'POST' && req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // Why: this sweep was publicly triggerable; require a shared cron secret.
+  const cronSecret = process.env.CRON_SECRET;
+  const provided = req.headers['x-cron-secret'] || req.headers.authorization?.replace(/^Bearer\s+/i, '');
+  if (!cronSecret || provided !== cronSecret) {
+    return res.status(401).json({ error: 'Unauthorized' });
   }
 
   try {
@@ -175,11 +183,8 @@ export default async function handler(
     });
 
   } catch (error: any) {
-    console.error('Error in auto-approval process:', error);
-    return res.status(500).json({
-      error: 'Failed to process auto-approvals',
-      details: error.message
-    });
+    // Why: do not leak error internals to callers.
+    return internalError(res, 'milestones/auto-approve', error);
   }
 }
 

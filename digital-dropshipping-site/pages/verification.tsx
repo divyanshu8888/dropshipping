@@ -7,7 +7,11 @@ export default function VerificationPage() {
     <>
       <Head>
         <title>Verification Guide - Unitiv</title>
-        <meta name="description" content="Learn how to get verified as a freelancer on Unitiv" />
+        {/* Why: 150-160 char description for healthier SERP snippets; public content page so it stays indexable */}
+        <meta
+          name="description"
+          content="Learn how to get verified as a freelancer on Unitiv: identity checks, portfolio review, and profile requirements that unlock priority placement and trust."
+        />
       </Head>
 
       <div className="min-h-screen bg-bg-base">
@@ -49,7 +53,7 @@ export default function VerificationPage() {
                 <span className="text-2xl">✅</span>
                 <div>
                   <h3 className="font-semibold text-white mb-2">Identity Verification</h3>
-                  <p className="text-gray-300 text-sm">Upload a government-issued ID (passport, driver's license, or national ID)</p>
+                  <p className="text-gray-300 text-sm">Upload a government-issued ID (passport, driver&apos;s license, or national ID)</p>
                 </div>
               </div>
               <div className="flex items-start gap-4">

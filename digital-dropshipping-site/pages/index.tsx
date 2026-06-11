@@ -153,17 +153,17 @@ const PopularServicesSection = () => {
           {/* Arrows */}
           <button
             onClick={() => scrollByCards("left")}
-            aria-label="Previous"
+            aria-label="Previous services"
             disabled={atStart}
-            className="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white text-neutral-900 shadow-lg h-8 w-8 grid place-items-center disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100 transition-all duration-200 hover:scale-110 text-sm"
+            className="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white text-neutral-900 shadow-lg h-8 w-8 grid place-items-center disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100 transition-all duration-200 hover:scale-110 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
           >
             ‹
           </button>
           <button
             onClick={() => scrollByCards("right")}
-            aria-label="Next"
+            aria-label="Next services"
             disabled={atEnd}
-            className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white text-neutral-900 shadow-lg h-8 w-8 grid place-items-center disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100 transition-all duration-200 hover:scale-110 text-sm"
+            className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white text-neutral-900 shadow-lg h-8 w-8 grid place-items-center disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100 transition-all duration-200 hover:scale-110 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
           >
             ›
           </button>
@@ -563,15 +563,11 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
         <meta name="description" content="Connect with verified freelancers across web, design, AI, and marketing. Secure milestones, transparent pricing, and real-time collaboration — all in one workspace." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="robots" content="index, follow" />
-        <link rel="canonical" href="https://uniti.com.au" />
 
-        {/* Open Graph */}
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://uniti.com.au" />
+        {/* Open Graph — Why: og:site_name/canonical/og:type live in _app.tsx; duplicates removed */}
         <meta property="og:title" content="Unitiv — Your Vision, Built by Experts" />
         <meta property="og:description" content="Connect with verified freelancers across web, design, AI, and marketing. Secure milestones, transparent pricing, and real-time collaboration." />
         <meta property="og:image" content="/images/logo/logo2.1.png" />
-        <meta property="og:site_name" content="Unitiv" />
 
         {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />
@@ -596,7 +592,9 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
         />
       </Head>
       <Header />
-      
+
+      {/* Why: semantic <main> landmark for screen readers and SEO */}
+      <main>
       {/* Hero Section - Framer Style */}
       <section className="relative overflow-hidden bg-bg-base">
         {/* Breathing glow orbs */}
@@ -656,6 +654,7 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
                     type="text"
                     value={searchQuery}
                     onChange={handleSearchChange}
+                    maxLength={200}
                     aria-label="Search services"
                     className="h-full flex-1 bg-transparent text-white outline-none search-input-field"
                     placeholder="Search services (e.g., 'Logo design')"
@@ -674,7 +673,7 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
                         <a
                           key={idx}
                           href={item.url}
-                          className="flex items-center px-6 py-3 text-white hover:bg-white/20 transition-colors border-b border-white/10 last:border-0"
+                          className="flex items-center px-6 py-3 text-white hover:bg-white/20 transition-colors border-b border-white/10 last:border-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
                         >
                           <span className="mr-3 text-white/60">{item.type === 'product' ? '📦' : '👤'}</span>
                           <span className="font-medium">{item.name}</span>
@@ -900,7 +899,7 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
               <span className="bg-gradient-to-r from-sky-400 to-violet-400 bg-clip-text text-transparent">What our</span>{" "}
               <span className="text-white/95">clients say</span>
             </h2>
-            <p className="mt-1.5 text-[10px] text-white/60">Don't just take our word for it</p>
+            <p className="mt-1.5 text-[10px] text-white/60">Don&apos;t just take our word for it</p>
           </div>
 
           {currentTestimonials.length > 0 ? (
@@ -939,7 +938,7 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
                       {/* Testimonial Text */}
                       <blockquote className="mb-4">
                         <p className="text-text-soft/90 text-sm leading-relaxed font-normal italic">
-                          "{testimonial.testimonial_text}"
+                          &ldquo;{testimonial.testimonial_text}&rdquo;
                         </p>
                       </blockquote>
 
@@ -970,6 +969,7 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
           )}
         </div>
       </section>
+      </main>
 
     </div>
   );

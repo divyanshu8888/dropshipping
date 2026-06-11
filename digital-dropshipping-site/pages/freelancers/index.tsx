@@ -545,12 +545,17 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
     <>
       <Head>
         <title>Find Freelancers - Unitiv</title>
-        <meta name="description" content="Browse verified freelancers and hire top talent for your projects" />
+        {/* Why: 150-160 char description + og tags for richer social previews (og:type/twitter:card are global in _app.tsx) */}
+        <meta name="description" content="Browse verified freelancers across web development, design, marketing, and AI. Compare ratings, portfolios, and availability to hire top talent on Unitiv." />
+        <meta property="og:title" content="Find Freelancers - Unitiv" />
+        <meta property="og:description" content="Browse verified freelancers across web development, design, marketing, and AI. Compare ratings, portfolios, and availability to hire top talent on Unitiv." />
       </Head>
 
       <div className="min-h-screen bg-[#0B0D10]">
         <Header />
 
+        {/* Why: semantic <main> landmark for screen readers and SEO */}
+        <main>
         {/* Hero Section - Enhanced Professional Design */}
         <section className="relative overflow-hidden text-white pt-24 pb-16 md:pt-28 md:pb-24 min-h-[78vh]">
           <div className="absolute inset-0 bg-[radial-gradient(900px_520px_at_50%_-20%,rgba(255,255,255,0.05),transparent)]" />
@@ -603,12 +608,26 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
                     }}
                     onKeyDown={handleKeyDown}
                     onFocus={() => setShowSuggestions(true)}
+                    maxLength={200}
                     aria-label="Search freelancers"
                     aria-expanded={showSuggestions}
                     aria-haspopup="listbox"
                   className="h-full flex-1 bg-transparent text-white font-medium text-[15px] outline-none tracking-wide focus-visible:outline-none search-input-field"
                     placeholder="Try 'Web Designer', 'Logo Animation', or 'SEO Audit'..."
                   />
+                  {/* Why: visible clear control when a search is active (UX + a11y) */}
+                  {searchTerm && (
+                    <button
+                      type="button"
+                      onClick={() => runSearch('')}
+                      aria-label="Clear search"
+                      className="shrink-0 rounded-full p-2 text-white/70 hover:text-white hover:bg-white/10 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+                    >
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
                   <button
                     type="submit"
                   className="shrink-0 h-[40px] px-6 rounded-full text-white font-semibold transition-all text-sm bg-[#3E5BF1] hover:bg-[#334fe6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7aa2ff]/40 focus-visible:ring-offset-0"
@@ -844,9 +863,9 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
                               )}
                             </div>
                           </div>
-                          <button 
-                            aria-label="Shortlist" 
-                            className="flex-shrink-0 rounded-full p-1.5 text-white/60 hover:text-white hover:bg-white/10 transition-all"
+                          <button
+                            aria-label={`Shortlist ${freelancer.display_name}`}
+                            className="flex-shrink-0 rounded-full p-1.5 text-white/60 hover:text-white hover:bg-white/10 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
                           >
                             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
@@ -939,7 +958,8 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M5 6h14a1 1 0 011 1v10a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1z" />
                         </svg>
                         <span className="mt-2 text-sm font-semibold text-white/70">No portfolio yet</span>
-                        <span className="text-xs text-white/50">Ask for samples</span>
+                        {/* Why: "Ask for samples" is a client-facing prompt — hide it from freelancer viewers */}
+                        {!viewerIsFreelancer && <span className="text-xs text-white/50">Ask for samples</span>}
                   </div>
                     )}
 
@@ -1000,6 +1020,14 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
               </svg>
               <h3 className="mt-4 text-xl font-medium text-white">No freelancers found</h3>
               <p className="mt-2 text-white/70">Try adding <span className="font-semibold">UI/UX</span>, <span className="font-semibold">SaaS</span>, or <span className="font-semibold">Mobile</span> filters.</p>
+              {/* Why: empty state needs an action CTA, not just a message */}
+              <button
+                type="button"
+                onClick={() => { runSearch(''); clearAllFilters(); }}
+                className="mt-6 inline-flex items-center justify-center rounded-xl border border-white/15 px-6 py-3 text-sm font-semibold text-white/90 hover:text-white hover:border-white/40 hover:bg-white/5 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+              >
+                Clear search &amp; filters
+              </button>
             </div>
           )}
         </section>
@@ -1088,6 +1116,7 @@ export default function FreelancersPage({ freelancers, initialSearchTerm }: Free
             </div>
           </div>
         </section>}
+        </main>
 
         <footer className="border-t border-white/10 bg-[#080C16]">
           <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-6 py-6 text-xs text-white/60 md:flex-row">

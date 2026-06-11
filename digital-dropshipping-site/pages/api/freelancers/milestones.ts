@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { query, queryOne } from 'lib/mysql';
+import { requireRole, parsePositiveInt, internalError } from '../../../src/lib/apiAuth';
 
 export default async function handler(
   req: NextApiRequest,
@@ -9,17 +10,21 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  try {
-    const { projectId, freelancerId } = req.query;
+  // Why: identity must come from the session cookie; query freelancerId is ignored.
+  const user = await requireRole(req, res, ['FREELANCER']);
+  if (!user) return;
 
-    if (!projectId || !freelancerId) {
-      return res.status(400).json({ error: 'Missing required parameters' });
+  try {
+    // Why: only positive integer ids are valid project ids.
+    const projectId = parsePositiveInt(req.query.projectId);
+    if (!projectId) {
+      return res.status(400).json({ error: 'Invalid id' });
     }
 
-    // Verify the project belongs to this freelancer
+    // Verify the project belongs to this freelancer (resolved from the session user)
     const freelancer = await queryOne<{ id: number }>(
       `SELECT id FROM freelancers WHERE user_id = ? LIMIT 1`,
-      [Number(freelancerId)]
+      [user.id]
     );
 
     if (!freelancer) {
@@ -28,7 +33,7 @@ export default async function handler(
 
     const project = await queryOne<{ id: number; freelancer_id: number }>(
       `SELECT id, freelancer_id FROM projects WHERE id = ? LIMIT 1`,
-      [Number(projectId)]
+      [projectId]
     );
 
     if (!project) {
@@ -42,7 +47,7 @@ export default async function handler(
     // Find contract for this project
     const contract = await queryOne<{ id: number }>(
       `SELECT id FROM contracts WHERE project_id = ? LIMIT 1`,
-      [Number(projectId)]
+      [projectId]
     );
 
     if (!contract) {
@@ -107,11 +112,7 @@ export default async function handler(
     return res.status(200).json({ milestones: formattedMilestones });
 
   } catch (error) {
-    console.error('Error fetching milestones:', error);
-    return res.status(500).json({
-      error: 'Failed to fetch milestones',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return internalError(res, 'freelancers/milestones', error);
   }
 }
 

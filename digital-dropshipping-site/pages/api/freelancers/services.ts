@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { query, queryOne } from '../../../src/lib/mysql';
+import { requireRole } from '../../../src/lib/apiAuth';
 
 const slugify = (value: string) =>
   value
@@ -35,22 +36,27 @@ const getServiceId = async (title: string, category?: string) => {
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'GET') {
+    // Why: service listings are public marketplace data; reads stay unauthenticated.
     return handleGet(req, res);
   }
 
+  if (req.method !== 'POST' && req.method !== 'PUT' && req.method !== 'DELETE') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // Why: only the owning freelancer (from the session cookie) may mutate listings.
+  const user = await requireRole(req, res, ['FREELANCER']);
+  if (!user) return;
+
   if (req.method === 'POST') {
-    return handlePost(req, res);
+    return handlePost(req, res, user.id);
   }
 
   if (req.method === 'PUT') {
-    return handlePut(req, res);
+    return handlePut(req, res, user.id);
   }
 
-  if (req.method === 'DELETE') {
-    return handleDelete(req, res);
-  }
-
-  return res.status(405).json({ error: 'Method not allowed' });
+  return handleDelete(req, res, user.id);
 }
 
 async function handleGet(req: NextApiRequest, res: NextApiResponse) {
@@ -94,16 +100,17 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
   }
 }
 
-async function handlePost(req: NextApiRequest, res: NextApiResponse) {
+async function handlePost(req: NextApiRequest, res: NextApiResponse, userId: number) {
   try {
-    const { freelancer_id, title, description, price, category, delivery_time } = req.body;
+    // Why: body freelancer_id is ignored; the listing owner is the session user.
+    const { title, description, price, category, delivery_time } = req.body;
 
-    if (!freelancer_id || !title || !description || !price || !category || !delivery_time) {
+    if (!title || !description || !price || !category || !delivery_time) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    const freelancer = await queryOne<{ id: number }>('SELECT id FROM freelancers WHERE id = ? LIMIT 1', [
-      Number(freelancer_id),
+    const freelancer = await queryOne<{ id: number }>('SELECT id FROM freelancers WHERE user_id = ? LIMIT 1', [
+      userId,
     ]);
 
     if (!freelancer) {
@@ -141,12 +148,26 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
   }
 }
 
-async function handlePut(req: NextApiRequest, res: NextApiResponse) {
+async function handlePut(req: NextApiRequest, res: NextApiResponse, userId: number) {
   try {
     const { id, title, description, price, delivery_time, is_active } = req.body;
 
     if (!id) {
       return res.status(400).json({ error: 'Service ID is required' });
+    }
+
+    // Why: ownership check — only listings belonging to the session freelancer may be updated.
+    const owned = await queryOne<{ id: number }>(
+      `SELECT sl.id
+       FROM service_listings sl
+       JOIN freelancers f ON f.id = sl.freelancer_id
+       WHERE sl.id = ? AND f.user_id = ?
+       LIMIT 1`,
+      [Number(id), userId]
+    );
+
+    if (!owned) {
+      return res.status(404).json({ error: 'Service not found' });
     }
 
     await query(
@@ -184,13 +205,27 @@ async function handlePut(req: NextApiRequest, res: NextApiResponse) {
   }
 }
 
-async function handleDelete(req: NextApiRequest, res: NextApiResponse) {
+async function handleDelete(req: NextApiRequest, res: NextApiResponse, userId: number) {
   try {
     const { id } = req.query;
     const listingId = Array.isArray(id) ? id[0] : id;
 
     if (!listingId) {
       return res.status(400).json({ error: 'Service ID is required' });
+    }
+
+    // Why: ownership check — only listings belonging to the session freelancer may be archived.
+    const owned = await queryOne<{ id: number }>(
+      `SELECT sl.id
+       FROM service_listings sl
+       JOIN freelancers f ON f.id = sl.freelancer_id
+       WHERE sl.id = ? AND f.user_id = ?
+       LIMIT 1`,
+      [Number(listingId), userId]
+    );
+
+    if (!owned) {
+      return res.status(404).json({ error: 'Service not found' });
     }
 
     await query(`UPDATE service_listings SET status = 'archived', updated_at = NOW() WHERE id = ?`, [

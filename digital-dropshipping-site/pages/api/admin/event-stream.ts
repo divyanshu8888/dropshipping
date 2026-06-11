@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { safeQuery } from '../../../src/lib/dbHelpers';
+import { requireAdmin, internalError } from '../../../src/lib/apiAuth';
 
 type EventRow = {
   id: string;
@@ -25,6 +26,11 @@ export default async function handler(
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+
+  // Why: admin endpoints were callable without any authentication (guard runs
+  // before any event data is sent).
+  const adminUser = await requireAdmin(req, res);
+  if (!adminUser) return;
 
   try {
     const { limit = 20, priority, event_type, assigned_to, pinned_only } = req.query;
@@ -104,11 +110,8 @@ export default async function handler(
       lastUpdated: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error fetching event stream:', error);
-    return res.status(500).json({
-      error: 'Failed to fetch event stream',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
+    // Why: 500 response leaked error.message to clients.
+    return internalError(res, 'event-stream', error);
   }
 }
 

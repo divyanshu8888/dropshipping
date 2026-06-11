@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { safeExecute, safeQuery } from '../../../src/lib/dbHelpers';
+import { requireAdmin } from '../../../src/lib/apiAuth';
 import { promises as fs } from 'fs';
 import path from 'path';
 
@@ -45,6 +46,10 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  // Why: admin endpoints were callable without any authentication.
+  const adminUser = await requireAdmin(req, res);
+  if (!adminUser) return;
+
   if (req.method === 'GET') {
     return handleGet(req, res);
   }

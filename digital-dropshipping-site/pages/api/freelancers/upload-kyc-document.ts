@@ -3,6 +3,7 @@ import { query, queryOne } from 'lib/mysql';
 import formidable from 'formidable';
 import path from 'path';
 import { promises as fs } from 'fs';
+import { requireRole, internalError } from '../../../src/lib/apiAuth';
 
 export const config = {
   api: {
@@ -17,6 +18,10 @@ export default async function handler(
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+
+  // Why: identity must come from the session cookie; form-field userId is ignored.
+  const user = await requireRole(req, res, ['FREELANCER']);
+  if (!user) return;
 
   try {
     // Temporary upload directory
@@ -45,16 +50,10 @@ export default async function handler(
       });
     });
 
-    // Get user from form data
-    const userId = Array.isArray(fields.userId) ? fields.userId[0] : fields.userId;
-    if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    // Get freelancer ID from user_id
+    // Get freelancer ID from the authenticated user's id
     const freelancer = await queryOne<{ id: number }>(
       `SELECT id FROM freelancers WHERE user_id = ? LIMIT 1`,
-      [userId]
+      [user.id]
     );
 
     if (!freelancer) {
@@ -125,11 +124,7 @@ export default async function handler(
       document: serialized
     });
   } catch (error: any) {
-    console.error('Error uploading KYC document:', error);
-    return res.status(500).json({
-      error: 'Failed to upload KYC document',
-      details: error.message
-    });
+    return internalError(res, 'freelancers/upload-kyc-document', error);
   }
 }
 

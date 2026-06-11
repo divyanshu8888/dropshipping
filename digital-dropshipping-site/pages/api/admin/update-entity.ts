@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { safeExecute, safeQuery } from '../../../src/lib/dbHelpers';
+import { requireAdmin, internalError, parsePositiveInt } from '../../../src/lib/apiAuth';
 
 type EntityType = 'user' | 'order' | 'project' | 'service' | 'kyc';
 
@@ -19,6 +20,10 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // Why: admin endpoints were callable without any authentication.
+  const adminUser = await requireAdmin(req, res);
+  if (!adminUser) return;
+
   try {
     const { entityType, entityId, data } = req.body as {
       entityType?: EntityType;
@@ -32,6 +37,12 @@ export default async function handler(
 
     if (!entityId) {
       return res.status(400).json({ error: 'entityId is required' });
+    }
+
+    // Why: entityId was used without validation; require a positive integer.
+    const entityIdNum = parsePositiveInt(entityId);
+    if (entityIdNum === null) {
+      return res.status(400).json({ error: 'Invalid id' });
     }
 
     if (!data || typeof data !== 'object' || Array.isArray(data)) {
@@ -52,13 +63,13 @@ export default async function handler(
       `UPDATE ${tableName}
           SET ${assignments}, updated_at = NOW()
         WHERE id = ?`,
-      [...values, entityId],
+      [...values, entityIdNum],
       'update-entity'
     );
 
     const updatedEntity = await safeQuery(
       `SELECT * FROM ${tableName} WHERE id = ? LIMIT 1`,
-      [entityId],
+      [entityIdNum],
       'update-entity-fetch'
     );
 
@@ -83,10 +94,7 @@ export default async function handler(
       data: updatedEntity[0] ?? null
     });
   } catch (error) {
-    console.error('Error updating entity:', error);
-    return res.status(500).json({
-      error: 'Failed to update entity',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
+    // Why: 500 response leaked error.message to clients.
+    return internalError(res, 'update-entity', error);
   }
 }

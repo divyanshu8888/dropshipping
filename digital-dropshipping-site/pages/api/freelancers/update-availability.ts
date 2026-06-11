@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { query, queryOne } from 'lib/mysql';
 import { parseAvailability } from '../../../src/lib/availability';
+import { requireRole, internalError } from '../../../src/lib/apiAuth';
 
 // Format availability object to database string format
 function formatAvailability(availability: {
@@ -34,27 +35,23 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  if (req.method !== 'GET' && req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // Why: identity must come from the session cookie; query/body freelancerId is ignored.
+  const user = await requireRole(req, res, ['FREELANCER']);
+  if (!user) return;
+
   if (req.method === 'GET') {
-    return handleGet(req, res);
+    return handleGet(req, res, user.id);
   }
-  
-  if (req.method === 'POST') {
-    return handlePost(req, res);
-  }
-  
-  return res.status(405).json({ error: 'Method not allowed' });
+
+  return handlePost(req, res, user.id);
 }
 
-async function handleGet(req: NextApiRequest, res: NextApiResponse) {
+async function handleGet(req: NextApiRequest, res: NextApiResponse, userId: number) {
   try {
-    const { freelancerId } = req.query;
-    
-    if (!freelancerId) {
-      return res.status(400).json({ error: 'Missing freelancerId' });
-    }
-
-    const userId = Number(freelancerId);
-    
     // Fetch the availability record
     const freelancer = await queryOne<{ id: number; user_id: number; availability: string | null }>(
       `SELECT id, user_id, availability
@@ -84,31 +81,21 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
     });
 
   } catch (error) {
-    console.error('Error fetching availability:', error);
-    return res.status(500).json({
-      error: 'Failed to fetch availability',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return internalError(res, 'freelancers/update-availability/get', error);
   }
 }
 
-async function handlePost(req: NextApiRequest, res: NextApiResponse) {
+async function handlePost(req: NextApiRequest, res: NextApiResponse, userId: number) {
   try {
-    const { freelancerId, availability } = req.body;
+    const { availability } = req.body;
 
-    if (!freelancerId || !availability) {
-      return res.status(400).json({ 
+    if (!availability) {
+      return res.status(400).json({
         error: 'Missing required fields',
-        received: { freelancerId: !!freelancerId, availability: !!availability }
+        received: { freelancerId: true, availability: !!availability }
       });
     }
 
-    const userId = Number(freelancerId);
-    
-    if (isNaN(userId)) {
-      return res.status(400).json({ error: 'Invalid freelancerId' });
-    }
-    
     // First verify freelancer exists
     const existingFreelancer = await queryOne<{ id: number; user_id: number }>(
       `SELECT id, user_id FROM freelancers WHERE user_id = ? LIMIT 1`,
@@ -143,11 +130,8 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
     // Check if update was successful
     const affectedRows = (updateResult as any)?.affectedRows ?? 0;
     if (affectedRows === 0) {
-      console.error(`Update query did not affect any rows for user_id=${userId}`);
-      return res.status(500).json({
-        error: 'Failed to update availability - no rows affected',
-        details: 'The update query did not modify any records. Please check if the freelancer record exists.'
-      });
+      // Why: generic 500, no internal details leaked.
+      return internalError(res, 'freelancers/update-availability/post no-rows', new Error(`no rows affected for user_id=${userId}`));
     }
 
     console.log(`Successfully updated availability for freelancer user_id=${userId}, affectedRows=${affectedRows}`);
@@ -181,10 +165,6 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
     });
 
   } catch (error) {
-    console.error('Error updating availability:', error);
-    return res.status(500).json({
-      error: 'Failed to update availability',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return internalError(res, 'freelancers/update-availability/post', error);
   }
 }

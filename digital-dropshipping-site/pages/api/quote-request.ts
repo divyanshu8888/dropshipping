@@ -4,6 +4,7 @@ import path from 'path';
 import { promises as fs } from 'fs';
 import { query } from '../../src/lib/mysql';
 import { projectQuoteSchema, formatZodErrors } from '../../src/lib/schemas/projectQuote';
+import { checkRateLimit } from '../../src/lib/rateLimit';
 
 export const config = {
   api: {
@@ -32,6 +33,15 @@ const toStringField = (value: string | string[] | undefined): string => {
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method not allowed' });
+  }
+
+  // Why: public form with file upload had no rate limiting — spam/disk-fill vector.
+  const fwd = req.headers['x-forwarded-for'];
+  const ip = (typeof fwd === 'string' ? fwd.split(',')[0].trim() : req.socket?.remoteAddress) ?? 'unknown';
+  const rl = checkRateLimit(`quote-request:${ip}`);
+  if (!rl.allowed) {
+    res.setHeader('Retry-After', String(Math.ceil((rl.retryAfterMs ?? 60000) / 1000)));
+    return res.status(429).json({ message: 'Too many requests. Please try again later.' });
   }
 
   const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'project-briefs');

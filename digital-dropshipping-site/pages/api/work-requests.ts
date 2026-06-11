@@ -1,16 +1,22 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { query, queryOne } from '../../src/lib/mysql';
+import { requireAuth, internalError } from '../../src/lib/apiAuth';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  switch (req.method) {
-    case 'GET':
-      return handleGet(res);
-    case 'POST':
-      return handlePost(req, res);
-    default:
-      res.setHeader('Allow', ['GET', 'POST']);
-      return res.status(405).end(`Method ${req.method} Not Allowed`);
+  if (req.method !== 'GET' && req.method !== 'POST') {
+    res.setHeader('Allow', ['GET', 'POST']);
+    return res.status(405).end(`Method ${req.method} Not Allowed`);
   }
+
+  // Why: this listing exposes client contact details and POST creates projects; require a session.
+  const user = await requireAuth(req, res);
+  if (!user) return;
+
+  if (req.method === 'GET') {
+    return handleGet(res);
+  }
+
+  return handlePost(req, res, user.id);
 }
 
 async function handleGet(res: NextApiResponse) {
@@ -32,22 +38,23 @@ async function handleGet(res: NextApiResponse) {
 
     return res.status(200).json(workRequests || []);
   } catch (error) {
-    console.error('Error fetching work requests:', error);
-    return res.status(500).json({ message: 'Error fetching work requests' });
+    return internalError(res, 'work-requests/get', error);
   }
 }
 
-async function handlePost(req: NextApiRequest, res: NextApiResponse) {
+async function handlePost(req: NextApiRequest, res: NextApiResponse, userId: number) {
   try {
-    const { title, description, budget, deadline, client_id, freelancer_id, created_by } = req.body;
+    // Why: body created_by is ignored; the creator is the session user.
+    const { title, description, budget, deadline, client_id, freelancer_id } = req.body;
 
     if (!title || !client_id) {
       return res.status(400).json({ message: 'Title and client_id are required' });
     }
 
+    // Why: ownership check — projects may only be created under a client the session user owns.
     const client = await queryOne<{ id: number; owner_id: number }>(
-      'SELECT id, owner_id FROM clients WHERE id = ? LIMIT 1',
-      [Number(client_id)]
+      'SELECT id, owner_id FROM clients WHERE id = ? AND owner_id = ? LIMIT 1',
+      [Number(client_id), userId]
     );
 
     if (!client) {
@@ -55,7 +62,7 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
     }
 
     const budgetCents = budget ? Math.round(Number(budget) * 100) : null;
-    const createdBy = created_by ? Number(created_by) : client.owner_id;
+    const createdBy = userId;
 
     const result = await query(
       `INSERT INTO projects
@@ -78,7 +85,6 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
 
     return res.status(201).json(workRequest);
   } catch (error) {
-    console.error('Error creating work request:', error);
-    return res.status(500).json({ message: 'Error creating work request' });
+    return internalError(res, 'work-requests/post', error);
   }
 }

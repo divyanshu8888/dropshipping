@@ -4,6 +4,7 @@ import formidable from 'formidable';
 import path from 'path';
 import { promises as fs } from 'fs';
 import { guardMessage } from '../../../src/lib/moderation/contactGuard';
+import { requireRole, internalError } from '../../../src/lib/apiAuth';
 
 export const config = {
   api: {
@@ -18,6 +19,10 @@ export default async function handler(
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+
+  // Why: identity must come from the session cookie; form-field freelancerId is ignored.
+  const user = await requireRole(req, res, ['FREELANCER']);
+  if (!user) return;
 
   try {
     // Temporary upload directory (formidable needs a temp dir)
@@ -48,9 +53,8 @@ export default async function handler(
 
     const milestoneId = Array.isArray(fields.milestoneId) ? fields.milestoneId[0] : fields.milestoneId;
     const projectId = Array.isArray(fields.projectId) ? fields.projectId[0] : fields.projectId;
-    const freelancerId = Array.isArray(fields.freelancerId) ? fields.freelancerId[0] : fields.freelancerId;
 
-    if (!milestoneId || !projectId || !freelancerId) {
+    if (!milestoneId || !projectId) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
@@ -91,10 +95,10 @@ export default async function handler(
       });
     }
 
-    // Verify the milestone belongs to this freelancer's project
+    // Verify the milestone belongs to this freelancer's project (resolved from the session user)
     const freelancer = await queryOne<{ id: number }>(
       `SELECT id FROM freelancers WHERE user_id = ? LIMIT 1`,
-      [Number(freelancerId)]
+      [user.id]
     );
 
     if (!freelancer) {
@@ -182,10 +186,6 @@ export default async function handler(
     });
 
   } catch (error) {
-    console.error('Error uploading milestone file:', error);
-    return res.status(500).json({
-      error: 'Failed to upload file',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return internalError(res, 'freelancers/upload-milestone-file', error);
   }
 }

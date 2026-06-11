@@ -128,17 +128,25 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
         )}
       </div>
 
-      {canApply || canApplyUnverified ? (
+      {canApply ? (
         <button
           onClick={() => onApply({ id, title, description, category, budget, budgetRaw: rest.budgetRaw, deadline, skills, clientCompany, postedAgo })}
-          className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-cyan-500 to-violet-500 px-3.5 py-1.5 text-xs font-bold text-white transition hover:opacity-90 hover:-translate-y-0.5"
+          className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-cyan-500 to-violet-500 px-4 py-2.5 text-xs font-bold text-white transition hover:opacity-90 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
         >
           Apply <ChevronRight className="h-3.5 w-3.5" />
         </button>
+      ) : canApplyUnverified ? (
+        /* Why: unverified freelancers get a clear path to verification instead of a dead end */
+        <Link
+          href="/verification"
+          className="inline-flex items-center gap-1 rounded-full border border-cyan-400/30 bg-cyan-500/10 px-4 py-2.5 text-xs font-semibold text-cyan-300 transition hover:border-cyan-300/50 hover:text-cyan-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+        >
+          Verify your account to apply
+        </Link>
       ) : !isLoggedIn ? (
         <Link
           href="/login"
-          className="inline-flex items-center gap-1 rounded-full border border-white/15 px-3.5 py-1.5 text-xs font-semibold text-white/60 transition hover:border-white/30 hover:text-white"
+          className="inline-flex items-center gap-1 rounded-full border border-white/15 px-4 py-2.5 text-xs font-semibold text-white/60 transition hover:border-white/30 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
         >
           Log in to apply
         </Link>
@@ -242,16 +250,24 @@ export default function ProjectsPage() {
   return (
     <>
       <Head>
-        <title>Projects — Unitiv</title>
+        <title>Open Projects - Unitiv</title>
+        {/* Why: 150-160 char description + og tags (og:type/twitter:card are global in _app.tsx) */}
         <meta
           name="description"
-          content="Browse open client projects on Unitiv. Find freelance work that matches your skills and apply today."
+          content="Browse open client projects on Unitiv across design, development, marketing, and more. Submit proposals, get hired, and get paid with milestone protection."
+        />
+        <meta property="og:title" content="Open Projects - Unitiv" />
+        <meta
+          property="og:description"
+          content="Browse open client projects on Unitiv across design, development, marketing, and more. Submit proposals, get hired, and get paid with milestone protection."
         />
       </Head>
 
       <div className="min-h-screen bg-[#0B0D10]">
         <Header />
 
+        {/* Why: semantic <main> landmark for screen readers and SEO */}
+        <main>
         {/* Hero */}
         <section className="relative overflow-hidden text-white pt-24 pb-16 md:pt-28 md:pb-24 min-h-[72vh]">
           {/* Layered backgrounds — same as Freelancers page */}
@@ -318,8 +334,21 @@ export default function ProjectsPage() {
                     placeholder="Search by skill, title, or keyword…"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
+                    maxLength={200}
+                    aria-label="Search projects"
                     className="h-full flex-1 bg-transparent text-white font-medium text-[15px] outline-none tracking-wide search-input-field"
                   />
+                  {/* Why: visible clear control when a search is active (UX + a11y) */}
+                  {search && (
+                    <button
+                      type="button"
+                      onClick={() => setSearch('')}
+                      aria-label="Clear search"
+                      className="shrink-0 rounded-full p-2 text-white/70 hover:text-white hover:bg-white/10 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -389,9 +418,28 @@ export default function ProjectsPage() {
 
           {/* Content */}
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-24 text-center">
-              <Loader2 className="h-8 w-8 animate-spin text-cyan-400/60 mb-4" />
-              <p className="text-white/40 text-sm">Loading projects…</p>
+            /* Why: card-shaped skeletons instead of a bare spinner so the layout doesn't jump */
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3" aria-hidden="true">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="animate-pulse rounded-[20px] border border-white/12 bg-gradient-to-b from-[#101722] via-[#0c121d] to-[#060910] p-6"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="h-11 w-11 shrink-0 rounded-xl bg-white/10" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 w-3/4 rounded bg-white/10" />
+                      <div className="h-3 w-1/3 rounded bg-white/10" />
+                    </div>
+                  </div>
+                  <div className="mt-4 space-y-2">
+                    <div className="h-3 w-full rounded bg-white/10" />
+                    <div className="h-3 w-5/6 rounded bg-white/10" />
+                    <div className="h-3 w-2/3 rounded bg-white/10" />
+                  </div>
+                  <div className="mt-6 ml-auto h-9 w-24 rounded-full bg-white/10" />
+                </div>
+              ))}
             </div>
           ) : error ? (
             <div className="flex flex-col items-center justify-center py-24 text-center">
@@ -411,7 +459,7 @@ export default function ProjectsPage() {
               <p className="mb-5 text-sm text-white/35">
                 {filtered.length} {filtered.length === 1 ? 'project' : 'projects'} found
               </p>
-              <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 {filtered.map((project) => (
                   <ProjectCard
                     key={project.id}
@@ -463,13 +511,15 @@ export default function ProjectsPage() {
             </Link>
           </div>}
         </section>
+        </main>
       </div>
       {/* Apply Modal */}
       {applyProject && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={(e) => { if (e.target === e.currentTarget) closeApply(); }}>
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
-          <div ref={modalRef} className="relative w-full max-w-lg rounded-2xl border border-white/12 bg-[#0e1420] shadow-2xl shadow-black/60 p-6">
-            <button onClick={closeApply} className="absolute right-4 top-4 grid h-8 w-8 place-items-center rounded-full border border-white/10 bg-white/[0.06] text-white/60 hover:text-white transition">
+          {/* Why: dialog semantics + labelled icon-only close button for screen readers */}
+          <div ref={modalRef} role="dialog" aria-modal="true" aria-label={`Apply for ${applyProject.title}`} className="relative w-full max-w-lg rounded-2xl border border-white/12 bg-[#0e1420] shadow-2xl shadow-black/60 p-6">
+            <button onClick={closeApply} aria-label="Close dialog" className="absolute right-4 top-4 grid h-8 w-8 place-items-center rounded-full border border-white/10 bg-white/[0.06] text-white/60 hover:text-white transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70">
               <X className="h-4 w-4" />
             </button>
 
@@ -499,10 +549,11 @@ export default function ProjectsPage() {
                       rows={5}
                       value={coverLetter}
                       onChange={(e) => setCoverLetter(e.target.value)}
+                      maxLength={5000}
                       placeholder="Introduce yourself and explain why you're a great fit for this project…"
                       className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white placeholder-white/30 outline-none resize-none focus:border-cyan-400/40 transition"
                     />
-                    <p className="mt-1 text-right text-[11px] text-white/25">{coverLetter.length} chars</p>
+                    <p className="mt-1 text-right text-[11px] text-white/40">{coverLetter.length}/5000</p>
                   </div>
 
                   <div>

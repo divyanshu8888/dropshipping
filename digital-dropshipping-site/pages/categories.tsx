@@ -53,22 +53,33 @@ export default function CategoriesPage({ products }: CategoriesPageProps) {
     <>
       <Head>
         <title>Service Categories - Unitiv</title>
-        <meta name="description" content="Browse all service categories on Unitiv" />
+        {/* Why: full SEO/social meta with 150-160 char description */}
+        <meta
+          name="description"
+          content="Browse Unitiv service categories including web development, UI/UX design, digital marketing, data analytics, AI, and content writing from verified experts."
+        />
+        <meta property="og:title" content="Service Categories - Unitiv" />
+        <meta
+          property="og:description"
+          content="Browse web development, design, marketing, data, AI, and writing services from verified freelancers."
+        />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary" />
       </Head>
 
       <div className="min-h-screen bg-bg-base">
         <Header />
 
-        <div className="max-w-6xl mx-auto px-6 py-16 pt-24">
+        <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 pt-24">
           <h1 className="text-4xl font-bold text-white mb-4 text-center">Service Categories</h1>
           <p className="text-xl text-gray-300 mb-12 text-center">Find the right expertise for your project</p>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {categories.map((category) => (
               <Link
                 key={category}
                 href={`/products?category=${encodeURIComponent(category)}`}
-                className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8 hover:bg-white/10 transition group"
+                className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8 hover:bg-white/10 transition group focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
               >
                 <div className="text-5xl mb-4">{categoryInfo[category]?.icon || '🔧'}</div>
                 <h2 className="text-2xl font-bold text-white mb-3 group-hover:text-cyan-400 transition">
@@ -104,18 +115,25 @@ export default function CategoriesPage({ products }: CategoriesPageProps) {
             )}
           </div>
 
-          <div className="mt-12 text-center">
-            <Link href="/freelancers" className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-cyan-400 to-violet-500 text-white rounded-xl font-semibold hover:opacity-90 transition">
+          {/* Why: internal links to freelancers and open projects */}
+          <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-3 text-center">
+            <Link href="/freelancers" className="inline-flex items-center min-h-[44px] px-8 py-4 bg-gradient-to-r from-cyan-500 via-fuchsia-500 to-rose-500 text-white rounded-xl font-semibold hover:opacity-90 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70">
               Browse All Freelancers
+            </Link>
+            <Link href="/open-projects" className="inline-flex items-center min-h-[44px] px-8 py-4 border border-white/15 text-white rounded-xl font-semibold hover:bg-white/10 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70">
+              View Open Projects
+            </Link>
+            <Link href="/how-it-works" className="inline-flex items-center min-h-[44px] px-8 py-4 border border-white/15 text-white rounded-xl font-semibold hover:bg-white/10 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70">
+              How It Works
             </Link>
           </div>
 
           <div className="mt-8 text-center">
-            <Link href="/" className="inline-flex items-center text-cyan-400 hover:text-cyan-300">
+            <Link href="/" className="inline-flex items-center min-h-[44px] px-4 text-cyan-400 hover:text-cyan-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 rounded-lg">
               ← Back to Home
             </Link>
           </div>
-        </div>
+        </main>
       </div>
     </>
   );

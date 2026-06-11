@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { query, queryOne } from '../../../../../src/lib/mysql';
 import { guardMessage } from '../../../../../src/lib/moderation/contactGuard';
+import { requireRole, parsePositiveInt, internalError } from '../../../../../src/lib/apiAuth';
 
 export default async function handler(
   req: NextApiRequest,
@@ -10,16 +11,15 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  try {
-    const userId = req.query.freelancerId || req.headers['x-user-id'];
-    if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
+  // Why: identity must come from the session cookie, not query params/headers.
+  const user = await requireRole(req, res, ['FREELANCER']);
+  if (!user) return;
 
-    // Get freelancer ID from user_id
+  try {
+    // Get freelancer ID from the authenticated user's id
     const freelancer = await queryOne<{ id: number }>(
       `SELECT id FROM freelancers WHERE user_id = ? LIMIT 1`,
-      [Number(userId)]
+      [user.id]
     );
 
     if (!freelancer) {
@@ -28,14 +28,10 @@ export default async function handler(
 
     const freelancerId = freelancer.id;
 
-    const { id } = req.query;
-    if (!id || typeof id !== 'string') {
-      return res.status(400).json({ error: 'Milestone ID is required' });
-    }
-
-    const milestoneId = Number.parseInt(id, 10);
-    if (Number.isNaN(milestoneId)) {
-      return res.status(400).json({ error: 'Invalid milestone ID' });
+    // Why: only positive integer ids are valid milestone ids.
+    const milestoneId = parsePositiveInt(req.query.id);
+    if (!milestoneId) {
+      return res.status(400).json({ error: 'Invalid id' });
     }
 
     const { description } = req.body;
@@ -86,7 +82,7 @@ export default async function handler(
 
         const userInfo = await queryOne<{ id: number; email: string; display_name: string | null; name: string | null }>(
           `SELECT id, email, display_name, name FROM users WHERE id = ? LIMIT 1`,
-          [Number(userId)]
+          [user.id]
         );
 
         const notificationType = isPricingViolation ? 'moderation_pricing_violation' : 'moderation_blocked_message';
@@ -114,7 +110,7 @@ export default async function handler(
               projectId: milestone.project_id,
               projectTitle: project?.title || 'Unknown',
               sender: 'freelancer',
-              senderUserId: Number(userId),
+              senderUserId: user.id,
               senderEmail: userInfo?.email || 'Unknown',
               senderName: userInfo?.display_name || userInfo?.name || userInfo?.email || 'Unknown',
               blockedContent: description.substring(0, 200),
@@ -122,7 +118,7 @@ export default async function handler(
               reasons: guardResult.reasons,
               violationType: isPricingViolation ? 'pricing_payment' : 'contact_info'
             }),
-            Number(userId),
+            user.id,
             milestone.project_id,
             'high'
           ]
@@ -231,7 +227,7 @@ export default async function handler(
          VALUES (?, ?, ?, 'milestone', 'FALSE')`,
         [
           conversation.id,
-          Number(userId),
+          user.id,
           notificationMessage
         ]
       );
@@ -262,11 +258,7 @@ export default async function handler(
     });
 
   } catch (error: any) {
-    console.error('Error updating milestone description:', error);
-    return res.status(500).json({ 
-      error: 'Failed to update milestone description',
-      details: error.message 
-    });
+    return internalError(res, 'freelancers/milestones/[id]/description', error);
   }
 }
 

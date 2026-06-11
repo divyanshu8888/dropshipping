@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { query, queryOne } from '../../../../src/lib/mysql';
+import { requireRole, parsePositiveInt, internalError } from '../../../../src/lib/apiAuth';
 
 // Valid milestone statuses
 const VALID_STATUSES = ['pending', 'funded', 'in_progress', 'submitted', 'approved', 'released', 'rejected'];
@@ -12,16 +13,15 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  try {
-    const userId = req.query.freelancerId || req.headers['x-user-id'];
-    if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
+  // Why: identity must come from the session cookie, not query params/headers.
+  const user = await requireRole(req, res, ['FREELANCER']);
+  if (!user) return;
 
-    // Get freelancer ID from user_id
+  try {
+    // Get freelancer ID from the authenticated user's id
     const freelancer = await queryOne<{ id: number }>(
       `SELECT id FROM freelancers WHERE user_id = ? LIMIT 1`,
-      [Number(userId)]
+      [user.id]
     );
 
     if (!freelancer) {
@@ -30,25 +30,29 @@ export default async function handler(
 
     const freelancerId = freelancer.id;
 
-    const { id } = req.query;
-    if (!id || typeof id !== 'string') {
-      return res.status(400).json({ error: 'Milestone ID is required' });
-    }
-
-    const milestoneId = Number.parseInt(id, 10);
-    if (Number.isNaN(milestoneId)) {
-      return res.status(400).json({ error: 'Invalid milestone ID' });
+    // Why: only positive integer ids are valid milestone ids.
+    const milestoneId = parsePositiveInt(req.query.id);
+    if (!milestoneId) {
+      return res.status(400).json({ error: 'Invalid id' });
     }
 
     const { status, dueDate, description } = req.body;
     
     // If updating due date or description (not status)
     if (dueDate !== undefined || description !== undefined) {
-      // Check if previous milestone is approved (sequential milestone editing restriction)
+      // Why: ownership check — milestone must belong to this freelancer's project.
       const milestoneWithOrder = await queryOne<{ sort_order: number; contract_id: number }>(
-        `SELECT sort_order, contract_id FROM milestones WHERE id = ?`,
-        [milestoneId]
+        `SELECT m.sort_order, m.contract_id
+         FROM milestones m
+         INNER JOIN contracts c ON m.contract_id = c.id
+         INNER JOIN projects p ON c.project_id = p.id
+         WHERE m.id = ? AND p.freelancer_id = ?`,
+        [milestoneId, freelancerId]
       );
+
+      if (!milestoneWithOrder) {
+        return res.status(404).json({ error: 'Milestone not found or you do not have permission to update it' });
+      }
 
       if (milestoneWithOrder && milestoneWithOrder.sort_order > 1) {
         const previousMilestone = await queryOne<{ status: string }>(
@@ -234,9 +238,9 @@ export default async function handler(
         const message = statusMessages[status];
         if (message) {
           await query(
-            `INSERT INTO messages (conversation_id, sender_id, body, message_type, is_read) 
+            `INSERT INTO messages (conversation_id, sender_id, body, message_type, is_read)
              VALUES (?, ?, ?, 'milestone', 'FALSE')`,
-            [conversation.id, Number(userId), message]
+            [conversation.id, user.id, message]
           );
         }
       }
@@ -332,11 +336,7 @@ export default async function handler(
     });
 
   } catch (error: any) {
-    console.error('Error updating milestone status:', error);
-    return res.status(500).json({ 
-      error: 'Failed to update milestone status',
-      details: error.message 
-    });
+    return internalError(res, 'freelancers/milestones/[id]', error);
   }
 }
 

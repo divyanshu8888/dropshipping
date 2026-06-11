@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { safeCount, safeQuery, tableExists } from '../../../src/lib/dbHelpers';
+import { requireAdmin, internalError } from '../../../src/lib/apiAuth';
 
 type OrderAmountRow = { total_amount: number | null };
 type ProjectRow = { created_at: string | Date; started_at?: string | Date | null; status?: string };
@@ -17,6 +18,10 @@ export default async function handler(
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+
+  // Why: admin endpoints were callable without any authentication.
+  const adminUser = await requireAdmin(req, res);
+  if (!adminUser) return;
 
   // Return cached data if still valid
   if (cache && Date.now() - cache.ts < TTL_MS) {
@@ -244,10 +249,7 @@ export default async function handler(
 
     return res.status(200).json(response);
   } catch (error) {
-    console.error('Error fetching dashboard metrics:', error);
-    return res.status(500).json({
-      error: 'Failed to fetch dashboard metrics',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
+    // Why: 500 response leaked error.message to clients.
+    return internalError(res, 'dashboard-metrics', error);
   }
 }

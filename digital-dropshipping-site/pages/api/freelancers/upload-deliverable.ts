@@ -2,7 +2,8 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import formidable, { type File } from 'formidable';
 import path from 'path';
 import { promises as fs } from 'fs';
-import { query } from '../../../src/lib/mysql';
+import { query, queryOne } from '../../../src/lib/mysql';
+import { requireRole, internalError } from '../../../src/lib/apiAuth';
 
 export const config = {
   api: {
@@ -56,6 +57,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // Why: identity must come from the session cookie; route previously had no auth at all.
+  const user = await requireRole(req, res, ['FREELANCER']);
+  if (!user) return;
+
   try {
     const { fields, files } = await parseMultipartForm(req);
     const projectId = firstValue(fields.projectId);
@@ -65,6 +70,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (!projectId || !file || !description) {
       return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Why: ownership check — only the project's assigned freelancer may upload deliverables.
+    const ownProject = await queryOne<{ id: number }>(
+      `SELECT p.id
+       FROM projects p
+       INNER JOIN freelancers f ON f.id = p.freelancer_id
+       WHERE p.id = ? AND f.user_id = ?
+       LIMIT 1`,
+      [Number(projectId), user.id]
+    );
+
+    if (!ownProject) {
+      return res.status(403).json({ error: 'Not authorized to upload deliverables for this project' });
     }
 
     const originalName = file.originalFilename || file.newFilename || 'deliverable';
@@ -104,10 +123,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       },
     });
   } catch (error) {
-    console.error('Error uploading deliverable:', error);
-    return res.status(500).json({
-      error: 'Failed to upload deliverable',
-      details: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return internalError(res, 'freelancers/upload-deliverable', error);
   }
 }

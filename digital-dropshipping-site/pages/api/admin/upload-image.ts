@@ -3,6 +3,7 @@ import formidable from 'formidable'
 import fs from 'fs'
 import path from 'path'
 import { promisify } from 'util'
+import { requireAdmin } from '../../../src/lib/apiAuth'
 
 // Disable body parser for file uploads
 export const config = {
@@ -18,13 +19,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ message: 'Method not allowed' })
   }
 
-  try {
-    // Check admin authentication
-    const authHeader = req.headers.authorization
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ message: 'Unauthorized' })
-    }
+  // Why: admin endpoints were callable without any authentication (the Bearer
+  // header check below only tested header presence, not a valid session).
+  const adminUser = await requireAdmin(req, res)
+  if (!adminUser) return
 
+  try {
     // Create uploads directory if it doesn't exist
     const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'products')
     try {

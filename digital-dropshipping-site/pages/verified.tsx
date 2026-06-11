@@ -7,7 +7,11 @@ export default function VerifiedPage() {
     <>
       <Head>
         <title>Verified Portfolios - Unitiv</title>
-        <meta name="description" content="Browse verified professional portfolios on Unitiv" />
+        {/* Why: 150-160 char description for healthier SERP snippets; public content page so it stays indexable */}
+        <meta
+          name="description"
+          content="Browse verified professional portfolios on Unitiv. Every freelancer passes identity, portfolio, and skills checks so you can hire with complete confidence."
+        />
       </Head>
 
       <div className="min-h-screen bg-bg-base">

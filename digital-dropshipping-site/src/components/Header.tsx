@@ -2,16 +2,21 @@ import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import {
+  BadgeCheck,
   Briefcase,
   ChevronDown,
   ClipboardList,
+  FileText,
   LayoutDashboard,
   LogOut,
   Menu,
+  PlusCircle,
+  Search,
   Settings,
   ShieldCheck,
   UserRound,
   Users,
+  Wallet,
   X,
 } from 'lucide-react';
 import { canAccessAdminDashboard } from '../lib/permissions';
@@ -101,13 +106,32 @@ const Header: React.FC = () => {
     user
       ? {
           href: dashboardHref(user.role),
-          label: isAdminUser ? 'Dashboard' : 'My dashboard',
+          // Why: admins land on /admin, so name the entry explicitly to match what it opens.
+          label: isAdminUser ? 'Admin Dashboard' : 'My dashboard',
           icon: isAdminUser ? LayoutDashboard : user.role === 'FREELANCER' ? Briefcase : ClipboardList,
         }
       : null,
     user && isAdminUser ? { href: '/admin/team', label: 'Team', icon: Users } : null,
     user && isAdminUser ? { href: '/admin/setup', label: 'Settings', icon: Settings } : null,
   ].filter(Boolean) as Array<{ href: string; label: string; icon: React.ComponentType<{ className?: string }> }>;
+
+  // Why: role-aware shortcuts so each role can reach its key destinations straight from the avatar menu.
+  const roleLinks: Array<{ href: string; label: string; icon: React.ComponentType<{ className?: string }> }> =
+    user?.role === 'FREELANCER'
+      ? [
+          { href: '/freelancers/dashboard?tab=profile', label: 'Profile & Settings', icon: Settings },
+          { href: '/freelancers/dashboard?tab=earnings', label: 'Earnings', icon: Wallet },
+          { href: '/freelancers/dashboard?tab=pipeline', label: 'My Proposals', icon: FileText },
+          { href: '/open-projects', label: 'Browse Open Projects', icon: Search },
+          { href: '/verification', label: 'Get Verified', icon: BadgeCheck },
+        ]
+      : user?.role === 'CLIENT'
+        ? [
+            { href: '/clients/dashboard', label: 'My Projects', icon: ClipboardList },
+            { href: '/request-quote', label: 'Post a Project', icon: PlusCircle },
+            { href: '/freelancers', label: 'Find Freelancers', icon: Users },
+          ]
+        : [];
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-[#141414]/95 backdrop-blur-2xl">
@@ -205,13 +229,14 @@ const Header: React.FC = () => {
                   </div>
 
                   <div className="mt-3 space-y-1">
-                    {accountLinks.map((item) => {
+                    {/* Why: dashboard link first, then role-aware shortcuts — key includes label since a role link can share an href with the dashboard entry. */}
+                    {[...accountLinks, ...roleLinks].map((item) => {
                       const Icon = item.icon;
                       return (
                         <Link
-                          key={item.href}
+                          key={`${item.href}-${item.label}`}
                           href={item.href}
-                          className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold text-white/78 transition hover:bg-white/[0.08] hover:text-white"
+                          className="flex min-h-[44px] items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold text-white/78 transition hover:bg-white/[0.08] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
                           role="menuitem"
                         >
                           <Icon className="h-4 w-4 text-cyan-200/80" aria-hidden="true" />
@@ -225,7 +250,7 @@ const Header: React.FC = () => {
                     <button
                       type="button"
                       onClick={handleLogout}
-                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-500/15 px-3 py-2 text-sm font-semibold text-red-200 transition hover:bg-red-500/25"
+                      className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-red-500/15 px-3 py-2 text-sm font-semibold text-red-200 transition hover:bg-red-500/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
                       role="menuitem"
                     >
                       <LogOut className="h-4 w-4" aria-hidden="true" />
@@ -306,28 +331,44 @@ const Header: React.FC = () => {
                 <div className="grid gap-2">
                   <Link
                     href={dashboardHref(user.role)}
-                    className="flex items-center gap-2 rounded-xl border border-white/10 px-4 py-3 text-sm font-semibold text-white/82"
+                    className="flex min-h-[44px] items-center gap-2 rounded-xl border border-white/10 px-4 py-3 text-sm font-semibold text-white/82 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
                   >
                     <UserRound className="h-4 w-4 text-cyan-200/80" aria-hidden="true" />
                     My workspace
                   </Link>
+                  {/* Why: mirror the desktop role-aware shortcuts so mobile users get the same profile management entries. */}
+                  {roleLinks.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        key={`${item.href}-${item.label}`}
+                        href={item.href}
+                        className="flex min-h-[44px] items-center gap-2 rounded-xl border border-white/10 px-4 py-3 text-sm font-semibold text-white/82 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+                      >
+                        <Icon className="h-4 w-4 text-cyan-200/80" aria-hidden="true" />
+                        {item.label}
+                      </Link>
+                    );
+                  })}
                   {isAdminUser && (
                     <Link
                       href="/admin"
-                      className="flex items-center gap-2 rounded-xl border border-white/10 px-4 py-3 text-sm font-semibold text-white/82"
+                      className="flex min-h-[44px] items-center gap-2 rounded-xl border border-white/10 px-4 py-3 text-sm font-semibold text-white/82 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
                     >
                       <ShieldCheck className="h-4 w-4 text-cyan-200/80" aria-hidden="true" />
                       Admin command
                     </Link>
                   )}
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="flex items-center justify-center gap-2 rounded-xl bg-red-500/15 px-4 py-3 text-sm font-semibold text-red-200"
-                  >
-                    <LogOut className="h-4 w-4" aria-hidden="true" />
-                    Log out
-                  </button>
+                  <div className="border-t border-white/10 pt-2">
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-red-500/15 px-4 py-3 text-sm font-semibold text-red-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+                    >
+                      <LogOut className="h-4 w-4" aria-hidden="true" />
+                      Log out
+                    </button>
+                  </div>
                 </div>
               </div>
             ) : (

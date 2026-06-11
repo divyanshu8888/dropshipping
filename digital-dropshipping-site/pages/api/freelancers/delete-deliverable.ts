@@ -3,6 +3,7 @@ import { query, queryOne } from 'lib/mysql';
 import { unlink } from 'fs/promises';
 import { join, sep } from 'path';
 import { existsSync } from 'fs';
+import { requireRole, internalError } from '../../../src/lib/apiAuth';
 
 export default async function handler(
   req: NextApiRequest,
@@ -11,6 +12,10 @@ export default async function handler(
   if (req.method !== 'DELETE') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+
+  // Why: identity must come from the session cookie; body freelancerId is ignored.
+  const user = await requireRole(req, res, ['FREELANCER']);
+  if (!user) return;
 
   try {
     // Parse body - could be in req.body or need to read it
@@ -21,16 +26,16 @@ export default async function handler(
       body = req.body;
     }
 
-    const { deliverableId, projectId, freelancerId } = body;
+    const { deliverableId, projectId } = body;
 
-    if (!deliverableId || !projectId || !freelancerId) {
+    if (!deliverableId || !projectId) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Verify the deliverable belongs to this freelancer's project
+    // Verify the deliverable belongs to this freelancer's project (resolved from the session user)
     const freelancer = await queryOne<{ id: number }>(
       `SELECT id FROM freelancers WHERE user_id = ? LIMIT 1`,
-      [Number(freelancerId)]
+      [user.id]
     );
 
     if (!freelancer) {
@@ -116,11 +121,7 @@ export default async function handler(
     });
 
   } catch (error) {
-    console.error('Error deleting deliverable:', error);
-    return res.status(500).json({
-      error: 'Failed to delete deliverable',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return internalError(res, 'freelancers/delete-deliverable', error);
   }
 }
 

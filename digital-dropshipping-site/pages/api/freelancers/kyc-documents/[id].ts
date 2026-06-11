@@ -3,6 +3,7 @@ import { query, queryOne } from 'lib/mysql';
 import { promises as fs } from 'fs';
 import path from 'path';
 import formidable from 'formidable';
+import { requireRole, parsePositiveInt, internalError } from '../../../../src/lib/apiAuth';
 
 export const config = {
   api: {
@@ -14,39 +15,38 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  const { id } = req.query;
-
-  if (!id || typeof id !== 'string') {
-    return res.status(400).json({ error: 'Invalid document ID' });
+  // Why: only positive integer ids are valid document ids.
+  const documentId = parsePositiveInt(req.query.id);
+  if (!documentId) {
+    return res.status(400).json({ error: 'Invalid id' });
   }
+
+  if (req.method !== 'DELETE' && req.method !== 'PATCH') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // Why: KYC docs belong to the freelancer; identity comes from the session cookie.
+  const user = await requireRole(req, res, ['FREELANCER']);
+  if (!user) return;
 
   if (req.method === 'DELETE') {
-    return handleDelete(req, res, id);
+    return handleDelete(req, res, String(documentId), user.id);
   }
 
-  if (req.method === 'PATCH') {
-    return handleUpdate(req, res, id);
-  }
-
-  return res.status(405).json({ error: 'Method not allowed' });
+  return handleUpdate(req, res, String(documentId), user.id);
 }
 
 async function handleDelete(
   req: NextApiRequest,
   res: NextApiResponse,
-  documentId: string
+  documentId: string,
+  authUserId: number
 ) {
   try {
-    // Get user from query or headers
-    const userId = req.query.userId || req.headers['x-user-id'];
-    if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    // Get freelancer ID from user_id
+    // Get freelancer ID from the authenticated user's id
     const freelancer = await queryOne<{ id: number }>(
       `SELECT id FROM freelancers WHERE user_id = ? LIMIT 1`,
-      [userId]
+      [authUserId]
     );
 
     if (!freelancer) {
@@ -107,30 +107,21 @@ async function handleDelete(
       message: 'Document deleted successfully'
     });
   } catch (error: any) {
-    console.error('Error deleting KYC document:', error);
-    return res.status(500).json({
-      error: 'Failed to delete KYC document',
-      details: error.message
-    });
+    return internalError(res, 'freelancers/kyc-documents/delete', error);
   }
 }
 
 async function handleUpdate(
   req: NextApiRequest,
   res: NextApiResponse,
-  documentId: string
+  documentId: string,
+  authUserId: number
 ) {
   try {
-    // Get user from query or headers
-    const userId = req.query.userId || req.headers['x-user-id'];
-    if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    // Get freelancer ID from user_id
+    // Get freelancer ID from the authenticated user's id
     const freelancer = await queryOne<{ id: number }>(
       `SELECT id FROM freelancers WHERE user_id = ? LIMIT 1`,
-      [userId]
+      [authUserId]
     );
 
     if (!freelancer) {
@@ -277,11 +268,7 @@ async function handleUpdate(
       document: serialized
     });
   } catch (error: any) {
-    console.error('Error updating KYC document:', error);
-    return res.status(500).json({
-      error: 'Failed to update KYC document',
-      details: error.message
-    });
+    return internalError(res, 'freelancers/kyc-documents/update', error);
   }
 }
 

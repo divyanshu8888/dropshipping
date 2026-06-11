@@ -1,34 +1,38 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { query, queryOne } from 'lib/mysql';
 import { guardMessage } from '../../../src/lib/moderation/contactGuard';
+import { requireRole, parsePositiveInt, internalError } from '../../../src/lib/apiAuth';
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  if (req.method !== 'GET' && req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // Why: identity must come from the session cookie, not query params/body/headers.
+  const user = await requireRole(req, res, ['CLIENT']);
+  if (!user) return;
+
   if (req.method === 'GET') {
-    return handleGet(req, res);
+    return handleGet(req, res, user.id);
   }
 
-  if (req.method === 'POST') {
-    return handlePost(req, res);
-  }
-
-  return res.status(405).json({ error: 'Method not allowed' });
+  return handlePost(req, res, user.id);
 }
 
-async function handleGet(req: NextApiRequest, res: NextApiResponse) {
+async function handleGet(req: NextApiRequest, res: NextApiResponse, userId: number) {
   try {
-    const projectId = req.query.projectId || req.body.projectId;
-    const userId = req.query.userId || req.headers['x-user-id'];
-
-    if (!projectId || !userId) {
-      return res.status(400).json({ error: 'Missing projectId or userId' });
+    // Why: only positive integer ids are valid project ids.
+    const projectId = parsePositiveInt(req.query.projectId);
+    if (!projectId) {
+      return res.status(400).json({ error: 'Invalid id' });
     }
 
     const client = await queryOne<{ id: number }>(
       `SELECT id FROM clients WHERE owner_id = ? LIMIT 1`,
-      [Number(userId)]
+      [userId]
     );
 
     if (!client) {
@@ -37,7 +41,7 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
 
     const project = await queryOne<{ id: number; client_id: number }>(
       `SELECT id, client_id FROM projects WHERE id = ? AND client_id = ? LIMIT 1`,
-      [Number(projectId), client.id]
+      [projectId, client.id]
     );
 
     if (!project) {
@@ -46,7 +50,7 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
 
     const conversation = await queryOne<{ id: number }>(
       `SELECT id FROM conversations WHERE project_id = ? LIMIT 1`,
-      [Number(projectId)]
+      [projectId]
     );
 
     if (!conversation) {
@@ -70,7 +74,7 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
 
     const messages = rows.map((row) => ({
       id: String(row.id),
-      sender: row.sender_id === Number(userId) ? 'client' : 'freelancer',
+      sender: row.sender_id === userId ? 'client' : 'freelancer',
       content: row.body || '',
       timestamp: new Date(row.created_at).toISOString(),
       read:
@@ -85,24 +89,22 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
        WHERE conversation_id = ?
          AND sender_id != ?
          AND is_read != 'TRUE'`,
-      [conversation.id, Number(userId)]
+      [conversation.id, userId]
     );
 
     return res.status(200).json({ success: true, messages });
   } catch (error) {
-    console.error('Error fetching client messages:', error);
-    return res.status(500).json({
-      error: 'Failed to load messages',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return internalError(res, 'clients/messages/get', error);
   }
 }
 
-async function handlePost(req: NextApiRequest, res: NextApiResponse) {
+async function handlePost(req: NextApiRequest, res: NextApiResponse, userId: number) {
   try {
-    const { projectId, content, senderId } = req.body;
+    // Why: sender identity comes from the session; body senderId is ignored.
+    const { projectId, content } = req.body;
+    const senderId = userId;
 
-    if (!projectId || !content || !senderId) {
+    if (!projectId || !content) {
       return res.status(400).json({ error: 'Missing required fields: projectId, content, senderId' });
     }
 
@@ -326,11 +328,7 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
     });
 
   } catch (error) {
-    console.error('Error sending message:', error);
-    return res.status(500).json({
-      error: 'Failed to send message',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return internalError(res, 'clients/messages/post', error);
   }
 }
 

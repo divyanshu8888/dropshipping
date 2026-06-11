@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { safeQuery } from '../../../src/lib/dbHelpers';
+import { requireAdmin, internalError } from '../../../src/lib/apiAuth';
 
 type SearchResult = {
   id: number | string;
@@ -19,6 +20,10 @@ export default async function handler(
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+
+  // Why: admin endpoints were callable without any authentication.
+  const adminUser = await requireAdmin(req, res);
+  if (!adminUser) return;
 
   try {
     const { q } = req.query;
@@ -138,10 +143,7 @@ export default async function handler(
       results: results.slice(0, 10)
     });
   } catch (error) {
-    console.error('Search error:', error);
-    return res.status(500).json({
-      error: 'Search failed',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
+    // Why: 500 response leaked error.message to clients.
+    return internalError(res, 'admin-search', error);
   }
 }

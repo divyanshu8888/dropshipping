@@ -31,24 +31,37 @@ export default function BlogPage() {
     <>
       <Head>
         <title>Blog - Unitiv</title>
-        <meta name="description" content="Insights, tips, and stories from Unitiv" />
+        {/* Why: full SEO/social meta with 150-160 char description */}
+        <meta
+          name="description"
+          content="Read the Unitiv blog for hiring guides, freelancing tips, and success stories — from writing winning project briefs to growing your freelance business."
+        />
+        <meta property="og:title" content="Blog - Unitiv" />
+        <meta
+          property="og:description"
+          content="Hiring guides, freelancing tips, and success stories from the Unitiv marketplace."
+        />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary" />
       </Head>
 
       <div className="min-h-screen bg-[#0B0C0F]">
         <Header />
 
+        <main>
         {/* Hero Section */}
         <section className="relative border-b border-white/10 bg-gradient-to-b from-[#0B0C0F] to-[#0B0C0F] pt-24 pb-8">
-          <div className="max-w-4xl mx-auto px-6 text-center">
-            <h1 className="text-xs text-white/60 font-bold tracking-wide uppercase mb-2">Blog</h1>
-            <p className="text-2xl md:text-3xl font-black text-white leading-tight tracking-tight">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            {/* Why: proper heading hierarchy — eyebrow is a span, the headline is the h1 */}
+            <span className="block text-xs text-white/60 font-semibold tracking-[0.4em] uppercase mb-2">Blog</span>
+            <h1 className="text-2xl md:text-3xl font-black text-white leading-tight tracking-tight">
               Insights, tips, and{" "}
               <span className="bg-gradient-to-r from-[#00C6FF] to-[#7D2AE8] bg-clip-text text-transparent">stories</span>
-            </p>
+            </h1>
           </div>
         </section>
 
-        <div className="max-w-4xl mx-auto px-6 py-12">
+        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
 
           <div className="space-y-6">
             {blogPosts.map((post) => (
@@ -61,17 +74,34 @@ export default function BlogPage() {
                 </div>
                 <h2 className="text-2xl font-bold text-white mb-3">{post.title}</h2>
                 <p className="text-gray-300 mb-4">{post.excerpt}</p>
-                <Link href="#" className="inline-flex items-center text-cyan-400 hover:text-cyan-300 text-sm font-medium">
+                <Link href="#" className="inline-flex items-center min-h-[44px] text-cyan-400 hover:text-cyan-300 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 rounded-lg">
                   Read more →
                 </Link>
               </div>
             ))}
           </div>
 
+          {/* Why: CTA section with internal links to deepen engagement */}
+          <div className="mt-12 border-t border-white/10 pt-10 text-center">
+            <h2 className="text-3xl font-semibold text-white">Ready to put these tips into action?</h2>
+            <p className="mt-3 text-sm text-white/70 max-w-md mx-auto">Browse verified talent, see how the platform works, or read real client results.</p>
+            <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Link href="/freelancers" className="inline-flex items-center justify-center min-h-[44px] px-6 py-2.5 rounded-full bg-gradient-to-r from-cyan-500 via-fuchsia-500 to-rose-500 text-sm font-semibold text-white hover:opacity-90 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70">
+                Browse Freelancers
+              </Link>
+              <Link href="/how-it-works" className="inline-flex items-center justify-center min-h-[44px] px-6 py-2.5 rounded-full border border-white/15 text-sm font-semibold text-white/90 hover:bg-white/10 hover:text-white transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70">
+                How It Works
+              </Link>
+              <Link href="/case-studies" className="inline-flex items-center justify-center min-h-[44px] px-6 py-2.5 rounded-full border border-white/15 text-sm font-semibold text-white/90 hover:bg-white/10 hover:text-white transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70">
+                Case Studies
+              </Link>
+            </div>
+          </div>
+
           <div className="mt-8 text-center">
             <Link
               href="/"
-              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm rounded-full bg-white/5 border border-white/10 text-white/90 hover:bg-white/10 hover:text-white transition-colors"
+              className="inline-flex items-center gap-2 px-5 py-2.5 min-h-[44px] text-sm rounded-full bg-white/5 border border-white/10 text-white/90 hover:bg-white/10 hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -79,7 +109,8 @@ export default function BlogPage() {
               Back to Home
             </Link>
           </div>
-        </div>
+        </section>
+        </main>
       </div>
     </>
   );

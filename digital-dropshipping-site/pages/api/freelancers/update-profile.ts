@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { query } from 'lib/mysql';
+import { query, queryOne } from 'lib/mysql';
+import { requireRole, internalError } from '../../../src/lib/apiAuth';
 
 // Allow freelancers to update their own profile details
 // Accepts a subset of columns from the freelancers table
@@ -8,9 +9,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // Why: identity must come from the session cookie; body freelancerId is ignored.
+  const user = await requireRole(req, res, ['FREELANCER']);
+  if (!user) return;
+
   try {
     const {
-      freelancerId,
       display_name,
       headline,
       title,
@@ -22,9 +26,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       availability,
     } = req.body || {};
 
-    if (!freelancerId) {
-      return res.status(400).json({ error: 'Missing freelancerId' });
+    // Why: only the freelancer record owned by the session user may be updated.
+    const ownRecord = await queryOne<{ id: number }>(
+      `SELECT id FROM freelancers WHERE user_id = ? LIMIT 1`,
+      [user.id]
+    );
+
+    if (!ownRecord) {
+      return res.status(404).json({ error: 'Freelancer not found' });
     }
+
+    const freelancerId = ownRecord.id;
 
     // Normalize skills to JSON string
     let skillsJson: string | null = null;
@@ -74,8 +86,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     return res.status(200).json({ success: true, freelancer: updated });
   } catch (error) {
-    console.error('Error updating freelancer profile:', error);
-    return res.status(500).json({ error: 'Failed to update profile' });
+    return internalError(res, 'freelancers/update-profile', error);
   }
 }
 

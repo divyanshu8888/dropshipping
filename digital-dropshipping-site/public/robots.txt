@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /clients/dashboard
+Disallow: /freelancers/dashboard
+Disallow: /cart
+Disallow: /checkout
+Disallow: /api/
+
+Sitemap: https://unitiv.com/sitemap.xml

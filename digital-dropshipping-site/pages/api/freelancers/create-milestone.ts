@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { query, queryOne } from 'lib/mysql';
 import { template10k } from '../../../src/lib/milestoneTemplates';
 import { guardMessage } from '../../../src/lib/moderation/contactGuard';
+import { requireRole, internalError } from '../../../src/lib/apiAuth';
 
 export default async function handler(
   req: NextApiRequest,
@@ -11,10 +12,14 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  try {
-    const { projectId, title, description, dueDate, freelancerId } = req.body;
+  // Why: identity must come from the session cookie; body freelancerId is ignored.
+  const user = await requireRole(req, res, ['FREELANCER']);
+  if (!user) return;
 
-    if (!projectId || !title || !freelancerId) {
+  try {
+    const { projectId, title, description, dueDate } = req.body;
+
+    if (!projectId || !title) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
@@ -44,10 +49,10 @@ export default async function handler(
       });
     }
 
-    // Verify the project belongs to this freelancer
+    // Verify the project belongs to this freelancer (resolved from the session user)
     const freelancer = await queryOne<{ id: number }>(
       `SELECT id FROM freelancers WHERE user_id = ? LIMIT 1`,
-      [Number(freelancerId)]
+      [user.id]
     );
 
     if (!freelancer) {
@@ -166,11 +171,7 @@ export default async function handler(
     });
 
   } catch (error) {
-    console.error('Error creating milestone:', error);
-    return res.status(500).json({
-      error: 'Failed to create milestone',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return internalError(res, 'freelancers/create-milestone', error);
   }
 }
 

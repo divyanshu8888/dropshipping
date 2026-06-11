@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { query } from '../../../src/lib/mysql';
+import { requireAdmin, internalError, parsePositiveInt } from '../../../src/lib/apiAuth';
 
 export default async function handler(
   req: NextApiRequest,
@@ -8,6 +9,10 @@ export default async function handler(
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+
+  // Why: admin endpoints were callable without any authentication.
+  const adminUser = await requireAdmin(req, res);
+  if (!adminUser) return;
 
   try {
     const { notificationId, markAllRead } = req.body;
@@ -30,11 +35,17 @@ export default async function handler(
       return res.status(400).json({ error: 'Missing notificationId' });
     }
 
+    // Why: Number() accepted floats/negatives; require a positive integer id.
+    const notificationIdNum = parsePositiveInt(notificationId);
+    if (notificationIdNum === null) {
+      return res.status(400).json({ error: 'Invalid id' });
+    }
+
     await query(
-      `UPDATE admin_notifications 
-       SET is_read = 'TRUE', read_at = NOW() 
+      `UPDATE admin_notifications
+       SET is_read = 'TRUE', read_at = NOW()
        WHERE id = ?`,
-      [Number(notificationId)]
+      [notificationIdNum]
     );
 
     return res.status(200).json({
@@ -43,11 +54,8 @@ export default async function handler(
     });
 
   } catch (error) {
-    console.error('Error marking notification as read:', error);
-    return res.status(500).json({
-      error: 'Failed to mark notification as read',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
+    // Why: 500 response leaked error.message to clients.
+    return internalError(res, 'mark-notification-read', error);
   }
 }
 

@@ -3,13 +3,24 @@ import Head from 'next/head';
 import Link from 'next/link';
 import Header from '../src/components/Header';
 
+// Why: lightweight client-side email format check before hitting the API
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'sent' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
+  const [emailError, setEmailError] = useState(''); // Why: inline field-level validation message
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Why: validate format client-side before the API round trip
+    if (!EMAIL_RE.test(email.trim())) {
+      setEmailError('Please enter a valid email address.');
+      return;
+    }
+    setEmailError('');
     setStatus('loading');
     setErrorMsg('');
 
@@ -25,7 +36,8 @@ export default function ForgotPasswordPage() {
       if (res.ok) {
         setStatus('sent');
       } else {
-        setErrorMsg(data.error || 'Something went wrong. Please try again.');
+        // Why: surface the API's { error } message with a friendly fallback
+        setErrorMsg(data.error || 'Something went wrong — please try again.');
         setStatus('error');
       }
     } catch {
@@ -37,8 +49,13 @@ export default function ForgotPasswordPage() {
   return (
     <>
       <Head>
-        <title>Forgot Password — Unitiv</title>
-        <meta name="description" content="Reset your Unitiv account password." />
+        <title>Forgot Password - Unitiv</title>
+        {/* Why: 150-160 char description; noindex because auth pages should stay out of search */}
+        <meta
+          name="description"
+          content="Forgot your Unitiv password? Enter your account email and we will send you a secure reset link so you can regain access to your projects within minutes."
+        />
+        <meta name="robots" content="noindex, nofollow" />
       </Head>
 
       <div className="relative min-h-screen overflow-hidden bg-[#0B0C0F] text-white">
@@ -63,13 +80,15 @@ export default function ForgotPasswordPage() {
                 </div>
                 <h1 className="text-2xl font-bold text-white">Check your inbox</h1>
                 <p className="mt-3 text-sm leading-relaxed text-white/60">
-                  If an account with <span className="font-semibold text-white/85">{email}</span> exists, we've sent a password reset link. It expires in 1 hour.
+                  If an account with <span className="font-semibold text-white/85">{email}</span> exists, we&apos;ve sent a password reset link. It expires in 1 hour.
                 </p>
                 <p className="mt-4 text-xs text-white/40">
-                  Didn't receive it? Check your spam folder or{' '}
+                  Didn&apos;t receive it? Check your spam folder or{' '}
+                  {/* Why: explicit type="button" so it never accidentally submits */}
                   <button
+                    type="button"
                     onClick={() => { setStatus('idle'); setEmail(''); }}
-                    className="text-cyan-400 hover:text-cyan-300 transition-colors"
+                    className="text-cyan-400 hover:text-cyan-300 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
                   >
                     try again
                   </button>.
@@ -95,29 +114,45 @@ export default function ForgotPasswordPage() {
                   </div>
                   <h1 className="text-2xl font-bold text-white">Forgot your password?</h1>
                   <p className="mt-2 text-sm text-white/55">
-                    Enter your email and we'll send you a reset link.
+                    Enter your email and we&apos;ll send you a reset link.
                   </p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-5">
                   <div className="space-y-2">
                     <label htmlFor="email" className="block text-sm font-semibold text-white/70">
-                      Email address
+                      Email address{' '}
+                      <span aria-hidden="true" className="text-rose-400">*</span>
                     </label>
                     <input
                       id="email"
                       type="email"
                       required
                       autoComplete="email"
+                      maxLength={254}
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
+                      onBlur={() => {
+                        // Why: inline validation on blur for immediate feedback
+                        if (email && !EMAIL_RE.test(email.trim())) {
+                          setEmailError('Please enter a valid email address.');
+                        } else {
+                          setEmailError('');
+                        }
+                      }}
+                      aria-invalid={Boolean(emailError)}
+                      aria-describedby={emailError ? 'email-error' : undefined}
                       placeholder="you@example.com"
                       className="block w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3.5 text-sm text-white placeholder:text-white/35 focus:border-cyan-400/60 focus:outline-none focus:ring-2 focus:ring-cyan-400/30 transition"
                     />
+                    {emailError && (
+                      <p id="email-error" className="text-xs font-semibold text-rose-300">{emailError}</p>
+                    )}
                   </div>
 
                   {status === 'error' && (
-                    <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                    // Why: role="alert" announces API failures to screen readers
+                    <div role="alert" className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
                       {errorMsg}
                     </div>
                   )}

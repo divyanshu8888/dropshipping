@@ -7,30 +7,42 @@ export default function AboutPage() {
     <>
       <Head>
         <title>About Us - Unitiv</title>
-        <meta name="description" content="Learn about Unitiv and our mission to connect verified freelancers with clients" />
+        {/* Why: full SEO/social meta with 150-160 char description */}
+        <meta
+          name="description"
+          content="Learn about Unitiv, the marketplace connecting verified freelancers with clients worldwide through secure escrow payments, transparent tracking, and trust."
+        />
+        <meta property="og:title" content="About Us - Unitiv" />
+        <meta
+          property="og:description"
+          content="Unitiv connects verified freelancers with clients worldwide through secure escrow payments and transparent project tracking."
+        />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary" />
       </Head>
 
       <div className="min-h-screen bg-[#0B0C0F]">
         <Header />
 
+        <main>
         {/* Hero Section */}
-        <section className="relative overflow-hidden border-b border-white/10 bg-[#0B0C0F] pt-28 pb-16">
+        <section className="relative overflow-hidden border-b border-white/10 bg-[#0B0C0F] pt-28 pb-16 min-h-[40vh]">
           <div className="pointer-events-none absolute -top-32 left-1/2 -translate-x-1/2 w-[600px] h-[300px] rounded-full bg-gradient-to-b from-cyan-500/15 via-violet-500/10 to-transparent blur-3xl" />
           <div className="relative max-w-4xl mx-auto px-6 text-center">
-            <span className="inline-flex items-center rounded-full border border-white/12 bg-white/[0.06] px-3 py-1 text-[11px] font-semibold uppercase tracking-widest text-white/60 mb-5">
+            <span className="inline-flex items-center rounded-full border border-white/12 bg-white/[0.06] px-3 py-1 text-xs font-semibold uppercase tracking-[0.4em] text-white/60 mb-5">
               About Us
             </span>
-            <h1 className="text-[clamp(36px,6vw,72px)] font-extrabold tracking-[-0.03em] leading-[1.08] text-white">
+            <h1 className="text-[clamp(36px,5.5vw,68px)] font-extrabold tracking-[-0.03em] leading-[1.08] text-white">
               Where ideas unite with{" "}
-              <span className="gradient-text">expert talent</span>
+              <span className="hero-gradient-refined">expert talent</span>
             </h1>
-            <p className="mt-5 text-base sm:text-lg text-white/60 max-w-xl mx-auto leading-relaxed">
+            <p className="mt-5 text-base sm:text-lg text-white/70 max-w-xl mx-auto leading-relaxed">
               Unitiv connects verified professionals with clients worldwide — securely, transparently, and at scale.
             </p>
           </div>
         </section>
 
-        <div className="max-w-4xl mx-auto px-6 py-12">
+        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
 
           <div className="prose prose-invert max-w-none">
             <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8 mb-8">
@@ -45,7 +57,7 @@ export default function AboutPage() {
             <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8 mb-8">
               <h2 className="text-2xl font-bold text-white mb-4">What We Do</h2>
               <p className="text-gray-300 leading-relaxed mb-4">
-                We've built a platform that prioritizes:
+                We&apos;ve built a platform that prioritizes:
               </p>
               <ul className="text-gray-300 space-y-2 list-disc pl-6">
                 <li>Verified professionals who pass ID and portfolio checks</li>
@@ -81,14 +93,18 @@ export default function AboutPage() {
             <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
               <h2 className="text-2xl font-bold text-white mb-4">Get Started</h2>
               <p className="text-gray-300 leading-relaxed mb-6">
-                Whether you're a client looking for expert help or a freelancer ready to grow your business,
+                Whether you&apos;re a client looking for expert help or a freelancer ready to grow your business,
                 Unitiv is here to support your journey.
               </p>
+              {/* Why: brand CTA gradient + focus rings + extra internal link */}
               <div className="flex flex-wrap gap-4">
-                <Link href="/freelancers" className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-cyan-400 to-violet-500 text-white rounded-xl font-semibold hover:opacity-90 transition">
+                <Link href="/freelancers" className="inline-flex items-center min-h-[44px] px-6 py-3 bg-gradient-to-r from-cyan-500 via-fuchsia-500 to-rose-500 text-white rounded-xl font-semibold hover:opacity-90 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70">
                   Browse Freelancers
                 </Link>
-                <Link href="/apply" className="inline-flex items-center px-6 py-3 border border-white/25 text-white rounded-xl font-semibold hover:bg-white/10 transition">
+                <Link href="/how-it-works" className="inline-flex items-center min-h-[44px] px-6 py-3 border border-white/15 text-white rounded-xl font-semibold hover:bg-white/10 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70">
+                  How It Works
+                </Link>
+                <Link href="/apply" className="inline-flex items-center min-h-[44px] px-6 py-3 border border-white/15 text-white rounded-xl font-semibold hover:bg-white/10 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70">
                   Apply as Freelancer
                 </Link>
               </div>
@@ -106,7 +122,8 @@ export default function AboutPage() {
               Back to Home
             </Link>
           </div>
-        </div>
+        </section>
+        </main>
       </div>
     </>
   );

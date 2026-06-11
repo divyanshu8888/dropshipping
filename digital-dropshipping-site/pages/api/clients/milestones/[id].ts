@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { query, queryOne } from '../../../../src/lib/mysql';
+import { requireRole, parsePositiveInt, internalError } from '../../../../src/lib/apiAuth';
 
 // Valid milestone statuses
 const VALID_STATUSES = ['pending', 'funded', 'in_progress', 'submitted', 'approved', 'released', 'rejected'];
@@ -15,28 +16,11 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // Why: identity and role come from the session cookie, not query params/headers.
+  const user = await requireRole(req, res, ['CLIENT']);
+  if (!user) return;
+
   try {
-    const userId = req.query.userId || req.headers['x-user-id'];
-    if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    // Get user info - check if user is a client
-    const user = await queryOne<{ id: number; role: string }>(
-      `SELECT id, role FROM users WHERE id = ? LIMIT 1`,
-      [Number(userId)]
-    );
-
-    if (!user) {
-      return res.status(401).json({ error: 'User not found' });
-    }
-
-    // Check if user is a client (database stores roles in lowercase)
-    const userRole = user.role?.toUpperCase();
-    if (userRole !== 'CLIENT') {
-      return res.status(403).json({ error: 'Only clients can update milestone status' });
-    }
-
     // Get client ID from user_id (clients table has owner_id that references users)
     const client = await queryOne<{ id: number }>(
       `SELECT id FROM clients WHERE owner_id = ? LIMIT 1`,
@@ -52,14 +36,10 @@ export default async function handler(
 
     const clientId = client.id;
 
-    const { id } = req.query;
-    if (!id || typeof id !== 'string') {
-      return res.status(400).json({ error: 'Milestone ID is required' });
-    }
-
-    const milestoneId = Number.parseInt(id, 10);
-    if (Number.isNaN(milestoneId)) {
-      return res.status(400).json({ error: 'Invalid milestone ID' });
+    // Why: only positive integer ids are valid milestone ids.
+    const milestoneId = parsePositiveInt(req.query.id);
+    if (!milestoneId) {
+      return res.status(400).json({ error: 'Invalid id' });
     }
 
     const { status } = req.body;
@@ -148,11 +128,8 @@ export default async function handler(
     try {
       await query(updateQuery, updateParams);
     } catch (updateError: any) {
-      console.error('Database update error:', updateError);
-      return res.status(500).json({ 
-        error: 'Failed to update milestone in database',
-        details: updateError.message || 'Unknown database error'
-      });
+      // Why: do not leak SQL error details to clients.
+      return internalError(res, 'clients/milestones/[id] db-update', updateError);
     }
     
     // Verify the update was successful
@@ -316,11 +293,7 @@ export default async function handler(
     });
 
   } catch (error: any) {
-    console.error('Error updating milestone status:', error);
-    return res.status(500).json({ 
-      error: 'Failed to update milestone status',
-      details: error.message 
-    });
+    return internalError(res, 'clients/milestones/[id]', error);
   }
 }
 

@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { query } from '../../../src/lib/mysql';
+import { requireAdmin, internalError, parsePositiveInt } from '../../../src/lib/apiAuth';
 
 const parseIntParam = (value: string | string[] | undefined, fallback: number) => {
   if (!value) return fallback;
@@ -8,6 +9,10 @@ const parseIntParam = (value: string | string[] | undefined, fallback: number) =
 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // Why: admin endpoints were callable without any authentication.
+  const adminUser = await requireAdmin(req, res);
+  if (!adminUser) return;
+
   if (req.method === 'GET') {
     try {
       const statusParam = Array.isArray(req.query.status) ? req.query.status[0] : req.query.status;
@@ -50,11 +55,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         },
       });
     } catch (error) {
-      console.error('Error fetching quote requests:', error);
-      res.status(500).json({
-        message: 'Failed to fetch quote requests',
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
+      // Why: 500 response leaked error.message to clients.
+      internalError(res, 'quote-requests-get', error);
     }
     return;
   }
@@ -65,6 +67,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       if (!id) {
         return res.status(400).json({ message: 'Quote request ID is required' });
+      }
+
+      // Why: id was used without validation; require a positive integer.
+      const idNum = parsePositiveInt(id);
+      if (idNum === null) {
+        return res.status(400).json({ error: 'Invalid id' });
       }
 
       const fields: string[] = [];
@@ -91,25 +99,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(400).json({ message: 'No fields provided to update.' });
       }
 
-      values.push(id);
+      values.push(idNum);
 
       await query(
         `UPDATE project_leads SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
         values,
       );
 
-      const [updated] = await query<any>(`SELECT * FROM project_leads WHERE id = ?`, [id]);
+      const [updated] = await query<any>(`SELECT * FROM project_leads WHERE id = ?`, [idNum]);
 
       res.status(200).json({
         message: 'Quote request updated successfully',
         quoteRequest: updated,
       });
     } catch (error) {
-      console.error('Error updating quote request:', error);
-      res.status(500).json({
-        message: 'Failed to update quote request',
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
+      // Why: 500 response leaked error.message to clients.
+      internalError(res, 'quote-requests-patch', error);
     }
     return;
   }

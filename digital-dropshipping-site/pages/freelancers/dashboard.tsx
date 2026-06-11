@@ -194,18 +194,20 @@ const CalendarPicker = ({ selectedDate, onSelectDate, onClose }: { selectedDate:
       <div className="flex items-center justify-between mb-4">
         <button
           onClick={prevMonth}
-          className="p-1 hover:bg-white/10 rounded transition-colors"
+          aria-label="Previous month"
+          className="p-2 hover:bg-white/10 rounded transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
         >
-          <ChevronUp className="w-4 h-4 text-white/70 rotate-[-90deg]" />
+          <ChevronUp className="w-4 h-4 text-white/70 rotate-[-90deg]" aria-hidden="true" />
         </button>
         <h3 className="text-sm font-semibold text-white">
           {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
         </h3>
         <button
           onClick={nextMonth}
-          className="p-1 hover:bg-white/10 rounded transition-colors"
+          aria-label="Next month"
+          className="p-2 hover:bg-white/10 rounded transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
         >
-          <ChevronUp className="w-4 h-4 text-white/70 rotate-90" />
+          <ChevronUp className="w-4 h-4 text-white/70 rotate-90" aria-hidden="true" />
         </button>
       </div>
       <div className="grid grid-cols-7 gap-1 mb-2">
@@ -303,6 +305,17 @@ interface Availability {
   workingHoursTo?: string;
 }
 
+// Why: canonical tab ids — used to validate ?tab deep links (header dropdown, bookmarks) before applying them.
+const VALID_TABS = ['overview', 'pipeline', 'playbooks', 'inbox', 'calendar', 'deliverables', 'earnings', 'profile'];
+
+// Why: playbooks have no backend API — they are client-side proposal templates persisted in localStorage.
+interface Playbook {
+  id: string;
+  title: string;
+  body: string;
+  updatedAt: string;
+}
+
 const TIMEZONES = [
   { value: 'UTC', label: 'UTC (Coordinated Universal Time)' },
   { value: 'America/New_York', label: 'EST (Eastern Time)' },
@@ -348,7 +361,112 @@ export default function FreelancerDashboard() {
   const [projectSearch, setProjectSearch] = useState('');
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const [expandedMilestones, setExpandedMilestones] = useState<Set<string>>(new Set());
-  
+
+  // Playbooks — client-side proposal templates (stored per-user in localStorage; no backend endpoint exists)
+  const [playbooks, setPlaybooks] = useState<Playbook[]>([]);
+  const [playbookModalOpen, setPlaybookModalOpen] = useState(false);
+  const [editingPlaybookId, setEditingPlaybookId] = useState<string | null>(null);
+  const [playbookForm, setPlaybookForm] = useState({ title: '', body: '' });
+
+  // Why: deep-link support — /freelancers/dashboard?tab=earnings opens that tab directly (header menu relies on this).
+  useEffect(() => {
+    if (!router.isReady) return;
+    const tab = typeof router.query.tab === 'string' ? router.query.tab : '';
+    // Why: guard against invalid/missing values so a bad ?tab never blanks the dashboard.
+    if (VALID_TABS.includes(tab)) {
+      setActiveTab(prev => (prev === tab ? prev : tab));
+    }
+  }, [router.isReady, router.query.tab]);
+
+  // Why: keep the URL in sync on tab clicks so tabs are shareable and survive refresh (shallow — no data refetch).
+  const setTab = useCallback((id: string) => {
+    if (!VALID_TABS.includes(id)) return;
+    setActiveTab(id);
+    router.replace({ query: { ...router.query, tab: id } }, undefined, { shallow: true });
+  }, [router]);
+
+  // Why: load saved playbooks once the user is known; guard typeof window because localStorage is SSR-unavailable.
+  useEffect(() => {
+    if (typeof window === 'undefined' || !user?.id) return;
+    try {
+      const raw = window.localStorage.getItem(`unitiv_playbooks_${user.id}`);
+      const parsed = raw ? JSON.parse(raw) : [];
+      if (Array.isArray(parsed)) {
+        setPlaybooks(parsed.filter((p: any) => p && typeof p.id === 'string' && typeof p.title === 'string'));
+      }
+    } catch {
+      // Why: corrupted storage should never crash the dashboard — start with an empty list.
+    }
+  }, [user?.id]);
+
+  const persistPlaybooks = useCallback((next: Playbook[]) => {
+    setPlaybooks(next);
+    if (typeof window !== 'undefined' && user?.id) {
+      try {
+        window.localStorage.setItem(`unitiv_playbooks_${user.id}`, JSON.stringify(next));
+      } catch {
+        // Why: storage may be full/blocked — keep the in-memory copy working regardless.
+      }
+    }
+  }, [user?.id]);
+
+  const openCreatePlaybook = () => {
+    setEditingPlaybookId(null);
+    setPlaybookForm({ title: '', body: '' });
+    setPlaybookModalOpen(true);
+  };
+
+  const openEditPlaybook = (pb: Playbook) => {
+    setEditingPlaybookId(pb.id);
+    setPlaybookForm({ title: pb.title, body: pb.body });
+    setPlaybookModalOpen(true);
+  };
+
+  const closePlaybookModal = () => {
+    setPlaybookModalOpen(false);
+    setEditingPlaybookId(null);
+    setPlaybookForm({ title: '', body: '' });
+  };
+
+  const savePlaybook = () => {
+    const title = playbookForm.title.trim();
+    const body = playbookForm.body.trim();
+    if (!title) {
+      addToast('Give your playbook a title', 'error');
+      return;
+    }
+    const now = new Date().toISOString();
+    if (editingPlaybookId) {
+      persistPlaybooks(playbooks.map(p => (p.id === editingPlaybookId ? { ...p, title, body, updatedAt: now } : p)));
+      addToast('Playbook updated', 'success');
+    } else {
+      persistPlaybooks([
+        { id: `pb_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, title, body, updatedAt: now },
+        ...playbooks,
+      ]);
+      addToast('Playbook created', 'success');
+    }
+    closePlaybookModal();
+  };
+
+  const deletePlaybook = (id: string) => {
+    if (!confirm('Delete this playbook? This cannot be undone.')) return;
+    persistPlaybooks(playbooks.filter(p => p.id !== id));
+    addToast('Playbook deleted', 'success');
+  };
+
+  // Why: copy + jump to the projects board is the most useful "apply" action without a proposal-draft API.
+  const applyPlaybook = async (pb: Playbook) => {
+    try {
+      await navigator.clipboard.writeText(pb.body);
+      addToast('Copied — paste it into your proposal', 'success');
+    } catch {
+      addToast('Could not copy automatically — open Edit and copy the text manually', 'error');
+      return;
+    }
+    router.push('/open-projects');
+  };
+
   const displayName = useMemo(() => {
     return profileName || user?.name || user?.email?.split('@')[0] || '';
   }, [profileName, user]);
@@ -468,9 +586,12 @@ export default function FreelancerDashboard() {
       return;
     }
 
-    // Only redirect if auth is verified and user is not a freelancer
-    if (!user || !isFreelancer()) {
-      router.push('/login');
+    // Why: only unauthenticated visitors go to /login; wrong-role users are routed to their own dashboard by useRoleGuard.
+    if (!user) {
+      router.replace('/login');
+      return;
+    }
+    if (!isFreelancer()) {
       return;
     }
 
@@ -538,6 +659,13 @@ export default function FreelancerDashboard() {
         fetch(`/api/freelancers/kyc-documents?userId=${user?.id}`, { signal })
       ]);
 
+      // Why: backend infers identity from the session cookie; a 401 means the session expired, so send the user back to login.
+      const unauthorized = results.some(r => r.status === 'fulfilled' && r.value.status === 401);
+      if (unauthorized) {
+        router.replace('/login');
+        return;
+      }
+
       // Projects
       const projectsRes = results[0].status === 'fulfilled' ? results[0].value : null;
       if (projectsRes && projectsRes.ok) {
@@ -566,8 +694,10 @@ export default function FreelancerDashboard() {
           }
         });
         setMilestones(milestonesMap);
-      } else if (projectsRes && !projectsRes.ok) {
-        setProjects([]);
+      } else {
+        // Why: a rejected/failed projects request should surface an inline error, not silently render an empty dashboard.
+        if (projectsRes && !projectsRes.ok) setProjects([]);
+        setError('Unable to load your dashboard right now. Please try again shortly.');
       }
 
       // Profile summary (rating)
@@ -1309,13 +1439,48 @@ export default function FreelancerDashboard() {
     });
   };
 
-  if (loading) {
+  // Why: while useRoleGuard navigates wrong-role/unauthenticated visitors away, show a brief notice instead of flashing this dashboard.
+  if (!authLoading && authVerified && (!user || !isFreelancer())) {
     return (
-      <div className="min-h-screen bg-[#0B0D10] flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-2 border-cyan-400/30 border-t-cyan-400 mx-auto"></div>
-          <p className="mt-4 text-white/70 text-sm">Loading your dashboard…</p>
+      <div className="min-h-screen bg-[#0B0D10] flex items-center justify-center text-white">
+        <Head>
+          <title>Freelancer Dashboard - Unitiv</title>
+          <meta name="robots" content="noindex,nofollow" />
+        </Head>
+        <div className="text-center text-white/70" role="status" aria-live="polite">
+          <div className="animate-spin rounded-full h-10 w-10 border-2 border-cyan-400/30 border-t-cyan-400 mx-auto mb-4" aria-hidden="true" />
+          <p className="text-sm">Redirecting…</p>
         </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    // Why: skeleton card shapes signal the upcoming layout better than a lone spinner.
+    return (
+      <div className="min-h-screen bg-[#0B0D10] text-white">
+        <Head>
+          <title>Freelancer Dashboard - Unitiv</title>
+          <meta name="robots" content="noindex,nofollow" />
+        </Head>
+        <Header />
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" aria-busy="true">
+          <h1 className="sr-only">Freelancer Dashboard</h1>
+          <p className="sr-only" role="status">Loading your dashboard…</p>
+          <div className="animate-pulse space-y-6">
+            <div className="h-9 w-72 rounded-xl bg-white/10" />
+            <div className="h-12 rounded-2xl border border-white/10 bg-white/[0.04]" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="h-32 rounded-2xl border border-white/10 bg-white/[0.04]" />
+              ))}
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="h-64 rounded-2xl border border-white/10 bg-white/[0.04]" />
+              <div className="h-64 rounded-2xl border border-white/10 bg-white/[0.04]" />
+            </div>
+          </div>
+        </main>
       </div>
     );
   }
@@ -1395,6 +1560,8 @@ export default function FreelancerDashboard() {
       <Head>
         <title>Freelancer Dashboard - Unitiv</title>
         <meta name="description" content="Manage your projects, communicate with clients, and track your progress" />
+        {/* Why: private dashboard — keep it out of search indexes. */}
+        <meta name="robots" content="noindex,nofollow" />
       </Head>
 
       <div className="min-h-screen bg-[#0B0D10] text-white">
@@ -1412,8 +1579,9 @@ export default function FreelancerDashboard() {
                 <div className="flex items-center gap-3 mt-2">
                   <p className="text-white/70">Welcome back, {displayName}</p>
                   <button
-                    onClick={() => setActiveTab('calendar')}
-                    className={`px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide flex items-center space-x-2 transition-all hover:scale-105 ${
+                    onClick={() => setTab('calendar')}
+                    title="Manage availability"
+                    className={`px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide flex items-center space-x-2 transition-all hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 ${
                       !availability.isAvailable 
                         ? 'bg-rose-500/15 text-rose-300 border border-rose-400/20 hover:bg-rose-500/20' 
                         : 'bg-emerald-500/15 text-emerald-300 border border-emerald-400/20 hover:bg-emerald-500/20'
@@ -1426,14 +1594,14 @@ export default function FreelancerDashboard() {
                 </div>
               <div className="flex items-center space-x-3">
                 <button
-                  onClick={() => router.push('/freelancers')}
-                  className="rounded-xl border border-white/10 bg-white/5 text-white/70 px-4 py-2 text-sm hover:bg-white/10 transition"
+                  onClick={() => router.push('/open-projects')}
+                  className="min-h-[44px] rounded-xl border border-white/10 bg-white/5 text-white/70 px-4 py-2 text-sm hover:bg-white/10 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
                 >
                   New Proposal
                 </button>
                 <button
-                  onClick={() => setActiveTab('playbooks')}
-                  className="rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold px-4 py-2 text-sm flex items-center space-x-2 transition"
+                  onClick={() => setTab('playbooks')}
+                  className="min-h-[44px] rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold px-4 py-2 text-sm flex items-center space-x-2 transition hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
                 >
                   <Plus className="w-4 h-4" />
                   <span>Playbooks</span>
@@ -1443,11 +1611,28 @@ export default function FreelancerDashboard() {
           </div>
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Why: semantic landmark for the dashboard content. */}
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {error && (
-            <div className="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-amber-200 flex items-center space-x-2">
-              <AlertCircle className="w-5 h-5" />
-              <span>{error}</span>
+            <div role="alert" className="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-amber-200 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center space-x-2">
+                <AlertCircle className="w-5 h-5 shrink-0" aria-hidden="true" />
+                <span>{error}</span>
+              </div>
+              {/* Why: let users recover from a failed fetch without reloading the page. */}
+              <button
+                onClick={async () => {
+                  setLoading(true);
+                  try {
+                    await fetchFreelancerData();
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                className="min-h-[44px] rounded-xl border border-amber-400/40 bg-amber-500/15 px-4 py-2 text-sm font-semibold text-amber-100 hover:bg-amber-500/25 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+              >
+                Retry
+              </button>
             </div>
           )}
 
@@ -1468,8 +1653,8 @@ export default function FreelancerDashboard() {
                   return (
                   <button
                     key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold whitespace-nowrap transition-all ${
+                    onClick={() => setTab(tab.id)}
+                    className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold whitespace-nowrap transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 ${
                       isActive
                         ? 'bg-gradient-to-r from-cyan-500/15 to-blue-500/20 border border-cyan-400/30 text-cyan-300'
                         : 'text-white/50 hover:text-white/80 hover:bg-white/5 border border-transparent'
@@ -1513,8 +1698,8 @@ export default function FreelancerDashboard() {
 
                 {/* Open Milestones */}
                 <button
-                  onClick={() => setActiveTab('pipeline')}
-                  className="premium-card relative p-5 text-left overflow-hidden"
+                  onClick={() => setTab('pipeline')}
+                  className="premium-card relative p-5 text-left overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
                 >
                   <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-cyan-500/15 mb-3">
                     <Target className="w-4 h-4 text-cyan-300" />
@@ -1533,8 +1718,8 @@ export default function FreelancerDashboard() {
 
                 {/* Earnings — with split bar */}
                 <button
-                  onClick={() => setActiveTab('earnings')}
-                  className="premium-card relative p-5 text-left overflow-hidden"
+                  onClick={() => setTab('earnings')}
+                  className="premium-card relative p-5 text-left overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
                 >
                   <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-emerald-500/15 mb-3">
                     <DollarSign className="w-4 h-4 text-emerald-300" />
@@ -1594,8 +1779,8 @@ export default function FreelancerDashboard() {
 
                 {/* Profile Strength */}
                 <button
-                  onClick={() => setActiveTab('profile')}
-                  className="premium-card relative p-5 text-left overflow-hidden"
+                  onClick={() => setTab('profile')}
+                  className="premium-card relative p-5 text-left overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
                 >
                   <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-fuchsia-500/15 mb-3">
                     <Award className="w-4 h-4 text-fuchsia-300" />
@@ -1662,7 +1847,7 @@ export default function FreelancerDashboard() {
 
                     {/* Step 2 — Complete profile */}
                     <button
-                      onClick={() => setActiveTab('profile')}
+                      onClick={() => setTab('profile')}
                       className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/10 hover:border-violet-500/40 hover:bg-violet-500/5 transition-all text-left group"
                     >
                       <div className="w-6 h-6 rounded-full border-2 border-white/20 group-hover:border-violet-400 flex items-center justify-center shrink-0 transition-colors">
@@ -1677,7 +1862,7 @@ export default function FreelancerDashboard() {
 
                     {/* Step 3 — Add portfolio */}
                     <button
-                      onClick={() => setActiveTab('profile')}
+                      onClick={() => setTab('profile')}
                       className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/10 hover:border-cyan-500/40 hover:bg-cyan-500/5 transition-all text-left group"
                     >
                       <div className="w-6 h-6 rounded-full border-2 border-white/20 group-hover:border-cyan-400 flex items-center justify-center shrink-0 transition-colors">
@@ -1692,7 +1877,7 @@ export default function FreelancerDashboard() {
 
                     {/* Step 4 — Browse projects */}
                     <a
-                      href="/freelancers"
+                      href="/open-projects"
                       className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/10 hover:border-blue-500/40 hover:bg-blue-500/5 transition-all group"
                     >
                       <div className="w-6 h-6 rounded-full border-2 border-white/20 group-hover:border-blue-400 flex items-center justify-center shrink-0 transition-colors">
@@ -1707,7 +1892,7 @@ export default function FreelancerDashboard() {
 
                     {/* Step 5 — Send proposal */}
                     <a
-                      href="/freelancers"
+                      href="/open-projects"
                       className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/10 hover:border-amber-500/40 hover:bg-amber-500/5 transition-all group"
                     >
                       <div className="w-6 h-6 rounded-full border-2 border-white/20 group-hover:border-amber-400 flex items-center justify-center shrink-0 transition-colors">
@@ -1737,7 +1922,7 @@ export default function FreelancerDashboard() {
                       <div className="space-y-3">
                         {/* Empty state action cards */}
                         <button
-                          onClick={() => setActiveTab('profile')}
+                          onClick={() => setTab('profile')}
                           className="w-full flex items-center gap-4 p-4 rounded-xl border border-white/10 bg-white/[0.03] hover:border-fuchsia-500/40 hover:bg-fuchsia-500/5 transition-all text-left group"
                         >
                           <div className="w-10 h-10 rounded-xl bg-fuchsia-500/15 flex items-center justify-center shrink-0 group-hover:bg-fuchsia-500/25 transition-colors">
@@ -1753,7 +1938,7 @@ export default function FreelancerDashboard() {
                         </button>
 
                         <a
-                          href="/freelancers"
+                          href="/open-projects"
                           className="flex items-center gap-4 p-4 rounded-xl border border-white/10 bg-white/[0.03] hover:border-cyan-500/40 hover:bg-cyan-500/5 transition-all group"
                         >
                           <div className="w-10 h-10 rounded-xl bg-cyan-500/15 flex items-center justify-center shrink-0 group-hover:bg-cyan-500/25 transition-colors">
@@ -1769,7 +1954,7 @@ export default function FreelancerDashboard() {
                         </a>
 
                         <a
-                          href="/freelancers"
+                          href="/open-projects"
                           className="flex items-center gap-4 p-4 rounded-xl border border-white/10 bg-white/[0.03] hover:border-blue-500/40 hover:bg-blue-500/5 transition-all group"
                         >
                           <div className="w-10 h-10 rounded-xl bg-blue-500/15 flex items-center justify-center shrink-0 group-hover:bg-blue-500/25 transition-colors">
@@ -1798,15 +1983,17 @@ export default function FreelancerDashboard() {
                               'bg-gray-400'
                             }`}></div>
                             <div>
-                              <p
+                              {/* Why: was a click-only <p> — a real button makes it keyboard reachable. */}
+                              <button
+                                type="button"
                                 onClick={() => {
                                   setSelectedProject(project);
-                                  setActiveTab('inbox');
+                                  setTab('inbox');
                                 }}
-                                className="font-medium text-sm cursor-pointer hover:text-cyan-400 transition-colors"
+                                className="font-medium text-sm cursor-pointer hover:text-cyan-400 transition-colors text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 rounded"
                               >
                                 {project.title}
-                              </p>
+                              </button>
                               <p className="text-xs text-white/50">{project.client} • {formatDate(project.createdAt)}</p>
                             </div>
                           </div>
@@ -1827,18 +2014,18 @@ export default function FreelancerDashboard() {
                   <div className="space-y-4">
                     <div>
                       <div className="flex items-center justify-between">
-                        <button onClick={() => setActiveTab('pipeline')} className="text-sm text-white/70 hover:text-cyan-400 transition-colors text-left">Total Projects</button>
+                        <button onClick={() => setTab('pipeline')} className="text-sm text-white/70 hover:text-cyan-400 transition-colors text-left">Total Projects</button>
                         <span className="font-semibold">{projects.length}</span>
                       </div>
                       {projects.length === 0 && (
                         <p className="text-[10px] text-white/35 mt-0.5">
-                          <a href="/freelancers" className="text-cyan-400/70 hover:text-cyan-400 underline underline-offset-2 transition-colors">Browse open projects</a> to get started
+                          <a href="/open-projects" className="text-cyan-400/70 hover:text-cyan-400 underline underline-offset-2 transition-colors">Browse open projects</a> to get started
                         </p>
                       )}
                     </div>
                     <div>
                       <div className="flex items-center justify-between">
-                        <button onClick={() => setActiveTab('inbox')} className="text-sm text-white/70 hover:text-cyan-400 transition-colors text-left">Messages</button>
+                        <button onClick={() => setTab('inbox')} className="text-sm text-white/70 hover:text-cyan-400 transition-colors text-left">Messages</button>
                         <span className="font-semibold">{metrics.totalMessages}</span>
                       </div>
                       {metrics.totalMessages === 0 && (
@@ -1846,7 +2033,7 @@ export default function FreelancerDashboard() {
                       )}
                     </div>
                     <div className="flex items-center justify-between">
-                      <button onClick={() => setActiveTab('inbox')} className="text-sm text-white/70 hover:text-cyan-400 transition-colors text-left">Unread</button>
+                      <button onClick={() => setTab('inbox')} className="text-sm text-white/70 hover:text-cyan-400 transition-colors text-left">Unread</button>
                       <span className={`font-semibold ${metrics.unreadMessages > 0 ? 'text-cyan-400' : ''}`}>{metrics.unreadMessages}</span>
                     </div>
                     <div>
@@ -1868,7 +2055,7 @@ export default function FreelancerDashboard() {
                           <span className="font-semibold">{dashboardMetrics?.profileStrength.percentage ?? 0}%</span>
                           {(dashboardMetrics?.profileStrength.percentage ?? 0) < 100 && (
                             <button
-                              onClick={() => setActiveTab('profile')}
+                              onClick={() => setTab('profile')}
                               className="text-[10px] font-semibold text-fuchsia-400 hover:text-fuchsia-300 transition-colors"
                             >
                               Improve →
@@ -1909,7 +2096,7 @@ export default function FreelancerDashboard() {
                     <select
                       value={projectFilter}
                       onChange={(e) => setProjectFilter(e.target.value)}
-                      className="pl-10 pr-8 py-2 bg-white/5 border border-white/10 rounded-xl text-white appearance-none cursor-pointer focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition"
+                      className="[color-scheme:dark] pl-10 pr-8 py-2 bg-white/5 border border-white/10 rounded-xl text-white appearance-none cursor-pointer focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition"
                       style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3E%3Cpath stroke=\'%23ffffff\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M6 8l4 4 4-4\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.5rem center', backgroundSize: '1.5em 1.5em', paddingRight: '2.5rem' }}
                     >
                       <option value="all" className="bg-[#1a1d24] text-white">All Status</option>
@@ -1930,10 +2117,20 @@ export default function FreelancerDashboard() {
               {/* Projects List */}
               <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-sm overflow-hidden">
                 {filteredProjects.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-sm text-white/40 space-y-2 m-4">
-                    <FileText className="w-12 h-12 text-white/20 mx-auto" />
-                    <p className="text-white/50 font-medium">{projectSearch || projectFilter !== 'all' ? 'No projects found' : 'No projects yet'}</p>
-                    <p>{projectSearch || projectFilter !== 'all' ? 'Try adjusting your filters' : 'Projects assigned by admins will appear here'}</p>
+                  <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-sm text-white/70 space-y-2 m-4">
+                    <FileText className="w-12 h-12 text-white/20 mx-auto" aria-hidden="true" />
+                    <p className="text-white font-medium">{projectSearch || projectFilter !== 'all' ? 'No projects found' : 'No projects yet'}</p>
+                    <p>{projectSearch || projectFilter !== 'all' ? 'Try adjusting your filters or search terms' : 'Win your first contract and it will show up here'}</p>
+                    {/* Why: empty states should offer a next step, not a dead end. */}
+                    {!projectSearch && projectFilter === 'all' && (
+                      {/* Why: align with the cyan→blue primary-action gradient used everywhere else in this file. */}
+                      <a
+                        href="/open-projects"
+                        className="inline-flex items-center gap-2 min-h-[44px] mt-2 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 px-5 py-2.5 text-sm font-semibold text-slate-900 transition hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+                      >
+                        Browse open projects
+                      </a>
+                    )}
                   </div>
                 ) : (
                   <div className="divide-y divide-white/10">
@@ -1944,14 +2141,18 @@ export default function FreelancerDashboard() {
                           <div className="flex items-start justify-between mb-4">
                         <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-3 mb-3">
-                                <h3 
-                                  onClick={() => {
-                                    setSelectedProject(project);
-                                    setActiveTab('inbox');
-                                  }}
-                                  className="text-lg font-semibold text-white cursor-pointer hover:text-cyan-400 transition-colors"
-                                >
-                                  {project.title}
+                                <h3 className="text-lg font-semibold text-white">
+                                  {/* Why: was a click-only heading — a real button makes it keyboard reachable. */}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedProject(project);
+                                      setTab('inbox');
+                                    }}
+                                    className="cursor-pointer hover:text-cyan-400 transition-colors text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 rounded"
+                                  >
+                                    {project.title}
+                                  </button>
                                 </h3>
                                 <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold border whitespace-nowrap ${getStatusColor(project.status)}`}>
                               {getStatusIcon(project.status)}
@@ -2017,7 +2218,7 @@ export default function FreelancerDashboard() {
                             <button
                               onClick={() => {
                                 setSelectedProject(project);
-                                setActiveTab('inbox');
+                                setTab('inbox');
                               }}
                               className="px-4 py-2 rounded-lg border border-cyan-400/30 bg-cyan-400/10 text-cyan-200 hover:bg-cyan-400/15 transition-colors text-sm font-medium flex items-center space-x-2"
                             >
@@ -2031,7 +2232,7 @@ export default function FreelancerDashboard() {
                             </button>
                             {project.deliverables && project.deliverables.length > 0 && (
                               <button
-                                onClick={() => setActiveTab('deliverables')}
+                                onClick={() => setTab('deliverables')}
                                 className="px-4 py-2 rounded-lg border border-purple-400/30 bg-purple-400/10 text-purple-200 hover:bg-purple-400/15 transition-colors text-sm font-medium flex items-center space-x-2"
                               >
                                 <Upload className="w-4 h-4" />
@@ -2498,19 +2699,20 @@ export default function FreelancerDashboard() {
                             {/* Status Change */}
                             <div>
                               <label className="block text-xs font-medium text-white/70 mb-2">Update Status</label>
+                              {/* Why: replicate the timezone-select dark treatment so the native popup isn't white. */}
                               <select
                                 value={project.status}
                                 onChange={(e) => updateProjectStatus(project.id, e.target.value)}
-                                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition"
+                                className="[color-scheme:dark] w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition"
                               >
-                                <option value="open">New</option>
-                                <option value="draft">Draft</option>
-                                <option value="in_review">In Review</option>
-                                <option value="contracted">Contracted</option>
-                                <option value="in_progress">In Progress</option>
-                                <option value="delivered">Delivered</option>
-                                <option value="completed">Completed</option>
-                                <option value="cancelled">Cancelled</option>
+                                <option value="open" className="bg-[#101722] text-white">New</option>
+                                <option value="draft" className="bg-[#101722] text-white">Draft</option>
+                                <option value="in_review" className="bg-[#101722] text-white">In Review</option>
+                                <option value="contracted" className="bg-[#101722] text-white">Contracted</option>
+                                <option value="in_progress" className="bg-[#101722] text-white">In Progress</option>
+                                <option value="delivered" className="bg-[#101722] text-white">Delivered</option>
+                                <option value="completed" className="bg-[#101722] text-white">Completed</option>
+                                <option value="cancelled" className="bg-[#101722] text-white">Cancelled</option>
                               </select>
                             </div>
 
@@ -2552,9 +2754,17 @@ export default function FreelancerDashboard() {
                 </div>
                 <div className="divide-y divide-white/10 max-h-[600px] overflow-y-auto">
                   {projects.filter(p => p.messages && p.messages.length > 0).length === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-sm text-white/40 space-y-2 m-4">
-                      <MessageCircle className="w-10 h-10 text-white/20 mx-auto" />
-                      <p>No messages yet</p>
+                    <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-sm text-white/70 space-y-2 m-4">
+                      <MessageCircle className="w-10 h-10 text-white/20 mx-auto" aria-hidden="true" />
+                      <p className="text-white font-medium">No messages yet</p>
+                      <p>Conversations with clients will appear here once a project kicks off.</p>
+                      {/* Why: give the user a productive next step instead of a dead end. */}
+                      <a
+                        href="/open-projects"
+                        className="inline-flex items-center gap-2 min-h-[44px] mt-2 rounded-xl border border-white/10 bg-white/5 px-5 py-2.5 text-sm font-semibold text-white/70 transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+                      >
+                        Browse open projects
+                      </a>
                     </div>
                   ) : (
                     projects.filter(p => p.messages && p.messages.length > 0).map(project => {
@@ -2661,7 +2871,8 @@ export default function FreelancerDashboard() {
                         <button
                           onClick={() => sendMessage(selectedProject.id)}
                           disabled={!newMessage.trim() || sendingMessage}
-                          className="rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold px-4 py-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                          aria-label="Send message"
+                          className="rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold px-4 py-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
                         >
                           {sendingMessage ? (
                             <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
@@ -2806,10 +3017,11 @@ export default function FreelancerDashboard() {
                       setAvailability(newState);
                       updateAvailability(newState);
                     }}
-                    className="bg-white/5 border border-white/10 rounded-xl text-white px-3 py-2.5 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
+                    /* Why: native dropdown rendered white — color-scheme:dark makes Chromium paint the popup dark, and options get explicit dark bg. */
+                    className="[color-scheme:dark] bg-white/5 border border-white/10 rounded-xl text-white px-3 py-2.5 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
                   >
                     {TIMEZONES.map(tz => (
-                      <option key={tz.value} value={tz.value}>{tz.label}</option>
+                      <option key={tz.value} value={tz.value} className="bg-[#101722] text-white">{tz.label}</option>
                     ))}
                   </select>
                 </div>
@@ -2839,35 +3051,79 @@ export default function FreelancerDashboard() {
 
           {activeTab === 'playbooks' && (
             <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-sm overflow-hidden">
-              <div className="px-6 py-4 border-b border-white/10 bg-white/5 flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-white">Your Playbooks</h2>
+              <div className="px-6 py-4 border-b border-white/10 bg-white/5 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-semibold text-white">Your Playbooks</h2>
+                  {/* Why: honest about persistence — playbooks live in localStorage, not on the server. */}
+                  <p className="text-xs text-white/60 mt-0.5">Reusable proposal templates. Playbooks are stored on this device.</p>
+                </div>
                 <button
-                  onClick={() => router.push('/freelancers/profile-setup')}
-                  className="rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold px-4 py-2 text-sm flex items-center space-x-2 transition"
+                  onClick={openCreatePlaybook}
+                  className="min-h-[44px] rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold px-4 py-2 text-sm flex items-center space-x-2 transition hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
                 >
-                  <Plus className="w-4 h-4" />
+                  <Plus className="w-4 h-4" aria-hidden="true" />
                   <span>Create Playbook</span>
                 </button>
               </div>
-              <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-sm text-white/40 space-y-2 m-4">
-                <Code className="w-12 h-12 text-white/20 mx-auto" />
-                <p className="text-white/50 font-medium text-base">No playbooks yet</p>
-                <p>Create reusable proposal templates to streamline how you pitch your services to clients.</p>
-                <div className="flex items-center justify-center gap-3">
-                  <button
-                    onClick={() => router.push('/freelancers/profile-setup')}
-                    className="rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold px-6 py-2.5 transition"
-                  >
-                    Create Playbook
-                  </button>
-                  <button
-                    onClick={() => router.push('/freelancers')}
-                    className="rounded-xl border border-white/10 bg-white/5 text-white/70 px-6 py-2.5 hover:bg-white/10 transition"
-                  >
-                    Browse Projects
-                  </button>
+              {playbooks.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-sm text-white/60 space-y-2 m-4">
+                  <Code className="w-12 h-12 text-white/20 mx-auto" aria-hidden="true" />
+                  <p className="text-white/60 font-medium text-base">No playbooks yet</p>
+                  <p>Create reusable proposal templates to streamline how you pitch your services to clients.</p>
+                  <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
+                    <button
+                      onClick={openCreatePlaybook}
+                      className="min-h-[44px] rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold px-6 py-2.5 transition hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+                    >
+                      Create Playbook
+                    </button>
+                    <button
+                      onClick={() => router.push('/open-projects')}
+                      className="min-h-[44px] rounded-xl border border-white/10 bg-white/5 text-white/70 px-6 py-2.5 hover:bg-white/10 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+                    >
+                      Browse Projects
+                    </button>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {playbooks.map(pb => (
+                    <div key={pb.id} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 hover:border-white/20 transition-all flex flex-col">
+                      <h3 className="text-sm font-semibold text-white truncate">{pb.title}</h3>
+                      <p className="text-xs text-white/60 mt-1.5 line-clamp-2 whitespace-pre-line flex-1">
+                        {pb.body || 'No content yet — click Edit to write your template.'}
+                      </p>
+                      <p className="text-[10px] text-white/40 mt-3">Updated {formatDate(pb.updatedAt)} · {formatTime(pb.updatedAt)}</p>
+                      <div className="flex items-center gap-2 mt-3 pt-3 border-t border-white/10">
+                        <button
+                          onClick={() => applyPlaybook(pb)}
+                          aria-label={`Use playbook ${pb.title}`}
+                          title="Copy template and browse open projects"
+                          className="flex-1 min-h-[36px] rounded-lg bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 text-xs font-semibold px-3 py-2 transition hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+                        >
+                          Use
+                        </button>
+                        <button
+                          onClick={() => openEditPlaybook(pb)}
+                          aria-label={`Edit playbook ${pb.title}`}
+                          className="min-h-[36px] rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-white/70 hover:bg-white/10 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 flex items-center gap-1"
+                        >
+                          <Edit3 className="w-3 h-3" aria-hidden="true" />
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => deletePlaybook(pb.id)}
+                          aria-label={`Delete playbook ${pb.title}`}
+                          className="min-h-[36px] rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs font-semibold text-rose-300 hover:bg-rose-500/20 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 flex items-center gap-1"
+                        >
+                          <Trash2 className="w-3 h-3" aria-hidden="true" />
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -2925,17 +3181,34 @@ export default function FreelancerDashboard() {
 
               <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-sm p-6">
                 <h3 className="text-lg font-semibold text-white mb-4">Payout Settings</h3>
-                <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-sm text-white/40 space-y-2">
-                  <DollarSign className="w-10 h-10 text-white/20 mx-auto" />
-                  <p>Add a payout method to receive funds</p>
-                  <div className="flex items-center justify-center gap-3">
-                    <button className="rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold px-6 py-2.5 transition">
-                      Connect Stripe
+                <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-sm text-white/60 space-y-2">
+                  <DollarSign className="w-10 h-10 text-white/20 mx-auto" aria-hidden="true" />
+                  <p>Payout method setup isn&apos;t available yet — it&apos;s coming soon.</p>
+                  <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
+                    {/* Why: no payout-onboarding API exists yet — honest disabled buttons beat silently dead ones. */}
+                    <button
+                      disabled
+                      title="Coming soon — payout onboarding isn't available yet"
+                      className="min-h-[44px] rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold px-6 py-2.5 transition opacity-50 cursor-not-allowed"
+                    >
+                      Connect Stripe (coming soon)
                     </button>
-                    <button className="rounded-xl border border-white/10 bg-white/5 text-white/70 px-6 py-2.5 hover:bg-white/10 transition">
-                      Add Bank Account
+                    <button
+                      disabled
+                      title="Coming soon — payout onboarding isn't available yet"
+                      className="min-h-[44px] rounded-xl border border-white/10 bg-white/5 text-white/70 px-6 py-2.5 transition opacity-50 cursor-not-allowed"
+                    >
+                      Add Bank Account (coming soon)
                     </button>
                   </div>
+                  <p className="pt-1">
+                    <a
+                      href="/payouts"
+                      className="text-cyan-400 hover:text-cyan-300 underline underline-offset-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 rounded"
+                    >
+                      Learn how Unitiv payouts work
+                    </a>
+                  </p>
                 </div>
               </div>
             </div>
@@ -2948,10 +3221,17 @@ export default function FreelancerDashboard() {
               </div>
               <div className="p-6">
                 {projects.filter(p => (p.deliverables && p.deliverables.length > 0) || p.status === 'delivered').length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-sm text-white/40 space-y-2">
-                    <Upload className="w-10 h-10 text-white/20 mx-auto" />
-                    <p className="text-white/50 font-medium">No deliverables yet</p>
-                    <p>Upload files and code for your projects</p>
+                  <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-sm text-white/60 space-y-2">
+                    <Upload className="w-10 h-10 text-white/20 mx-auto" aria-hidden="true" />
+                    <p className="text-white/60 font-medium">No deliverables yet</p>
+                    <p>Files are uploaded against milestones — open a project in your pipeline to add one.</p>
+                    {/* Why: uploads live on milestone cards in the pipeline tab, so point the empty state there. */}
+                    <button
+                      onClick={() => setTab('pipeline')}
+                      className="inline-flex items-center gap-2 min-h-[44px] mt-2 rounded-xl border border-white/10 bg-white/5 px-5 py-2.5 text-sm font-semibold text-white/70 transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+                    >
+                      Go to Pipeline
+                    </button>
                   </div>
                 ) : (
                   <div className="space-y-6">
@@ -3311,7 +3591,7 @@ export default function FreelancerDashboard() {
                     <MapPin className="w-4 h-4" /> Country
                   </label>
                   <select
-                    className="bg-[#0f1117] border border-white/10 rounded-xl text-white px-4 py-2.5 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
+                    className="[color-scheme:dark] bg-[#0f1117] border border-white/10 rounded-xl text-white px-4 py-2.5 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
                     value={profileForm.country}
                     onChange={(e) => setProfileForm({ ...profileForm, country: e.target.value })}
                   >
@@ -3428,18 +3708,19 @@ export default function FreelancerDashboard() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                     <div>
                       <label className="block text-sm font-medium text-white mb-2">Document Type *</label>
+                      {/* Why: replicate the timezone-select dark treatment so the native popup isn't white. */}
                       <select
                         value={kycUploadForm.documentType}
                         onChange={(e) => setKycUploadForm({ ...kycUploadForm, documentType: e.target.value })}
-                        className="bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
+                        className="[color-scheme:dark] bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
                       >
-                        <option value="">Select type</option>
-                        <option value="id_card">ID Card</option>
-                        <option value="passport">Passport</option>
-                        <option value="drivers_license">Driver's License</option>
-                        <option value="proof_of_address">Proof of Address</option>
-                        <option value="tax_id">Tax ID</option>
-                        <option value="other">Other</option>
+                        <option value="" className="bg-[#101722] text-white">Select type</option>
+                        <option value="id_card" className="bg-[#101722] text-white">ID Card</option>
+                        <option value="passport" className="bg-[#101722] text-white">Passport</option>
+                        <option value="drivers_license" className="bg-[#101722] text-white">Driver&apos;s License</option>
+                        <option value="proof_of_address" className="bg-[#101722] text-white">Proof of Address</option>
+                        <option value="tax_id" className="bg-[#101722] text-white">Tax ID</option>
+                        <option value="other" className="bg-[#101722] text-white">Other</option>
                       </select>
                     </div>
                     <div>
@@ -3582,8 +3863,10 @@ export default function FreelancerDashboard() {
                     })}
                   </div>
                 ) : (
-                  <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-sm text-white/40 space-y-2">
-                    <p>No KYC documents uploaded yet</p>
+                  <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-sm text-white/70 space-y-2">
+                    <Lock className="w-10 h-10 text-white/20 mx-auto" aria-hidden="true" />
+                    <p className="text-white font-medium">No KYC documents uploaded yet</p>
+                    <p>Upload an ID document above to verify your identity and unlock payouts.</p>
                   </div>
                 )}
               </div>
@@ -3591,14 +3874,16 @@ export default function FreelancerDashboard() {
               {/* Edit KYC Document Modal */}
               {editingKycDoc && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
-                  <div className="relative w-full max-w-md rounded-2xl border border-white/20 bg-gradient-to-br from-[#0B0D12] via-[#0F1419] to-[#0B0D12] backdrop-blur-xl shadow-2xl p-6">
+                  {/* Why: cap height so the dialog stays usable on small screens. */}
+                  <div className="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl border border-white/20 bg-gradient-to-br from-[#0B0D12] via-[#0F1419] to-[#0B0D12] backdrop-blur-xl shadow-2xl p-6" role="dialog" aria-modal="true" aria-label="Edit KYC document">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-lg font-semibold text-white">Edit Document</h3>
                       <button
                         onClick={cancelEditKycDocument}
-                        className="text-white/50 hover:text-white transition"
+                        aria-label="Close edit document dialog"
+                        className="p-2 -m-2 text-white/70 hover:text-white transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 rounded-lg"
                       >
-                        <X className="w-5 h-5" />
+                        <X className="w-5 h-5" aria-hidden="true" />
                       </button>
                     </div>
                     
@@ -3663,6 +3948,72 @@ export default function FreelancerDashboard() {
             </div>
           )}
 
+          {/* Playbook Create/Edit Modal */}
+          {playbookModalOpen && (
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              {/* Why: cap height so the dialog stays usable on small screens. */}
+              <div
+                className="bg-[#0B0D12] border border-white/10 rounded-2xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto"
+                role="dialog"
+                aria-modal="true"
+                aria-label={editingPlaybookId ? 'Edit playbook' : 'Create playbook'}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-white">{editingPlaybookId ? 'Edit Playbook' : 'Create Playbook'}</h3>
+                  <button
+                    onClick={closePlaybookModal}
+                    aria-label="Close playbook dialog"
+                    className="p-2 -m-2 text-white/70 hover:text-white transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 rounded-lg"
+                  >
+                    <X className="w-5 h-5" aria-hidden="true" />
+                  </button>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <label htmlFor="playbook-title" className="block text-sm font-medium text-white/70 mb-2">Title *</label>
+                    <input
+                      id="playbook-title"
+                      type="text"
+                      value={playbookForm.title}
+                      maxLength={100}
+                      onChange={(e) => setPlaybookForm({ ...playbookForm, title: e.target.value })}
+                      placeholder="e.g., Web app proposal — fixed scope"
+                      className="bg-white/5 border border-white/10 rounded-xl text-white px-3 py-2 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="playbook-body" className="block text-sm font-medium text-white/70 mb-2">Template body</label>
+                    <textarea
+                      id="playbook-body"
+                      value={playbookForm.body}
+                      maxLength={5000}
+                      rows={8}
+                      onChange={(e) => setPlaybookForm({ ...playbookForm, body: e.target.value })}
+                      placeholder="Write a reusable proposal template — your intro, approach, milestone plan, and a closing question. Use it as a starting point when applying to projects."
+                      className="bg-white/5 border border-white/10 rounded-xl text-white px-3 py-2 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full resize-none"
+                    />
+                    <p className="text-xs text-white/50 mt-1">{playbookForm.body.length}/5000 · Playbooks are stored on this device.</p>
+                  </div>
+                  <div className="flex items-center space-x-3 pt-4 border-t border-white/10">
+                    <button
+                      onClick={closePlaybookModal}
+                      className="flex-1 min-h-[44px] rounded-xl border border-white/10 bg-white/5 text-white/70 px-4 py-2 hover:bg-white/10 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={savePlaybook}
+                      disabled={!playbookForm.title.trim()}
+                      className="flex-1 min-h-[44px] rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold px-4 py-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+                    >
+                      {editingPlaybookId ? 'Save Changes' : 'Save Playbook'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Milestone Creation Modal */}
           {creatingMilestone && (
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -3674,9 +4025,10 @@ export default function FreelancerDashboard() {
                       setCreatingMilestone(false);
                       setMilestoneForm({ projectId: '', title: '', description: '', amount: '', dueDate: '' });
                     }}
-                    className="text-white/60 hover:text-white transition-colors"
+                    aria-label="Close create milestone dialog"
+                    className="p-2 -m-2 text-white/70 hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 rounded-lg"
                   >
-                    <X className="w-5 h-5" />
+                    <X className="w-5 h-5" aria-hidden="true" />
                   </button>
                 </div>
                 <div className="space-y-4">
@@ -3763,7 +4115,7 @@ export default function FreelancerDashboard() {
               </div>
             </div>
           )}
-        </div>
+        </main>
       </div>
     </>
   );

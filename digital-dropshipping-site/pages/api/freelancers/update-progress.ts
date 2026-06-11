@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { query, queryOne } from '../../../src/lib/mysql';
+import { requireRole, internalError } from '../../../src/lib/apiAuth';
 
 export default async function handler(
   req: NextApiRequest,
@@ -9,17 +10,21 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  try {
-    const { projectId, progress, freelancerId } = req.body;
+  // Why: identity must come from the session cookie; body freelancerId is ignored.
+  const user = await requireRole(req, res, ['FREELANCER']);
+  if (!user) return;
 
-    if (!projectId || progress === undefined || !freelancerId) {
+  try {
+    const { projectId, progress } = req.body;
+
+    if (!projectId || progress === undefined) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Verify the project belongs to this freelancer
+    // Verify the project belongs to this freelancer (resolved from the session user)
     const freelancer = await queryOne<{ id: number }>(
       `SELECT id FROM freelancers WHERE user_id = ? LIMIT 1`,
-      [Number(freelancerId)]
+      [user.id]
     );
 
     if (!freelancer) {
@@ -75,10 +80,6 @@ export default async function handler(
     });
 
   } catch (error) {
-    console.error('Error updating progress:', error);
-    return res.status(500).json({
-      error: 'Failed to update progress',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return internalError(res, 'freelancers/update-progress', error);
   }
 }

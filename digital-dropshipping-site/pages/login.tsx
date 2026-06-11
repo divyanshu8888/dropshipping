@@ -3,10 +3,14 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import Header from '../src/components/Header';
+import { Eye, EyeOff } from 'lucide-react'; // Why: accessible show/hide password toggles
 import { useAuth } from '../src/contexts/AuthContext';
 import { loginCopy, signupCopy } from '../src/copy/auth';
 
 type AuthMode = 'login' | 'signup';
+
+// Why: lightweight client-side email format check before hitting the API
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function AuthPage() {
   const router = useRouter();
@@ -24,6 +28,10 @@ export default function AuthPage() {
   const [loginErrors, setLoginErrors] = useState<Record<string, string>>({});
   const [signupErrors, setSignupErrors] = useState<Record<string, string>>({});
   const [signupLoading, setSignupLoading] = useState(false);
+  // Why: independent visibility toggles per password field
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showSignupPassword, setShowSignupPassword] = useState(false);
+  const [showSignupConfirm, setShowSignupConfirm] = useState(false);
 
   const activeCopy = useMemo(() => (mode === 'login' ? loginCopy : signupCopy), [mode]);
 
@@ -63,6 +71,20 @@ export default function AuthPage() {
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Why: field-level validation on submit before calling the API
+    const validationErrors: Record<string, string> = {};
+    if (!EMAIL_RE.test(loginForm.email.trim())) {
+      validationErrors.email = 'Please enter a valid email address.';
+    }
+    if (!loginForm.password) {
+      validationErrors.password = 'Password is required.';
+    }
+    if (Object.keys(validationErrors).length > 0) {
+      setLoginErrors(validationErrors);
+      return;
+    }
+
     setLoginErrors({});
 
     try {
@@ -83,6 +105,11 @@ export default function AuthPage() {
 
     if (!signupForm.name.trim()) {
       validationErrors.name = signupCopy.form.fields.nameLabel + ' is required';
+    }
+
+    // Why: catch malformed emails client-side before the API round trip
+    if (!EMAIL_RE.test(signupForm.email.trim())) {
+      validationErrors.email = signupCopy.alerts.invalidEmail;
     }
 
     if (signupForm.password.length < 6) {
@@ -191,6 +218,8 @@ export default function AuthPage() {
       <Head>
         <title>{activeCopy.seo.title}</title>
         <meta name="description" content={activeCopy.seo.description} />
+        {/* Why: auth pages must not be indexed by search engines */}
+        <meta name="robots" content="noindex, nofollow" />
       </Head>
 
       <div className="relative min-h-screen overflow-hidden bg-superhuman text-text-base">
@@ -308,7 +337,8 @@ export default function AuthPage() {
                   <div className="space-y-6">
                     <div className="space-y-3">
                       <label htmlFor="login-email" className="block text-sm font-semibold text-text-soft">
-                        {loginCopy.form.fields.emailLabel}
+                        {loginCopy.form.fields.emailLabel}{' '}
+                        <span aria-hidden="true" className="text-rose-400">*</span>
                       </label>
                       <input
                         id="login-email"
@@ -316,54 +346,107 @@ export default function AuthPage() {
                         type="email"
                         autoComplete="email"
                         required
+                        maxLength={254}
                         value={loginForm.email}
                         onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
+                        onBlur={() => {
+                          // Why: inline validation on blur for immediate feedback
+                          if (loginForm.email && !EMAIL_RE.test(loginForm.email.trim())) {
+                            setLoginErrors((prev) => ({ ...prev, email: 'Please enter a valid email address.' }));
+                          } else {
+                            setLoginErrors(({ email: _removed, ...rest }) => rest);
+                          }
+                        }}
+                        aria-invalid={Boolean(loginErrors.email)}
+                        aria-describedby={loginErrors.email ? 'login-email-error' : undefined}
                         className="block w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-sm text-text-base shadow-inner drop-shadow-md placeholder:text-text-mute/70 focus:border-brand-b focus:outline-none focus:ring-2 focus:ring-brand-b/60 sm:text-base"
                         placeholder={loginCopy.form.fields.emailPlaceholder}
                       />
+                      {loginErrors.email && (
+                        <p id="login-email-error" className="text-xs font-semibold text-red-300">{loginErrors.email}</p>
+                      )}
                     </div>
 
                     <div className="space-y-3">
                       <label htmlFor="login-password" className="block text-sm font-semibold text-text-soft">
-                        {loginCopy.form.fields.passwordLabel}
+                        {loginCopy.form.fields.passwordLabel}{' '}
+                        <span aria-hidden="true" className="text-rose-400">*</span>
                       </label>
-                      <input
-                        id="login-password"
-                        name="password"
-                        type="password"
-                        autoComplete="current-password"
-                        required
-                        value={loginForm.password}
-                        onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                        className="block w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-sm text-text-base shadow-inner drop-shadow-md placeholder:text-text-mute/70 focus:border-brand-c focus:outline-none focus:ring-2 focus:ring-brand-c/60 sm:text-base"
-                        placeholder={loginCopy.form.fields.passwordPlaceholder}
-                      />
+                      <div className="relative">
+                        <input
+                          id="login-password"
+                          name="password"
+                          type={showLoginPassword ? 'text' : 'password'}
+                          autoComplete="current-password"
+                          required
+                          maxLength={128}
+                          value={loginForm.password}
+                          onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+                          onBlur={() => {
+                            // Why: surface missing password on blur, not only on submit
+                            if (!loginForm.password) {
+                              setLoginErrors((prev) => ({ ...prev, password: 'Password is required.' }));
+                            } else {
+                              setLoginErrors(({ password: _removed, ...rest }) => rest);
+                            }
+                          }}
+                          aria-invalid={Boolean(loginErrors.password)}
+                          aria-describedby={loginErrors.password ? 'login-password-error' : undefined}
+                          className="block w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-4 pr-14 text-sm text-text-base shadow-inner drop-shadow-md placeholder:text-text-mute/70 focus:border-brand-c focus:outline-none focus:ring-2 focus:ring-brand-c/60 sm:text-base"
+                          placeholder={loginCopy.form.fields.passwordPlaceholder}
+                        />
+                        {/* Why: 44px show/hide toggle for password visibility */}
+                        <button
+                          type="button"
+                          onClick={() => setShowLoginPassword((v) => !v)}
+                          aria-label={showLoginPassword ? 'Hide password' : 'Show password'}
+                          className="absolute right-1.5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-xl text-text-mute transition-colors hover:text-text-base focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+                        >
+                          {showLoginPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                        </button>
+                      </div>
+                      {loginErrors.password && (
+                        <p id="login-password-error" className="text-xs font-semibold text-red-300">{loginErrors.password}</p>
+                      )}
                     </div>
                   </div>
                 ) : (
                   <div className="space-y-6">
                     <div className="space-y-2">
                       <label htmlFor="signup-name" className="block text-sm font-semibold text-text-soft">
-                        {signupCopy.form.fields.nameLabel}
+                        {signupCopy.form.fields.nameLabel}{' '}
+                        <span aria-hidden="true" className="text-rose-400">*</span>
                       </label>
                       <input
                         id="signup-name"
                         name="name"
                         type="text"
                         required
+                        maxLength={100}
                         value={signupForm.name}
                         onChange={(e) => setSignupForm({ ...signupForm, name: e.target.value })}
+                        onBlur={() => {
+                          // Why: inline validation on blur for immediate feedback
+                          if (!signupForm.name.trim()) {
+                            setSignupErrors((prev) => ({ ...prev, name: signupCopy.form.fields.nameLabel + ' is required' }));
+                          } else {
+                            setSignupErrors(({ name: _removed, ...rest }) => rest);
+                          }
+                        }}
+                        aria-invalid={Boolean(signupErrors.name)}
+                        aria-describedby={signupErrors.name ? 'signup-name-error' : undefined}
                         className="block w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-sm text-text-base shadow-inner drop-shadow-md placeholder:text-text-mute/70 focus:border-brand-b focus:outline-none focus:ring-2 focus:ring-brand-b/60 sm:text-base"
                         placeholder={signupCopy.form.fields.namePlaceholder}
                       />
                       {signupErrors.name && (
-                        <p className="text-xs font-semibold text-red-300">{signupErrors.name}</p>
+                        <p id="signup-name-error" className="text-xs font-semibold text-red-300">{signupErrors.name}</p>
                       )}
                     </div>
 
                     <div className="space-y-2">
                       <label htmlFor="signup-email" className="block text-sm font-semibold text-text-soft">
-                        {signupCopy.form.fields.emailLabel}
+                        {signupCopy.form.fields.emailLabel}{' '}
+                        <span aria-hidden="true" className="text-rose-400">*</span>
                       </label>
                       <input
                         id="signup-email"
@@ -371,52 +454,112 @@ export default function AuthPage() {
                         type="email"
                         autoComplete="email"
                         required
+                        maxLength={254}
                         value={signupForm.email}
                         onChange={(e) => setSignupForm({ ...signupForm, email: e.target.value })}
+                        onBlur={() => {
+                          // Why: inline validation on blur for immediate feedback
+                          if (signupForm.email && !EMAIL_RE.test(signupForm.email.trim())) {
+                            setSignupErrors((prev) => ({ ...prev, email: signupCopy.alerts.invalidEmail }));
+                          } else {
+                            setSignupErrors(({ email: _removed, ...rest }) => rest);
+                          }
+                        }}
+                        aria-invalid={Boolean(signupErrors.email)}
+                        aria-describedby={signupErrors.email ? 'signup-email-error' : undefined}
                         className="block w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-sm text-text-base shadow-inner drop-shadow-md placeholder:text-text-mute/70 focus:border-brand-b focus:outline-none focus:ring-2 focus:ring-brand-b/60 sm:text-base"
                         placeholder={signupCopy.form.fields.emailPlaceholder}
                       />
+                      {signupErrors.email && (
+                        <p id="signup-email-error" className="text-xs font-semibold text-red-300">{signupErrors.email}</p>
+                      )}
                     </div>
 
                     <div className="space-y-2">
                       <label htmlFor="signup-password" className="block text-sm font-semibold text-text-soft">
-                        {signupCopy.form.fields.passwordLabel}
+                        {signupCopy.form.fields.passwordLabel}{' '}
+                        <span aria-hidden="true" className="text-rose-400">*</span>
                       </label>
-                      <input
-                        id="signup-password"
-                        name="password"
-                        type="password"
-                        autoComplete="new-password"
-                        required
-                        value={signupForm.password}
-                        onChange={(e) => setSignupForm({ ...signupForm, password: e.target.value })}
-                        className="block w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-sm text-text-base shadow-inner drop-shadow-md placeholder:text-text-mute/70 focus:border-brand-c focus:outline-none focus:ring-2 focus:ring-brand-c/60 sm:text-base"
-                        placeholder={signupCopy.form.fields.passwordPlaceholder}
-                      />
+                      <div className="relative">
+                        <input
+                          id="signup-password"
+                          name="password"
+                          type={showSignupPassword ? 'text' : 'password'}
+                          autoComplete="new-password"
+                          required
+                          maxLength={128}
+                          value={signupForm.password}
+                          onChange={(e) => setSignupForm({ ...signupForm, password: e.target.value })}
+                          onBlur={() => {
+                            // Why: inline validation on blur for immediate feedback
+                            if (signupForm.password && signupForm.password.length < 6) {
+                              setSignupErrors((prev) => ({ ...prev, password: signupCopy.alerts.shortPassword }));
+                            } else {
+                              setSignupErrors(({ password: _removed, ...rest }) => rest);
+                            }
+                          }}
+                          aria-invalid={Boolean(signupErrors.password)}
+                          aria-describedby={signupErrors.password ? 'signup-password-error' : undefined}
+                          className="block w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-4 pr-14 text-sm text-text-base shadow-inner drop-shadow-md placeholder:text-text-mute/70 focus:border-brand-c focus:outline-none focus:ring-2 focus:ring-brand-c/60 sm:text-base"
+                          placeholder={signupCopy.form.fields.passwordPlaceholder}
+                        />
+                        {/* Why: 44px show/hide toggle for password visibility */}
+                        <button
+                          type="button"
+                          onClick={() => setShowSignupPassword((v) => !v)}
+                          aria-label={showSignupPassword ? 'Hide password' : 'Show password'}
+                          className="absolute right-1.5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-xl text-text-mute transition-colors hover:text-text-base focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+                        >
+                          {showSignupPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                        </button>
+                      </div>
                       {signupErrors.password && (
-                        <p className="text-xs font-semibold text-red-300">{signupErrors.password}</p>
+                        <p id="signup-password-error" className="text-xs font-semibold text-red-300">{signupErrors.password}</p>
                       )}
                     </div>
 
                     <div className="space-y-2">
                       <label htmlFor="signup-confirm" className="block text-sm font-semibold text-text-soft">
-                        {signupCopy.form.fields.passwordLabel} (confirm)
+                        {signupCopy.form.fields.passwordLabel} (confirm){' '}
+                        <span aria-hidden="true" className="text-rose-400">*</span>
                       </label>
-                      <input
-                        id="signup-confirm"
-                        name="confirmPassword"
-                        type="password"
-                        autoComplete="new-password"
-                        required
-                        value={signupForm.confirmPassword}
-                        onChange={(e) =>
-                          setSignupForm({ ...signupForm, confirmPassword: e.target.value })
-                        }
-                        className="block w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-sm text-text-base shadow-inner drop-shadow-md placeholder:text-text-mute/70 focus:border-brand-c focus:outline-none focus:ring-2 focus:ring-brand-c/60 sm:text-base"
-                        placeholder="Confirm your password"
-                      />
+                      <div className="relative">
+                        <input
+                          id="signup-confirm"
+                          name="confirmPassword"
+                          type={showSignupConfirm ? 'text' : 'password'}
+                          autoComplete="new-password"
+                          required
+                          maxLength={128}
+                          value={signupForm.confirmPassword}
+                          onChange={(e) =>
+                            setSignupForm({ ...signupForm, confirmPassword: e.target.value })
+                          }
+                          onBlur={() => {
+                            // Why: inline validation on blur for immediate feedback
+                            if (signupForm.confirmPassword && signupForm.confirmPassword !== signupForm.password) {
+                              setSignupErrors((prev) => ({ ...prev, confirmPassword: 'Passwords do not match' }));
+                            } else {
+                              setSignupErrors(({ confirmPassword: _removed, ...rest }) => rest);
+                            }
+                          }}
+                          aria-invalid={Boolean(signupErrors.confirmPassword)}
+                          aria-describedby={signupErrors.confirmPassword ? 'signup-confirm-error' : undefined}
+                          className="block w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-4 pr-14 text-sm text-text-base shadow-inner drop-shadow-md placeholder:text-text-mute/70 focus:border-brand-c focus:outline-none focus:ring-2 focus:ring-brand-c/60 sm:text-base"
+                          placeholder="Confirm your password"
+                        />
+                        {/* Why: 44px show/hide toggle for password visibility */}
+                        <button
+                          type="button"
+                          onClick={() => setShowSignupConfirm((v) => !v)}
+                          aria-label={showSignupConfirm ? 'Hide password' : 'Show password'}
+                          className="absolute right-1.5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-xl text-text-mute transition-colors hover:text-text-base focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+                        >
+                          {showSignupConfirm ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                        </button>
+                      </div>
                       {signupErrors.confirmPassword && (
-                        <p className="text-xs font-semibold text-red-300">
+                        <p id="signup-confirm-error" className="text-xs font-semibold text-red-300">
                           {signupErrors.confirmPassword}
                         </p>
                       )}
@@ -476,14 +619,16 @@ export default function AuthPage() {
 
                 {isLogin ? (
                   (loginErrors.submit || error) && (
-                    <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-4 text-sm text-red-200">
+                    // Why: role="alert" announces API failures to screen readers
+                    <div role="alert" className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-4 text-sm text-red-200">
                       {loginErrors.submit || error || loginCopy.alerts.generic}
                     </div>
                   )
                 ) : (
                   signupErrors.submit && (
-                    <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-4 text-sm text-red-200">
-                      <p className="font-semibold text-red-100">We couldn’t create your account</p>
+                    // Why: role="alert" announces API failures to screen readers
+                    <div role="alert" className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-4 text-sm text-red-200">
+                      <p className="font-semibold text-red-100">We couldn&apos;t create your account</p>
                       <p className="mt-1 whitespace-pre-line">{signupErrors.submit}</p>
                     </div>
                   )

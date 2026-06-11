@@ -1,32 +1,32 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { query, queryOne } from 'lib/mysql';
+import { requireRole, internalError } from '../../../src/lib/apiAuth';
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  if (req.method !== 'GET' && req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // Why: identity must come from the session cookie, not query params/body/headers.
+  const user = await requireRole(req, res, ['CLIENT']);
+  if (!user) return;
+
   if (req.method === 'GET') {
-    return handleGet(req, res);
+    return handleGet(req, res, user.id);
   }
 
-  if (req.method === 'POST') {
-    return handlePost(req, res);
-  }
-
-  return res.status(405).json({ error: 'Method not allowed' });
+  return handlePost(req, res, user.id);
 }
 
-async function handleGet(req: NextApiRequest, res: NextApiResponse) {
+async function handleGet(req: NextApiRequest, res: NextApiResponse, userId: number) {
   try {
-    const userId = req.query.userId || req.headers['x-user-id'];
-    if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    // Get client ID from user_id
+    // Get client ID from the authenticated user's id
     const client = await queryOne<{ id: number }>(
       `SELECT id FROM clients WHERE owner_id = ? LIMIT 1`,
-      [Number(userId)]
+      [userId]
     );
 
     if (!client) {
@@ -96,7 +96,7 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
               JOIN users u ON u.id = m.sender_id
               WHERE m.conversation_id = ?
               ORDER BY m.created_at ASC`,
-              [Number(userId), convId]
+              [userId, convId]
             );
           }
         } catch (e) {
@@ -214,31 +214,22 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
     });
 
   } catch (error) {
-    console.error('Error fetching client projects:', error);
-    return res.status(500).json({
-      error: 'Failed to fetch client projects',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return internalError(res, 'clients/projects/get', error);
   }
 }
 
-async function handlePost(req: NextApiRequest, res: NextApiResponse) {
+async function handlePost(req: NextApiRequest, res: NextApiResponse, userId: number) {
   try {
-    const userId = req.query.userId || req.headers['x-user-id'] || req.body.userId;
-    if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
     const { title, description, budget, currency = 'AUD', deadline, freelancerId } = req.body;
 
     if (!title) {
       return res.status(400).json({ error: 'Title is required' });
     }
 
-    // Get client ID from user_id
+    // Get client ID from the authenticated user's id
     const client = await queryOne<{ id: number }>(
       `SELECT id FROM clients WHERE owner_id = ? LIMIT 1`,
-      [Number(userId)]
+      [userId]
     );
 
     if (!client) {
@@ -255,7 +246,7 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, NOW(), NOW())`,
       [
         clientId,
-        Number(userId),
+        userId,
         freelancerId ? Number(freelancerId) : null,
         title,
         description || null,
@@ -297,11 +288,7 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
     });
 
   } catch (error) {
-    console.error('Error creating project:', error);
-    return res.status(500).json({
-      error: 'Failed to create project',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return internalError(res, 'clients/projects/post', error);
   }
 }
 

@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { safeQuery } from '../../../src/lib/dbHelpers';
+import { requireAdmin, internalError } from '../../../src/lib/apiAuth';
 
 type Project = {
   id: number | string;
@@ -18,6 +19,10 @@ export default async function handler(
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+
+  // Why: admin endpoints were callable without any authentication.
+  const adminUser = await requireAdmin(req, res);
+  if (!adminUser) return;
 
   try {
     const projects = await safeQuery<Project>(
@@ -72,10 +77,7 @@ export default async function handler(
       lastUpdated: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error fetching kanban data:', error);
-    return res.status(500).json({
-      error: 'Failed to fetch kanban data',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
+    // Why: 500 response leaked error.message to clients.
+    return internalError(res, 'kanban-data', error);
   }
 }

@@ -56,10 +56,12 @@ function buildAuthResult(dbUser: DbUser): AuthResult {
 
 /**
  * Server-side authentication helper.
- * Verifies session from (in priority order):
- *   1. JWT in httpOnly session_token cookie  ← new, most secure
- *   2. x-user-data request header            ← legacy, kept for backwards compat
- *   3. user object in request body           ← legacy, kept for backwards compat
+ * Verifies the signed JWT in the httpOnly session_token cookie ONLY.
+ *
+ * Why: the previous x-user-data header / body.user fallbacks let anyone
+ * impersonate any user by sending a forged id — no client code used them
+ * (verified via codebase scan), so they were pure attack surface. Users with
+ * pre-cookie sessions simply need to log in again.
  */
 export async function verifyUserSession(req: NextApiRequest): Promise<AuthResult> {
   try {
@@ -67,34 +69,14 @@ export async function verifyUserSession(req: NextApiRequest): Promise<AuthResult
       return { success: false, error: 'Auth backend unavailable' };
     }
 
-    // 1. JWT cookie (preferred)
     const cookieToken = getTokenFromCookie(req.headers.cookie);
-    if (cookieToken) {
-      const payload = verifyToken(cookieToken);
-      if (!payload) return { success: false, error: 'Invalid or expired session' };
+    if (!cookieToken) return { success: false, error: 'No user session found' };
 
-      const dbUser = await fetchDbUser(payload.userId);
-      if (!dbUser) return { success: false, error: 'User not found or inactive' };
-      return buildAuthResult(dbUser);
-    }
+    const payload = verifyToken(cookieToken);
+    if (!payload) return { success: false, error: 'Invalid or expired session' };
 
-    // 2. Legacy x-user-data header
-    let user: any = null;
-    const userData = req.headers['x-user-data'] as string | undefined;
-    if (userData) {
-      try { user = JSON.parse(userData); } catch { user = null; }
-    }
-
-    // 3. Legacy body.user
-    if (!user && req.body && typeof req.body === 'object' && 'user' in req.body) {
-      user = (req.body as any).user;
-    }
-
-    if (!user) return { success: false, error: 'No user session found' };
-
-    const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
-    const dbUser = await fetchDbUser(userId);
-    if (!dbUser) return { success: false, error: 'Invalid user session' };
+    const dbUser = await fetchDbUser(payload.userId);
+    if (!dbUser) return { success: false, error: 'User not found or inactive' };
     return buildAuthResult(dbUser);
   } catch (error) {
     console.error('Session verification error:', error);

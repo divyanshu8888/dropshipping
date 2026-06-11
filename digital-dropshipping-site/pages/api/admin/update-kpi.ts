@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { safeExecute } from '../../../src/lib/dbHelpers';
+import { requireAdmin, internalError } from '../../../src/lib/apiAuth';
 
 export default async function handler(
   req: NextApiRequest,
@@ -8,6 +9,10 @@ export default async function handler(
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+
+  // Why: admin endpoints were callable without any authentication.
+  const adminUser = await requireAdmin(req, res);
+  if (!adminUser) return;
 
   try {
     const { field, value } = req.body;
@@ -38,10 +43,7 @@ export default async function handler(
       message: `KPI ${field} updated successfully`
     });
   } catch (error) {
-    console.error('Error updating KPI:', error);
-    return res.status(500).json({
-      error: 'Failed to update KPI',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
+    // Why: 500 response leaked error.message to clients.
+    return internalError(res, 'update-kpi', error);
   }
 }

@@ -80,27 +80,39 @@ export default function HowItWorksPage() {
   return (
     <>
       <Head>
-        <title>How It Works — Unitiv</title>
-        <meta name="description" content="Learn how Unitiv connects clients with verified freelancers. Simple, secure, and professional." />
+        <title>How It Works - Unitiv</title>
+        {/* Why: full SEO/social meta with 150-160 char description */}
+        <meta
+          name="description"
+          content="See how Unitiv works for clients and freelancers: post a project, get matched with verified talent, collaborate through milestones, and pay safely via escrow."
+        />
+        <meta property="og:title" content="How It Works - Unitiv" />
+        <meta
+          property="og:description"
+          content="Post a project, get matched with verified freelancers, collaborate through milestones, and pay safely via escrow."
+        />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary" />
       </Head>
 
       <div className="min-h-screen bg-[#0B0C0F]">
         <Header />
 
+        <main>
         {/* Hero */}
-        <section className="relative pt-24 pb-14 text-center overflow-hidden">
+        <section className="relative pt-24 pb-14 text-center overflow-hidden min-h-[40vh]">
           <div className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-[500px] h-[300px] rounded-full bg-gradient-to-b from-cyan-500/10 via-violet-500/8 to-transparent blur-3xl" />
           <div className="relative mx-auto max-w-3xl px-4 sm:px-6">
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.06] px-3 py-1 text-[11px] font-semibold uppercase tracking-widest text-white/60 mb-4">
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.06] px-3 py-1 text-xs font-semibold uppercase tracking-[0.4em] text-white/60 mb-4">
               How It Works
             </span>
-            <h1 className="text-[clamp(36px,6vw,72px)] font-extrabold tracking-[-0.03em] text-white leading-[1.08]">
+            <h1 className="text-[clamp(36px,5.5vw,68px)] font-extrabold tracking-[-0.03em] text-white leading-[1.08]">
               Simple.{' '}
-              <span className="gradient-text">Secure.</span>{' '}
+              <span className="hero-gradient-refined">Secure.</span>{' '}
               Professional.
             </h1>
-            <p className="mt-5 text-base sm:text-lg text-white/60 max-w-lg mx-auto leading-relaxed">
-              Whether you're hiring talent or offering your skills, Unitiv makes it straightforward.
+            <p className="mt-5 text-base sm:text-lg text-white/70 max-w-lg mx-auto leading-relaxed">
+              Whether you&apos;re hiring talent or offering your skills, Unitiv makes it straightforward.
             </p>
 
             {/* Tab toggle */}
@@ -109,17 +121,17 @@ export default function HowItWorksPage() {
                 onClick={() => setTab('client')}
                 className={`rounded-full px-3 sm:px-5 py-2 text-xs sm:text-sm font-semibold transition-all ${
                   tab === 'client' ? 'bg-gradient-to-r from-cyan-400 to-violet-500 text-white shadow-lg' : 'text-white/55 hover:text-white/80'
-                }`}
+                } min-h-[44px] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70`}
               >
-                I'm a Client
+                I&apos;m a Client
               </button>
               <button
                 onClick={() => setTab('freelancer')}
                 className={`rounded-full px-3 sm:px-5 py-2 text-xs sm:text-sm font-semibold transition-all ${
                   tab === 'freelancer' ? 'bg-gradient-to-r from-cyan-400 to-violet-500 text-white shadow-lg' : 'text-white/55 hover:text-white/80'
-                }`}
+                } min-h-[44px] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70`}
               >
-                I'm a Freelancer
+                I&apos;m a Freelancer
               </button>
             </div>
           </div>
@@ -150,7 +162,7 @@ export default function HowItWorksPage() {
               <div className="space-y-3">
                 <button
                   onClick={handleClientCTA}
-                  className="inline-flex h-12 items-center gap-2 rounded-full bg-gradient-to-r from-cyan-400 to-violet-500 px-8 text-sm font-bold text-white shadow-lg shadow-cyan-950/30 transition hover:-translate-y-0.5 hover:opacity-95"
+                  className="inline-flex h-12 items-center gap-2 rounded-full bg-gradient-to-r from-cyan-400 to-violet-500 px-8 text-sm font-bold text-white shadow-lg shadow-cyan-950/30 transition hover:-translate-y-0.5 hover:opacity-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
                 >
                   Post a Project →
                 </button>
@@ -162,7 +174,7 @@ export default function HowItWorksPage() {
               <div className="space-y-3">
                 <button
                   onClick={handleFreelancerCTA}
-                  className="inline-flex h-12 items-center gap-2 rounded-full bg-gradient-to-r from-cyan-400 to-violet-500 px-8 text-sm font-bold text-white shadow-lg shadow-cyan-950/30 transition hover:-translate-y-0.5 hover:opacity-95"
+                  className="inline-flex h-12 items-center gap-2 rounded-full bg-gradient-to-r from-cyan-400 to-violet-500 px-8 text-sm font-bold text-white shadow-lg shadow-cyan-950/30 transition hover:-translate-y-0.5 hover:opacity-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
                 >
                   {user?.role === 'FREELANCER' ? 'Update my profile →' : 'Apply as a Freelancer →'}
                 </button>
@@ -260,8 +272,8 @@ export default function HowItWorksPage() {
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_80%_at_50%_0%,rgba(0,198,255,0.08),transparent)]" />
             <p className="relative text-xs font-semibold uppercase tracking-widest text-white/40 mb-2">Need help choosing?</p>
             <h2 className="relative text-xl sm:text-2xl md:text-3xl font-extrabold text-white tracking-tight">
-              Didn't find the perfect match?{' '}
-              <span className="bg-gradient-to-r from-cyan-300 to-violet-300 bg-clip-text text-transparent">We'll shortlist great freelancers for you.</span>
+              Didn&apos;t find the perfect match?{' '}
+              <span className="bg-gradient-to-r from-cyan-300 to-violet-300 bg-clip-text text-transparent">We&apos;ll shortlist great freelancers for you.</span>
             </h2>
             <p className="relative mt-2 text-sm text-white/55">
               Tell us what you need, and our team will send you a few vetted options.
@@ -272,15 +284,22 @@ export default function HowItWorksPage() {
                   <span key={tag} className="rounded-full border border-white/15 bg-white/[0.06] px-3 py-1 text-xs text-white/70">{tag}</span>
                 ))}
               </div>
+              {/* Why: focus rings + internal links to open projects and freelancers */}
               <button
                 onClick={handleClientCTA}
-                className="w-full sm:w-auto inline-flex h-11 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-cyan-400 to-violet-500 px-6 text-sm font-bold text-white shadow-lg transition hover:-translate-y-0.5"
+                className="w-full sm:w-auto inline-flex h-11 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-cyan-400 to-violet-500 px-6 text-sm font-bold text-white shadow-lg transition hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
               >
                 Post a Project →
               </button>
               <Link
+                href="/open-projects"
+                className="w-full sm:w-auto inline-flex h-11 items-center justify-center gap-2 rounded-full border border-white/20 bg-white/[0.06] px-6 text-sm font-semibold text-white/85 transition hover:bg-white/[0.1] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+              >
+                Browse Open Projects
+              </Link>
+              <Link
                 href="/contact"
-                className="w-full sm:w-auto inline-flex h-11 items-center justify-center gap-2 rounded-full border border-white/20 bg-white/[0.06] px-6 text-sm font-semibold text-white/85 transition hover:bg-white/[0.1] hover:text-white"
+                className="w-full sm:w-auto inline-flex h-11 items-center justify-center gap-2 rounded-full border border-white/20 bg-white/[0.06] px-6 text-sm font-semibold text-white/85 transition hover:bg-white/[0.1] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
               >
                 💬 Talk to a talent advisor
               </Link>
@@ -290,6 +309,7 @@ export default function HowItWorksPage() {
             </p>
           </div>
         </section>
+        </main>
       </div>
     </>
   );

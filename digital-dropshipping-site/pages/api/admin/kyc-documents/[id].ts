@@ -1,15 +1,21 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { safeQuery, safeExecute } from '../../../../src/lib/dbHelpers';
+import { requireAdmin, parsePositiveInt } from '../../../../src/lib/apiAuth';
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  const { id } = req.query;
+  // Why: admin endpoints were callable without any authentication.
+  const adminUser = await requireAdmin(req, res);
+  if (!adminUser) return;
 
-  if (!id || typeof id !== 'string') {
+  // Why: id was only checked for being a string; enforce positive integer.
+  const idNum = parsePositiveInt(req.query.id);
+  if (idNum === null) {
     return res.status(400).json({ error: 'Invalid document ID' });
   }
+  const id = String(idNum);
 
   if (req.method === 'PATCH') {
     return handlePatch(req, res, id);

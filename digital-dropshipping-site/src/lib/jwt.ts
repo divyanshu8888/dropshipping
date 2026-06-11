@@ -1,9 +1,15 @@
 import { createHmac, timingSafeEqual } from 'crypto';
 
-const SECRET =
-  process.env.SESSION_SECRET ||
-  process.env.NEXTAUTH_SECRET ||
-  'change-this-secret-in-production-min-32-chars';
+// Why: a hardcoded fallback secret means anyone reading the repo can forge
+// admin sessions. Fail hard in production; dev-only fallback kept for DX.
+const SECRET = (() => {
+  const fromEnv = process.env.SESSION_SECRET || process.env.NEXTAUTH_SECRET;
+  if (fromEnv) return fromEnv;
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('SESSION_SECRET (or NEXTAUTH_SECRET) must be set in production.');
+  }
+  return 'dev-only-insecure-secret-do-not-use-in-prod';
+})();
 
 export interface SessionPayload {
   userId: number;

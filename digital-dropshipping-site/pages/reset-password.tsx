@@ -12,6 +12,7 @@ export default function ResetPasswordPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error' | 'invalid'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
+  const [passwordError, setPasswordError] = useState(''); // Why: inline field-level validation message
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -41,6 +42,8 @@ export default function ResetPasswordPage() {
     setErrorMsg('');
 
     if (password.length < 8) {
+      // Why: mirror the inline field error so the input is flagged too
+      setPasswordError('Password must be at least 8 characters.');
       setErrorMsg('Password must be at least 8 characters.');
       return;
     }
@@ -63,7 +66,8 @@ export default function ResetPasswordPage() {
       if (res.ok) {
         setStatus('success');
       } else {
-        setErrorMsg(data.error || 'Something went wrong. Please try again.');
+        // Why: surface the API's { error } message with a friendly fallback
+        setErrorMsg(data.error || 'Something went wrong — please try again.');
         setStatus('error');
       }
     } catch {
@@ -77,8 +81,13 @@ export default function ResetPasswordPage() {
   return (
     <>
       <Head>
-        <title>Reset Password — Unitiv</title>
-        <meta name="description" content="Set a new password for your Unitiv account." />
+        <title>Reset Password - Unitiv</title>
+        {/* Why: 150-160 char description; noindex because auth pages should stay out of search */}
+        <meta
+          name="description"
+          content="Set a new password for your Unitiv account. Choose a strong password to secure your profile, projects, and payments, then sign back in and keep work moving."
+        />
+        <meta name="robots" content="noindex, nofollow" />
       </Head>
 
       <div className="relative min-h-screen overflow-hidden bg-[#0B0C0F] text-white">
@@ -144,7 +153,8 @@ export default function ResetPasswordPage() {
                   {/* New password */}
                   <div className="space-y-2">
                     <label htmlFor="password" className="block text-sm font-semibold text-white/70">
-                      New password
+                      New password{' '}
+                      <span aria-hidden="true" className="text-rose-400">*</span>
                     </label>
                     <div className="relative">
                       <input
@@ -152,15 +162,27 @@ export default function ResetPasswordPage() {
                         type={showPassword ? 'text' : 'password'}
                         required
                         autoComplete="new-password"
+                        maxLength={128}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
+                        onBlur={() => {
+                          // Why: inline validation on blur for immediate feedback
+                          if (password && password.length < 8) {
+                            setPasswordError('Password must be at least 8 characters.');
+                          } else {
+                            setPasswordError('');
+                          }
+                        }}
+                        aria-invalid={Boolean(passwordError)}
+                        aria-describedby={passwordError ? 'password-error' : undefined}
                         placeholder="Min. 8 characters"
-                        className="block w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3.5 pr-12 text-sm text-white placeholder:text-white/35 focus:border-cyan-400/60 focus:outline-none focus:ring-2 focus:ring-cyan-400/30 transition"
+                        className="block w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3.5 pr-14 text-sm text-white placeholder:text-white/35 focus:border-cyan-400/60 focus:outline-none focus:ring-2 focus:ring-cyan-400/30 transition"
                       />
+                      {/* Why: enlarge toggle to a 44px tap target with a visible focus ring */}
                       <button
                         type="button"
                         onClick={() => setShowPassword((v) => !v)}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors"
+                        className="absolute right-1.5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-xl text-white/40 hover:text-white/70 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
                         aria-label={showPassword ? 'Hide password' : 'Show password'}
                       >
                         {showPassword ? (
@@ -175,6 +197,9 @@ export default function ResetPasswordPage() {
                         )}
                       </button>
                     </div>
+                    {passwordError && (
+                      <p id="password-error" className="text-xs font-semibold text-rose-300">{passwordError}</p>
+                    )}
 
                     {/* Password strength bar */}
                     {password.length > 0 && (
@@ -195,15 +220,19 @@ export default function ResetPasswordPage() {
                   {/* Confirm password */}
                   <div className="space-y-2">
                     <label htmlFor="confirm" className="block text-sm font-semibold text-white/70">
-                      Confirm password
+                      Confirm password{' '}
+                      <span aria-hidden="true" className="text-rose-400">*</span>
                     </label>
                     <input
                       id="confirm"
                       type={showPassword ? 'text' : 'password'}
                       required
                       autoComplete="new-password"
+                      maxLength={128}
                       value={confirm}
                       onChange={(e) => setConfirm(e.target.value)}
+                      aria-invalid={Boolean(confirm && confirm !== password)}
+                      aria-describedby={confirm && confirm !== password ? 'confirm-error' : undefined}
                       placeholder="Repeat your new password"
                       className={`block w-full rounded-2xl border bg-white/[0.05] px-4 py-3.5 text-sm text-white placeholder:text-white/35 focus:outline-none focus:ring-2 transition ${
                         confirm && confirm !== password
@@ -214,12 +243,13 @@ export default function ResetPasswordPage() {
                       }`}
                     />
                     {confirm && confirm !== password && (
-                      <p className="text-xs text-red-400">Passwords don't match</p>
+                      <p id="confirm-error" className="text-xs text-red-400">Passwords don&apos;t match</p>
                     )}
                   </div>
 
-                  {status === 'error' && (
-                    <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                  {/* Why: role="alert" announces API failures to screen readers */}
+                  {(status === 'error' || (status === 'idle' && errorMsg)) && errorMsg && (
+                    <div role="alert" className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
                       {errorMsg}
                     </div>
                   )}

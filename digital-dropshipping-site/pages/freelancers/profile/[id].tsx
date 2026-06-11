@@ -4,6 +4,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import Header from '../../../src/components/Header';
 import { buildQuoteHref } from '../../../src/lib/quoteLink';
+import { useAuth } from '../../../src/contexts/AuthContext';
 import { parseAvailability } from '../../../src/lib/availability';
 import { formatAvailabilityDisplay } from '../../../src/lib/availabilityDisplay';
 import { query, queryOne } from '../../../src/lib/mysql';
@@ -74,16 +75,31 @@ export default function FreelancerProfile({ freelancer, reviews, portfolio }: Fr
   const [activeTab, setActiveTab] = useState<'about' | 'portfolio' | 'reviews'>('about');
   const [selectedPortfolio, setSelectedPortfolio] = useState<PortfolioItem | null>(null);
   const [selectedGalleryImage, setSelectedGalleryImage] = useState<{ url: string; index: number; allUrls: string[] } | null>(null);
+  // Why: freelancers should not see client-only quote CTAs (consistent with /freelancers and /products gating)
+  const { isFreelancer } = useAuth();
+  const viewerIsFreelancer = isFreelancer();
+
+  // Why: meta description capped near 160 chars with a sensible fallback
+  const metaDescription = (
+    freelancer?.description ||
+    freelancer?.bio ||
+    `Hire ${freelancer?.display_name || 'a verified freelancer'} on Unitiv — view portfolio, reviews, and request a custom quote.`
+  ).slice(0, 160);
 
   return (
     <div className="min-h-screen bg-[#0B0D10]">
       <Head>
         <title>{freelancer?.display_name || 'Freelancer'} - Unitiv</title>
-        <meta name="description" content={freelancer?.description || 'Professional freelancer profile'} />
+        <meta name="description" content={metaDescription} />
+        {/* Why: per-page og tags (og:type/twitter:card are global in _app.tsx) */}
+        <meta property="og:title" content={`${freelancer?.display_name || 'Freelancer'} - Unitiv`} />
+        <meta property="og:description" content={metaDescription} />
       </Head>
 
       <Header />
 
+      {/* Why: semantic <main> landmark for screen readers and SEO */}
+      <main>
       {/* Hero Section - Professional Dark Theme */}
       <section className="relative bg-gradient-to-br from-[#0B0D10] via-[#0c0f14] to-[#0a0d12] border-b border-white/5 overflow-hidden">
         {/* Background gradient glow */}
@@ -104,7 +120,7 @@ export default function FreelancerProfile({ freelancer, reviews, portfolio }: Fr
               <div className="relative">
                 <div className="w-20 h-20 rounded-xl bg-gradient-to-br from-sky-500/20 via-violet-500/20 to-transparent border border-white/10 backdrop-blur-sm flex items-center justify-center text-white font-bold text-2xl shadow-2xl">
                   {freelancer.avatar_url ? (
-                    <img src={freelancer.avatar_url} alt={freelancer.display_name} className="w-full h-full rounded-xl object-cover" />
+                    <img src={freelancer.avatar_url} alt={`${freelancer.display_name} profile photo`} className="w-full h-full rounded-xl object-cover" />
                   ) : (
                     <span>{freelancer.display_name.charAt(0)}{freelancer.display_name.split(' ')[1]?.charAt(0) || ''}</span>
                   )}
@@ -400,6 +416,9 @@ export default function FreelancerProfile({ freelancer, reviews, portfolio }: Fr
             <div className="relative rounded-2xl border border-white/10 bg-gradient-to-b from-[#0c0f14] to-[#0a0d12] p-5 shadow-[0_10px_30px_rgba(0,0,0,0.35)] sticky top-24">
               <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
               
+              {/* Why: quote request is a client action — hidden from freelancer viewers */}
+              {!viewerIsFreelancer && (
+                <>
               <div className="text-center mb-5 p-4 bg-gradient-to-br from-sky-500/10 via-violet-500/10 to-transparent rounded-xl border border-white/10">
                 <div className="text-xl font-bold text-white mb-1.5">
                   Get Custom Quote
@@ -421,12 +440,14 @@ export default function FreelancerProfile({ freelancer, reviews, portfolio }: Fr
                   freelancerId: freelancer.id,
                   freelancerName: freelancer.display_name
                 })}
-                className="block w-full text-center py-3 bg-gradient-to-r from-[#00C6FF] via-[#5F57FF] to-[#7D2AE8] text-white rounded-xl font-bold text-sm hover:shadow-[0_0_20px_rgba(125,42,232,0.5)] transition-all shadow-lg hover:scale-[1.02] mb-5"
+                className="block w-full text-center py-3 bg-gradient-to-r from-[#00C6FF] via-[#5F57FF] to-[#7D2AE8] text-white rounded-xl font-bold text-sm hover:shadow-[0_0_20px_rgba(125,42,232,0.5)] transition-all shadow-lg hover:scale-[1.02] mb-5 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
               >
                 Request Quote
               </Link>
+                </>
+              )}
 
-              <div className="space-y-3 pt-4 border-t border-white/10">
+              <div className={viewerIsFreelancer ? 'space-y-3' : 'space-y-3 pt-4 border-t border-white/10'}>
                 <div className="flex items-center text-white/80">
                   <svg className="w-4 h-4 mr-2.5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -453,6 +474,7 @@ export default function FreelancerProfile({ freelancer, reviews, portfolio }: Fr
           </div>
         </div>
       </div>
+      </main>
 
       {/* Portfolio Detail Modal */}
       {selectedPortfolio && (
@@ -461,7 +483,8 @@ export default function FreelancerProfile({ freelancer, reviews, portfolio }: Fr
             {/* Close Button */}
             <button
               onClick={() => setSelectedPortfolio(null)}
-              className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-all z-10"
+              aria-label="Close portfolio details"
+              className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-all z-10 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -512,7 +535,7 @@ export default function FreelancerProfile({ freelancer, reviews, portfolio }: Fr
                       >
                         <img
                           src={url}
-                          alt={`Gallery ${index + 1}`}
+                          alt={`${selectedPortfolio.title} gallery image ${index + 1}`}
                           className="w-full h-32 object-cover group-hover:scale-105 transition-transform"
                         />
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors rounded-lg pointer-events-none"></div>
@@ -563,7 +586,8 @@ export default function FreelancerProfile({ freelancer, reviews, portfolio }: Fr
           {/* Close Button */}
           <button
             onClick={() => setSelectedGalleryImage(null)}
-            className="absolute top-4 right-4 w-12 h-12 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-all z-10"
+            aria-label="Close gallery"
+            className="absolute top-4 right-4 w-12 h-12 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-all z-10 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -581,7 +605,8 @@ export default function FreelancerProfile({ freelancer, reviews, portfolio }: Fr
                   allUrls: selectedGalleryImage.allUrls
                 });
               }}
-              className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-all z-10"
+              aria-label="Previous image"
+              className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-all z-10 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -600,7 +625,8 @@ export default function FreelancerProfile({ freelancer, reviews, portfolio }: Fr
                   allUrls: selectedGalleryImage.allUrls
                 });
               }}
-              className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-all z-10"
+              aria-label="Next image"
+              className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-all z-10 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -617,7 +643,7 @@ export default function FreelancerProfile({ freelancer, reviews, portfolio }: Fr
           <div className="max-w-7xl max-h-[90vh] w-full h-full flex items-center justify-center p-4" onClick={(e) => e.stopPropagation()}>
             <img
               src={selectedGalleryImage.url}
-              alt={`Gallery ${selectedGalleryImage.index + 1}`}
+              alt={`Gallery image ${selectedGalleryImage.index + 1} of ${selectedGalleryImage.allUrls.length}`}
               className="max-w-full max-h-full object-contain rounded-lg"
             />
           </div>

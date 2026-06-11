@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { query, queryOne } from '../../../src/lib/mysql';
+import { requireAdmin, internalError } from '../../../src/lib/apiAuth';
 
 export default async function handler(
   req: NextApiRequest,
@@ -9,23 +10,12 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // Why: previous check trusted a client-supplied userId header/query param,
+  // which is spoofable; validate the real session cookie server-side instead.
+  const adminUser = await requireAdmin(req, res);
+  if (!adminUser) return;
+
   try {
-    // Verify admin access (you should add proper auth check here)
-    const userId = req.query.userId || req.headers['x-user-id'];
-    if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    // Check if user is admin
-    const user = await queryOne<{ role: string }>(
-      `SELECT role FROM users WHERE id = ? LIMIT 1`,
-      [Number(userId)]
-    );
-
-    if (!user || user?.role?.toLowerCase() !== 'admin') {
-      return res.status(403).json({ error: 'Forbidden: Admin access required' });
-    }
-
     const { projectId, conversationId, limit = '100', offset = '0' } = req.query;
     const limitNum = Math.min(Number.parseInt(String(limit), 10) || 100, 500);
     const offsetNum = Math.max(Number.parseInt(String(offset), 10) || 0, 0);
@@ -128,11 +118,8 @@ export default async function handler(
     });
 
   } catch (error) {
-    console.error('Error fetching all messages:', error);
-    return res.status(500).json({
-      error: 'Failed to fetch messages',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
+    // Why: 500 response leaked error.message to clients.
+    return internalError(res, 'all-messages', error);
   }
 }
 
