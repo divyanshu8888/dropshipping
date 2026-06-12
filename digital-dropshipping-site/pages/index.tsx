@@ -789,7 +789,7 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
   const currentTestimonials = getCurrentTestimonials();
 
   return (
-    <div className="min-h-screen bg-bg-base">
+    <div className="min-h-screen bg-[#050507]">
       <Head>
         <title>Unitiv — Your Vision, Built by Experts</title>
         <meta name="description" content="Connect with verified freelancers across web, design, AI, and marketing. Secure milestones, transparent pricing, and real-time collaboration — all in one workspace." />
@@ -828,166 +828,143 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
       {/* Why: semantic <main> landmark for screen readers and SEO */}
       <main>
       {/* ─── Hero ─── */}
-      <section className="hero-section relative overflow-hidden bg-[#030508] text-white">
-        <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-10%,rgba(34,211,238,0.14),transparent)]" />
-        <div aria-hidden="true" className="hero-perspective-grid absolute inset-0 z-[1] opacity-80" />
-        <div aria-hidden="true" className="hero-scanlines absolute inset-0 z-[4]" />
-        <div aria-hidden="true" className="hero-vignette pointer-events-none absolute inset-0 z-[2]" />
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-[1] overflow-hidden">
-          <div className="absolute -right-32 top-0 h-[36rem] w-[36rem] rounded-full bg-cyan-500/10 blur-[120px] motion-safe:animate-[auroraDrift_22s_ease-in-out_infinite]" />
-          <div className="absolute -bottom-40 -left-32 h-[40rem] w-[40rem] rounded-full bg-indigo-600/10 blur-[120px] motion-safe:animate-[heroAuroraB_26s_ease-in-out_infinite]" />
+      <section className="relative overflow-hidden bg-[#050507] text-white min-h-screen flex flex-col">
+        {/* Subtle purple/pink glow blobs — no photo, pure dark like Figma */}
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute right-0 top-0 h-[55rem] w-[55rem] -translate-y-1/4 translate-x-1/4 rounded-full bg-violet-700/[0.08] blur-[200px]" />
+          <div className="absolute -bottom-32 left-0 h-[44rem] w-[44rem] -translate-x-1/4 rounded-full bg-fuchsia-700/[0.07] blur-[180px]" />
         </div>
         <ConstellationCanvas pointerRef={heroPointerRef} />
         <div ref={spotlightRef} aria-hidden="true" className="hero-spotlight pointer-events-none absolute left-0 top-0 z-[3]" />
 
         <div
-          className="hero-inner"
+          className="relative z-10 mx-auto my-auto flex w-full max-w-4xl flex-col items-center px-4 pt-32 pb-16 text-center sm:px-6 lg:px-8"
           onMouseMove={handleHeroPointerMove}
           onMouseLeave={handleHeroPointerLeave}
         >
-          <h1 className="animate-fade-in-up animate-delay-100 hero-headline md:whitespace-nowrap">
-            Your vision, <span className="hero-future-accent">built by experts.</span>
+          {/* Trust badge — matches Figma */}
+          <div className="animate-fade-in-up inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-[13px] text-white/70 backdrop-blur-sm">
+            <span className="h-2 w-2 rounded-full bg-emerald-400" />
+            Trusted by 500+ businesses worldwide
+          </div>
+
+          {/* Headline */}
+          <h1 className="animate-fade-in-up mt-6 text-[clamp(44px,7vw,88px)] font-extrabold leading-[1.04] tracking-[-0.03em]">
+            Your vision,<br />
+            <span className="hero-gradient-refined">built by experts.</span>
           </h1>
 
-          <p className="animate-fade-in-up animate-delay-200 hero-subtitle">
-            Hire verified freelancers in design, development, AI, and marketing.
+          <p className="animate-fade-in-up mt-5 max-w-[580px] text-[clamp(15px,1.6vw,18px)] leading-relaxed text-white/60">
+            Hire verified freelancers across design, development, AI, and marketing. Every project backed by milestone payment protection.
           </p>
 
-          <div className="hero-horizon" aria-hidden="true" />
-
-          <div className="animate-fade-in-up animate-delay-300 hero-command-deck">
-            <div className="hero-search-zone">
-              <div className="hero-neon-search-wrap">
-                <form onSubmit={handleSearchSubmit} className="hero-search-pill">
-                  <svg className="h-4 w-4 shrink-0 text-cyan-400/70" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path d="M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                  </svg>
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={handleSearchChange}
-                    maxLength={200}
-                    aria-label="Search services or freelancers"
-                    aria-expanded={searchSuggestions.length > 0}
-                    aria-controls="hero-search-suggestions"
-                    className="hero-search-input"
-                    placeholder="Search services or freelancers"
-                  />
-                  <button type="submit" className="hero-search-btn">
-                    Search
-                  </button>
-                </form>
-              </div>
+          {/* Search bar — Figma style */}
+          <div className="animate-fade-in-up mt-8 w-full max-w-[700px]">
+            <form
+              onSubmit={handleSearchSubmit}
+              className="relative flex h-[58px] w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-5 backdrop-blur-sm transition-all duration-300 focus-within:border-violet-500/40 focus-within:bg-white/8"
+            >
+              <svg className="h-5 w-5 shrink-0 text-white/40" viewBox="0 0 24 24" fill="none">
+                <path d="M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+              </svg>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={handleSearchChange}
+                maxLength={200}
+                aria-label="Search services or freelancers"
+                aria-expanded={searchSuggestions.length > 0}
+                className="h-full flex-1 bg-transparent text-white text-[15px] outline-none placeholder:text-white/35"
+                placeholder="Search for a skill, service, or expert..."
+              />
+              <button
+                type="submit"
+                className="hero-cta-sheen h-10 shrink-0 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-6 text-sm font-semibold text-white shadow-[0_4px_20px_rgba(139,92,246,0.4)] transition-all hover:-translate-y-px hover:shadow-[0_8px_28px_rgba(139,92,246,0.55)]"
+              >
+                Search
+              </button>
               {searchSuggestions.length > 0 && (
-                <div
-                  id="hero-search-suggestions"
-                  role="listbox"
-                  className="hero-search-dropdown text-left"
-                >
+                <div className="absolute top-full left-0 right-0 mt-2 rounded-2xl border border-white/10 bg-[#0e1018] shadow-[0_20px_60px_rgba(0,0,0,.7)] overflow-hidden z-50 text-left">
                   {searchSuggestions.map((item, idx) => (
-                    <a
-                      key={`${item.type}-${item.id ?? idx}`}
-                      href={item.url}
-                      role="option"
-                      className="hero-search-dropdown-item"
-                    >
-                      <span className="hero-search-dropdown-tag">
+                    <a key={idx} href={item.url} className="flex items-center gap-3 px-5 py-3 text-sm text-white/80 hover:bg-white/8 hover:text-white transition-colors border-b border-white/6 last:border-0">
+                      <span className="shrink-0 rounded-md bg-white/8 px-1.5 py-0.5 text-[10px] font-semibold text-white/50">
                         {item.type === 'product' ? 'Service' : 'Talent'}
                       </span>
-                      <span className="hero-search-dropdown-label">{item.name}</span>
+                      {item.name}
                     </a>
                   ))}
                 </div>
               )}
-            </div>
+            </form>
+          </div>
 
-            {searchSuggestions.length === 0 && (
-            <>
-            <p className="hero-deck-popular">
-              Popular{' '}
-              <span className="normal-case tracking-normal">
-                {HERO_QUICK_SEARCHES.map((item, i) => (
-                  <span key={item.label}>
-                    {i > 0 && <span className="text-zinc-700"> · </span>}
-                    <Link href={item.href} className="hero-quick-link text-zinc-500 hover:text-cyan-300">
-                      {item.label}
-                    </Link>
-                  </span>
-                ))}
-              </span>
-            </p>
+          {/* Popular tags — matches Figma */}
+          <div className="animate-fade-in-up mt-5 flex flex-wrap items-center justify-center gap-2 text-sm text-white/45">
+            <span className="font-medium">Popular:</span>
+            {HERO_MARQUEE_CATEGORIES.slice(0, 5).map((cat) => (
+              <Link
+                key={cat}
+                href={`/products?category=${encodeURIComponent(cat)}`}
+                className="rounded-full border border-white/12 bg-white/5 px-3.5 py-1 text-white/65 transition-all hover:border-violet-400/40 hover:bg-violet-500/10 hover:text-white"
+              >
+                {cat}
+              </Link>
+            ))}
+          </div>
 
-            <div className="hero-deck-actions">
-              {!viewerIsFreelancer && (
-                <Link
-                  href={buildQuoteHref({ source: 'general', intent: 'proposal', title: 'Request a quote' })}
-                  className="hero-cta-sheen hero-future-cta hero-deck-btn text-white"
-                >
-                  Request a Quote
-                  <svg className="ml-1.5 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5-5 5M6 12h12" />
-                  </svg>
-                </Link>
-              )}
-              {!viewerIsFreelancer && (
-                <Link
-                  href="/freelancers"
-                  className="hero-future-ghost hero-deck-btn text-cyan-50"
-                >
-                  Browse Freelancers
-                </Link>
-              )}
-              {viewerIsFreelancer && (
-                <Link
-                  href="/open-projects"
-                  className="hero-cta-sheen hero-future-cta hero-deck-btn text-white"
-                >
-                  Find Open Projects
-                </Link>
-              )}
-            </div>
-            </>
+          {/* CTA buttons */}
+          <div className="animate-fade-in-up mt-8 flex flex-col items-center gap-3 sm:flex-row sm:gap-4">
+            {!viewerIsFreelancer && (
+              <Link
+                href={buildQuoteHref({ source: 'general', intent: 'proposal', title: 'Request a quote' })}
+                className="hero-cta-sheen inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 px-8 text-sm font-semibold text-white shadow-[0_8px_28px_rgba(139,92,246,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_40px_rgba(139,92,246,0.6)] sm:w-auto sm:min-w-[200px]"
+              >
+                Request a Quote
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </Link>
+            )}
+            {!viewerIsFreelancer && (
+              <Link
+                href="/freelancers"
+                className="inline-flex h-12 w-full items-center justify-center rounded-full border border-white/15 bg-white/5 px-8 text-sm font-semibold text-white/85 backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-white/30 hover:bg-white/10 sm:w-auto sm:min-w-[180px]"
+              >
+                Browse Freelancers
+              </Link>
+            )}
+            {viewerIsFreelancer && (
+              <Link
+                href="/open-projects"
+                className="hero-cta-sheen inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 px-8 text-sm font-semibold text-white shadow-[0_8px_28px_rgba(139,92,246,0.45)] transition-all duration-300 hover:-translate-y-0.5 sm:w-auto sm:min-w-[200px]"
+              >
+                Find Open Projects
+              </Link>
             )}
           </div>
 
-          <div className="animate-fade-in-up animate-delay-500 hero-stat-hud">
+          {/* Stats */}
+          <div className="animate-fade-in-up mt-12 flex items-center justify-center gap-10 sm:gap-16">
             <div className="text-center">
-              <div className="hero-stat-hud-value">
+              <div className="text-2xl font-extrabold text-white">
                 {stats.totalFreelancers > 0 ? `${stats.totalFreelancers.toLocaleString()}+` : '50+'}
               </div>
-              <div className="hero-stat-hud-label">Freelancers</div>
+              <div className="mt-0.5 text-xs text-white/40">Verified experts</div>
             </div>
-            <div className="hero-stat-hud-divider" aria-hidden="true" />
+            <div className="h-8 w-px bg-white/10" />
             <div className="text-center">
-              <div className="hero-stat-hud-value">
-                {stats.averageRating && stats.averageRating !== '0.0' ? stats.averageRating : '4.9'}
-                <span className="text-sm font-normal text-cyan-400/80">/5</span>
+              <div className="text-2xl font-extrabold text-white">
+                {stats.averageRating && stats.averageRating !== '0.0' ? stats.averageRating : '4.9'}/5
               </div>
-              <div className="hero-stat-hud-label">Rating</div>
+              <div className="mt-0.5 text-xs text-white/40">Average rating</div>
             </div>
-            <div className="hero-stat-hud-divider" aria-hidden="true" />
+            <div className="h-8 w-px bg-white/10" />
             <div className="text-center">
-              <div className="hero-stat-hud-value">
+              <div className="text-2xl font-extrabold text-white">
                 {stats.totalProjects > 0 ? `${stats.totalProjects.toLocaleString()}+` : '100+'}
               </div>
-              <div className="hero-stat-hud-label">Projects</div>
+              <div className="mt-0.5 text-xs text-white/40">Projects done</div>
             </div>
-          </div>
-        </div>
-
-        {/* Category marquee */}
-        <div aria-hidden="true" className="hero-marquee-strip">
-          <div className="hero-marquee-track">
-            {[0, 1].map((dup) => (
-              <div key={dup} className="flex items-center">
-                {HERO_MARQUEE_CATEGORIES.map((cat) => (
-                  <span key={`${dup}-${cat}`} className="hero-marquee-item">
-                    <span className="hero-marquee-label">{cat}</span>
-                    <span className="hero-marquee-sep">//</span>
-                  </span>
-                ))}
-              </div>
-            ))}
           </div>
         </div>
       </section>

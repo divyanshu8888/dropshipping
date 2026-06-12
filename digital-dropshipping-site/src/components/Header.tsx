@@ -287,7 +287,7 @@ const Header: React.FC = () => {
               </Link>
               <Link
                 href="/login?mode=signup"
-                className="inline-flex h-10 items-center justify-center rounded-full bg-gradient-to-r from-cyan-400 to-violet-500 px-4 text-sm font-bold text-white shadow-lg shadow-cyan-950/30 transition hover:-translate-y-0.5 hover:shadow-violet-900/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+                className="inline-flex h-10 items-center justify-center rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 px-5 text-sm font-bold text-white shadow-[0_4px_20px_rgba(139,92,246,0.4)] transition hover:-translate-y-0.5 hover:shadow-[0_8px_28px_rgba(139,92,246,0.55)] focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/70"
               >
                 Get started
               </Link>
