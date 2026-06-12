@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { query, queryOne } from 'lib/mysql';
 import { guardMessage } from '../../../src/lib/moderation/contactGuard';
 import { requireRole, parsePositiveInt, internalError } from '../../../src/lib/apiAuth';
+import { moderateAndQueue } from '../../../src/lib/moderation/aiModeration';
 
 export default async function handler(
   req: NextApiRequest,
@@ -299,9 +300,18 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, userId: num
       conversation = { id: convId };
     }
 
+    // Why: AI pass catches contextual abuse/harassment the pattern guard can't.
+    const aiVerdict = await moderateAndQueue('message', Number(senderId), { message: content });
+    if (aiVerdict.flagged) {
+      return res.status(400).json({
+        error: 'Your message was flagged by automated content review and was not sent. Please rephrase it.',
+        code: 'AI_FLAGGED',
+      });
+    }
+
     // Insert message
     const result = await query(
-      `INSERT INTO messages 
+      `INSERT INTO messages
        (conversation_id, project_id, sender_id, body, message_type, is_read, created_at, updated_at)
        VALUES (?, ?, ?, ?, 'text', 'FALSE', NOW(), NOW())`,
       [conversation.id, Number(projectId), Number(senderId), content]

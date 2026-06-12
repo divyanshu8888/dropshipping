@@ -55,6 +55,9 @@ type ProjectCardProps = Project & {
   showBudget: boolean;
   canApply: boolean;
   canApplyUnverified: boolean;
+  // Why: verified freelancers with an incomplete profile get a specific gate, not a dead end.
+  profileIncomplete: boolean;
+  profileCompletion: number;
   isLoggedIn: boolean;
   isFreelancer: boolean;
   onApply: (project: Project) => void;
@@ -73,6 +76,8 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
   showBudget,
   canApply,
   canApplyUnverified,
+  profileIncomplete,
+  profileCompletion,
   isLoggedIn,
   isFreelancer,
   onApply,
@@ -143,6 +148,15 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
         >
           Verify your account to apply
         </Link>
+      ) : profileIncomplete ? (
+        /* Why: applying requires a >=90% complete profile; show progress + a direct link to finish it. */
+        <Link
+          href="/freelancers/dashboard?tab=profile"
+          title="Applications need a near-complete profile so clients can evaluate you"
+          className="inline-flex items-center gap-1 rounded-full border border-violet-400/30 bg-violet-500/10 px-4 py-2.5 text-xs font-semibold text-violet-300 transition hover:border-violet-300/50 hover:text-violet-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+        >
+          Complete profile ({profileCompletion}%) to apply
+        </Link>
       ) : !isLoggedIn ? (
         <Link
           href="/login"
@@ -160,8 +174,32 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
 export default function ProjectsPage() {
   const { user, verified, isFreelancer } = useAuth();
   const isLoggedInFreelancer = !!user && isFreelancer();
-  const canApply = isLoggedInFreelancer && verified;
-  const canApplyUnverified = isLoggedInFreelancer && !verified;
+
+  // Why: applying requires verification AND a >=90% complete profile; the server
+  // (/api/freelancers/can-apply) is the source of truth, enforced again in /api/proposals.
+  const [eligibility, setEligibility] = useState<{
+    canApply: boolean;
+    verified: boolean;
+    emailVerified: boolean;
+    completion: number;
+    missing: string[];
+  } | null>(null);
+
+  useEffect(() => {
+    if (!isLoggedInFreelancer) { setEligibility(null); return; }
+    let active = true;
+    fetch('/api/freelancers/can-apply')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (active && d?.success) setEligibility(d); })
+      .catch(() => { /* fall back to legacy verified flag below */ });
+    return () => { active = false; };
+  }, [isLoggedInFreelancer]);
+
+  const canApply = isLoggedInFreelancer && (eligibility ? eligibility.canApply : verified);
+  const canApplyUnverified = isLoggedInFreelancer && (eligibility ? !(eligibility.verified && eligibility.emailVerified) : !verified);
+  const profileIncomplete = isLoggedInFreelancer && !!eligibility
+    && eligibility.verified && eligibility.emailVerified && !eligibility.canApply;
+  const profileCompletion = eligibility?.completion ?? 0;
   const showBudget = false;
 
   // Apply modal state
@@ -467,6 +505,8 @@ export default function ProjectsPage() {
                     showBudget={showBudget}
                     canApply={canApply}
                     canApplyUnverified={canApplyUnverified}
+                    profileIncomplete={profileIncomplete}
+                    profileCompletion={profileCompletion}
                     isLoggedIn={!!user}
                     isFreelancer={isLoggedInFreelancer}
                     onApply={openApply}

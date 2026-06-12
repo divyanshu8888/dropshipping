@@ -6,6 +6,8 @@ export interface AuthenticatedUser {
   id: number;
   email: string;
   name: string;
+  // Why: the dashboard contact card displays the phone; it was missing from the session user.
+  phone: string | null;
   role: string;
   isActive: boolean;
   emailVerified: boolean;
@@ -15,6 +17,7 @@ export interface AuthenticatedUser {
 interface DbUser {
   id: number;
   email: string;
+  phone: string | null;
   display_name: string | null;
   role: 'admin' | 'freelancer' | 'client' | 'team_member';
   is_active: 'TRUE' | 'FALSE';
@@ -31,7 +34,7 @@ export interface AuthResult {
 async function fetchDbUser(userId: number): Promise<DbUser | null> {
   return Promise.race([
     queryOne<DbUser>(
-      `SELECT id, email, display_name, role, is_active, email_verified, created_at
+      `SELECT id, email, phone, display_name, role, is_active, email_verified, created_at
        FROM users WHERE id = ? AND is_active = 'TRUE'`,
       [userId],
     ),
@@ -45,6 +48,7 @@ function buildAuthResult(dbUser: DbUser): AuthResult {
     user: {
       id: dbUser.id,
       email: dbUser.email,
+      phone: dbUser.phone ?? null,
       name: dbUser.display_name || dbUser.email.split('@')[0],
       role: dbUser.role?.toUpperCase?.() ?? dbUser.role,
       isActive: dbUser.is_active === 'TRUE',

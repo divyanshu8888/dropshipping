@@ -1,6 +1,13 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { query, queryOne } from 'lib/mysql';
 import { requireRole, internalError } from '../../../src/lib/apiAuth';
+import { checkFields } from '../../../src/lib/moderation/contentFilter';
+import { moderateAndQueue } from '../../../src/lib/moderation/aiModeration';
+
+// Why: profiles are client-facing — a one-line bio or empty pitch hurts conversion
+// and the apply gate. Minimums force a real "who I am" description.
+export const BIO_MIN = 50;
+export const DESCRIPTION_MIN = 150;
 
 // Allow freelancers to update their own profile details
 // Accepts a subset of columns from the freelancers table
@@ -23,7 +30,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       country,
       skills, // array of strings or comma separated string
       hourly_rate_cents,
-      availability,
+      // Why: `availability` is intentionally NOT accepted here. That column stores the
+      // structured string owned by /api/freelancers/update-availability (the Calendar tab);
+      // accepting it here let profile saves overwrite "available|..." and flip users to busy.
     } = req.body || {};
 
     // Why: only the freelancer record owned by the session user may be updated.
@@ -37,6 +46,70 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const freelancerId = ownRecord.id;
+
+    // Why: enforce minimum quality server-side, not just in the form.
+    if (typeof bio === 'string' && bio.trim() && bio.trim().length < BIO_MIN) {
+      return res.status(400).json({
+        error: `Your bio is too short. Write at least ${BIO_MIN} characters about who you are and what you do.`,
+      });
+    }
+    if (typeof description === 'string' && description.trim() && description.trim().length < DESCRIPTION_MIN) {
+      return res.status(400).json({
+        error: `Your description is too short. Write at least ${DESCRIPTION_MIN} characters — your experience, the projects you take on, and how you work.`,
+      });
+    }
+
+    // Why: never publish abusive or questionable text on a public profile.
+    const contentCheck = checkFields({
+      'display name': display_name,
+      headline,
+      title,
+      bio,
+      description,
+      skills: Array.isArray(skills) ? skills.join(', ') : skills,
+    });
+    if (!contentCheck.ok) {
+      // Log the attempt so admins can spot repeat offenders (never block on logging).
+      try {
+        await query(
+          `INSERT INTO admin_notifications (type, title, message, user_id, severity, is_read, created_at)
+           VALUES ('content_flagged', ?, ?, ?, ?, 'FALSE', NOW())`,
+          [
+            `Profile content ${contentCheck.tier}`,
+            `User #${user.id} tried to save ${contentCheck.tier} content in profile ${contentCheck.field} (matched: "${contentCheck.match}")`,
+            user.id,
+            contentCheck.tier === 'blocked' ? 'high' : 'medium',
+          ],
+        );
+      } catch { /* notifications table may not exist */ }
+
+      const messages: Record<string, string> = {
+        blocked: `Your ${contentCheck.field} contains language that isn't allowed on Unitiv. Please rephrase it.`,
+        confidential: `Your ${contentCheck.field} contains a ${contentCheck.match}. Contact, payment, and ID details can't appear on public profiles — clients reach you through Unitiv.`,
+        questionable: `Your ${contentCheck.field} contains content that can't be published on a professional profile. Please rephrase it — if you believe this is a mistake, contact support.`,
+      };
+      return res.status(400).json({
+        error: messages[contentCheck.tier],
+        code: 'CONTENT_REJECTED',
+        field: contentCheck.field,
+      });
+    }
+
+    // Why: AI pass judges MEANING (novel insults, coded hate, context) that the
+    // word filter can't; flagged saves are rejected and queued for admin review.
+    const aiVerdict = await moderateAndQueue('profile', user.id, {
+      headline,
+      title,
+      bio,
+      description,
+    });
+    if (aiVerdict.flagged) {
+      return res.status(400).json({
+        error:
+          'Your profile text was flagged by automated content review and sent to our moderators. Please rephrase it — or contact support if you believe this is a mistake.',
+        code: 'AI_FLAGGED',
+      });
+    }
 
     // Normalize skills to JSON string
     let skillsJson: string | null = null;
@@ -66,7 +139,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (typeof country === 'string') setField('country', country.trim());
     if (skillsJson !== null) setField('skills', skillsJson);
     if (Number.isFinite(Number(hourly_rate_cents))) setField('hourly_rate_cents', Number(hourly_rate_cents));
-    if (typeof availability === 'string') setField('availability', availability.trim());
 
     if (fields.length === 0) {
       return res.status(400).json({ error: 'No updatable fields provided' });

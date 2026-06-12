@@ -6,6 +6,8 @@ const Header = dynamic(() => import('../../src/components/Header'));
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useRoleGuard } from '../../src/lib/useRoleGuard';
 import { useToast } from '../../src/components/Toast';
+// Why: same moderation rules as the server, for instant feedback before submit.
+import { checkFields } from '../../src/lib/moderation/contentFilter';
 import { 
   Calendar,
   MessageCircle,
@@ -352,6 +354,8 @@ export default function FreelancerDashboard() {
   const [phoneOtp, setPhoneOtp] = useState('');
   const [emailOtpSent, setEmailOtpSent] = useState(false);
   const [phoneOtpSent, setPhoneOtpSent] = useState(false);
+  // Why: session user refreshes only on next verify; show the new number immediately after change.
+  const [localPhone, setLocalPhone] = useState<string | null>(null);
   const [contactChangeSaving, setContactChangeSaving] = useState(false);
   // Why: in-dashboard password change (verifies current password server-side).
   const [pwChangeMode, setPwChangeMode] = useState(false);
@@ -359,6 +363,21 @@ export default function FreelancerDashboard() {
   const [pwSaving, setPwSaving] = useState(false);
   const [pwVisible, setPwVisible] = useState(false);
   const [pwError, setPwError] = useState<string | null>(null);
+  // Why: live profile-completion data (same source the apply gate uses) so the
+  // profile tab can show exactly what's missing and why it matters.
+  const [profileChecklist, setProfileChecklist] = useState<{
+    completion: number; missing: string[]; canApply: boolean; verified: boolean;
+  } | null>(null);
+  const refreshProfileChecklist = useCallback(() => {
+    fetch('/api/freelancers/can-apply')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d?.success) setProfileChecklist(d); })
+      .catch(() => { /* non-critical */ });
+  }, []);
+  useEffect(() => {
+    if (activeTab === 'profile' && user?.id) refreshProfileChecklist();
+  }, [activeTab, user?.id, refreshProfileChecklist]);
+
   // Why: time-aware greeting set after mount to avoid SSR/client hydration mismatch.
   const [greeting, setGreeting] = useState('Welcome back');
   useEffect(() => {
@@ -3319,6 +3338,40 @@ export default function FreelancerDashboard() {
                 )}
               </div>
 
+              {/* Why: show completion + exactly what's missing, since applying requires >=90%. */}
+              {profileChecklist && (
+                <div className="mb-6 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-semibold text-white">Profile completion</p>
+                    <p className={`text-sm font-bold ${profileChecklist.completion >= 90 ? 'text-emerald-300' : 'text-cyan-300'}`}>
+                      {profileChecklist.completion}%
+                    </p>
+                  </div>
+                  <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${profileChecklist.completion >= 90 ? 'bg-gradient-to-r from-emerald-400 to-teal-400' : 'bg-gradient-to-r from-cyan-400 to-violet-500'}`}
+                      style={{ width: `${profileChecklist.completion}%` }}
+                    />
+                  </div>
+                  {profileChecklist.completion >= 90 ? (
+                    <p className="text-xs text-emerald-300/90 mt-2">Your profile is complete — you can apply to open projects.</p>
+                  ) : (
+                    <div className="mt-2">
+                      <p className="text-xs text-white/60 mb-1.5">
+                        Reach 90% to apply for projects. Still missing:
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {profileChecklist.missing.map((item) => (
+                          <span key={item} className="rounded-full border border-amber-400/25 bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-200">
+                            {item}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Email & Phone — changeable via OTP verification */}
               <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Email */}
@@ -3422,7 +3475,7 @@ export default function FreelancerDashboard() {
                   </p>
                   {!phoneChangeMode ? (
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm text-white/80 truncate">{(user as any)?.phone || 'Not set'}</p>
+                      <p className="text-sm text-white/80 truncate">{localPhone ?? (user as any)?.phone ?? 'Not set'}</p>
                       <button
                         onClick={() => { setPhoneChangeMode(true); setPhoneOtpSent(false); setNewPhone(''); setPhoneOtp(''); }}
                         className="shrink-0 text-xs font-semibold text-cyan-400 hover:text-cyan-300 transition"
@@ -3489,6 +3542,8 @@ export default function FreelancerDashboard() {
                                   });
                                   if (res.ok) {
                                     addToast('Phone number updated successfully', 'success');
+                                    // Why: reflect the new number immediately (session user updates on next login/verify).
+                                    setLocalPhone(newPhone);
                                     setPhoneChangeMode(false);
                                     setPhoneOtpSent(false);
                                     await fetchFreelancerData();
@@ -3616,12 +3671,43 @@ export default function FreelancerDashboard() {
               <form
                 onSubmit={async (e) => {
                   e.preventDefault();
+                  // Why: mirror the server's quality + content rules for instant feedback.
+                  const bioLen = profileForm.bio.trim().length;
+                  const descLen = profileForm.description.trim().length;
+                  if (bioLen > 0 && bioLen < 50) {
+                    addToast('Bio must be at least 50 characters — tell clients who you are and what you do.', 'error');
+                    return;
+                  }
+                  if (descLen > 0 && descLen < 150) {
+                    addToast('Description must be at least 150 characters — your experience, project types, and how you work.', 'error');
+                    return;
+                  }
+                  const contentCheck = checkFields({
+                    'display name': profileForm.display_name,
+                    headline: profileForm.headline,
+                    title: profileForm.title,
+                    bio: profileForm.bio,
+                    description: profileForm.description,
+                    skills: profileForm.skills,
+                  });
+                  if (!contentCheck.ok) {
+                    addToast(
+                      contentCheck.tier === 'confidential'
+                        ? `Your ${contentCheck.field} contains a ${contentCheck.match} — contact, payment, and ID details can't appear on public profiles.`
+                        : `Your ${contentCheck.field} contains language that can't be published on a professional profile. Please rephrase it.`,
+                      'error'
+                    );
+                    return;
+                  }
                   setSaving(true);
                   try {
+                    // Why: never send `availability` — that column belongs to the Calendar
+                    // tab's toggle; sending it here flipped users from Available to Busy.
+                    const { availability: _omitAvailability, ...profilePayload } = profileForm;
                     const res = await fetch('/api/freelancers/update-profile', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ freelancerId: user?.id, ...profileForm }),
+                      body: JSON.stringify(profilePayload),
                     });
                     if (res.ok) {
                       const data = await res.json();
@@ -3629,6 +3715,8 @@ export default function FreelancerDashboard() {
                       addToast('Profile updated successfully', 'success');
                       setProfileEditMode(false);
                       await fetchFreelancerData();
+                      // Why: completion meter should reflect the save immediately.
+                      refreshProfileChecklist();
                     } else {
                       const error = await res.json();
                       addToast(error?.error || 'Failed to update profile', 'error');
@@ -3647,6 +3735,7 @@ export default function FreelancerDashboard() {
                   <input
                     className="bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
                     value={profileForm.display_name}
+                    maxLength={100}
                     onChange={(e) => setProfileForm({ ...profileForm, display_name: e.target.value })}
                     required
                     placeholder="Your name"
@@ -3657,8 +3746,9 @@ export default function FreelancerDashboard() {
                   <input
                     className="bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
                     value={profileForm.headline}
+                    maxLength={100}
                     onChange={(e) => setProfileForm({ ...profileForm, headline: e.target.value })}
-                    placeholder="e.g., Senior Web Developer"
+                    placeholder="e.g., Senior Web Developer — React &amp; Node specialist"
                   />
                 </div>
                 <div>
@@ -3709,33 +3799,68 @@ export default function FreelancerDashboard() {
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-white mb-2">Bio</label>
+                  {/* Why: guided placeholder + live counter help freelancers write a client-facing bio. */}
+                  <label className="block text-sm font-medium text-white mb-2">Bio <span className="text-white/40 text-xs">(shown on your public card)</span></label>
                   <textarea
                     className="bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full resize-none"
                     rows={3}
+                    maxLength={500}
                     value={profileForm.bio}
                     onChange={(e) => setProfileForm({ ...profileForm, bio: e.target.value })}
-                    placeholder="A short bio about yourself"
+                    placeholder="One or two sentences: who you are, what you build, and the results clients can expect. e.g. 'Full-stack developer helping startups ship MVPs in weeks, not months.'"
                   />
+                  <p className={`text-[11px] mt-1 text-right ${profileForm.bio.trim().length > 0 && profileForm.bio.trim().length < 50 ? 'text-amber-300' : 'text-white/40'}`}>
+                    {profileForm.bio.trim().length > 0 && profileForm.bio.trim().length < 50
+                      ? `${50 - profileForm.bio.trim().length} more characters needed · `
+                      : ''}{profileForm.bio.length}/500 (min 50)
+                  </p>
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-white mb-2">Description</label>
+                  <label className="block text-sm font-medium text-white mb-2">Description <span className="text-white/40 text-xs">(your full pitch)</span></label>
                   <textarea
                     className="bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full resize-none"
                     rows={4}
+                    maxLength={5000}
                     value={profileForm.description}
                     onChange={(e) => setProfileForm({ ...profileForm, description: e.target.value })}
-                    placeholder="A detailed description of your skills and experience"
+                    placeholder="Go deeper: your experience, the kinds of projects you take on, your process, and what working with you is like. Clients read this before requesting a quote."
                   />
+                  <p className={`text-[11px] mt-1 text-right ${profileForm.description.trim().length > 0 && profileForm.description.trim().length < 150 ? 'text-amber-300' : 'text-white/40'}`}>
+                    {profileForm.description.trim().length > 0 && profileForm.description.trim().length < 150
+                      ? `${150 - profileForm.description.trim().length} more characters needed · `
+                      : ''}{profileForm.description.length}/5000 (min 150)
+                  </p>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-white mb-2">Skills (comma separated)</label>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-white mb-2">Skills <span className="text-white/40 text-xs">(comma separated — tap suggestions to add)</span></label>
                   <input
                     className="bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 placeholder:text-white/30 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition w-full"
                     value={profileForm.skills}
+                    maxLength={500}
                     onChange={(e) => setProfileForm({ ...profileForm, skills: e.target.value })}
                     placeholder="React, TypeScript, Node.js"
                   />
+                  {/* Why: one-tap chips beat typing — and nudge toward searchable, standardized skill names. */}
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {['React', 'Next.js', 'TypeScript', 'Node.js', 'Python', 'UI/UX Design', 'Figma', 'WordPress', 'Shopify', 'SEO', 'Content Writing', 'Video Editing', 'AWS', 'Data Analysis', 'Logo Design']
+                      .filter((s) => !profileForm.skills.toLowerCase().split(',').map((x) => x.trim()).includes(s.toLowerCase()))
+                      .slice(0, 10)
+                      .map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => setProfileForm({
+                            ...profileForm,
+                            skills: profileForm.skills.trim()
+                              ? `${profileForm.skills.replace(/,\s*$/, '')}, ${s}`
+                              : s,
+                          })}
+                          className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-white/60 hover:border-cyan-400/40 hover:text-cyan-300 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+                        >
+                          + {s}
+                        </button>
+                      ))}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-white mb-2">Hourly Rate (USD)</label>

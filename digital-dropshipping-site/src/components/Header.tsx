@@ -70,7 +70,9 @@ const Header: React.FC = () => {
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+  const [headerScrolled, setHeaderScrolled] = useState(false);
   const accountMenuRef = useRef<HTMLDivElement | null>(null);
+  const isHomePage = router.pathname === '/';
   const isAdminUser = canAccessAdminDashboard(user?.role || '');
   const displayName = user?.name || (user?.email ? user.email.split('@')[0] : undefined) || 'Account';
   const navItems = getNavItems(user?.role);
@@ -90,6 +92,13 @@ const Header: React.FC = () => {
   useEffect(() => {
     closeMenus();
   }, [router.asPath]);
+
+  useEffect(() => {
+    const onScroll = () => setHeaderScrolled(window.scrollY > 20);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -133,8 +142,16 @@ const Header: React.FC = () => {
           ]
         : [];
 
+  const headerSurfaceClass = isHomePage
+    ? headerScrolled
+      ? 'header-home-scrolled backdrop-blur-2xl'
+      : 'header-home-transparent'
+    : 'border-white/10 bg-[#05070b]/90 backdrop-blur-2xl';
+
   return (
-    <header className="sticky top-0 z-50 border-b border-white/10 bg-[#141414]/95 backdrop-blur-2xl">
+    <header
+      className={`sticky top-0 z-50 border-b transition-[background,box-shadow,border-color] duration-300 ${headerSurfaceClass}`}
+    >
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-cyan-300/30 to-transparent" />
 
       <div className="mx-auto flex min-h-[72px] max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">

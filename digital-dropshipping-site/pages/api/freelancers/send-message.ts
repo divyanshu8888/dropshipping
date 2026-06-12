@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { query, queryOne } from 'lib/mysql';
 import { guardMessage } from '../../../src/lib/moderation/contactGuard';
 import { requireAuth, internalError } from '../../../src/lib/apiAuth';
+import { moderateAndQueue } from '../../../src/lib/moderation/aiModeration';
 
 export default async function handler(
   req: NextApiRequest,
@@ -152,6 +153,15 @@ export default async function handler(
 
     // Why: sender identity comes from the authenticated session, never the body.
     const senderUserId = user.id;
+
+    // Why: AI pass catches contextual abuse/harassment the pattern guard can't.
+    const aiVerdict = await moderateAndQueue('message', user.id, { message: content });
+    if (aiVerdict.flagged) {
+      return res.status(400).json({
+        error: 'Your message was flagged by automated content review and was not sent. Please rephrase it.',
+        code: 'AI_FLAGGED',
+      });
+    }
 
     // Insert message
     await query(

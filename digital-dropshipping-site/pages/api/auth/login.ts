@@ -8,6 +8,7 @@ import { checkRateLimit } from '../../../src/lib/rateLimit';
 type DbUser = {
   id: number;
   email: string;
+  phone: string | null;
   password_hash: string;
   display_name: string | null;
   role: 'admin' | 'freelancer' | 'client' | 'team_member';
@@ -68,7 +69,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const normalizedEmail = email.toLowerCase();
 
     const user = await queryOne<DbUser>(
-      `SELECT id, email, password_hash, display_name, role, is_active, email_verified, created_at
+      `SELECT id, email, phone, password_hash, display_name, role, is_active, email_verified, created_at
        FROM users
        WHERE email = ?
        LIMIT 1`,
@@ -101,6 +102,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       user: {
         id: user.id,
         email: user.email,
+        // Why: dashboard contact card needs the phone in the session user.
+        phone: user.phone ?? null,
         name: user.display_name || user.email.split('@')[0],
         role: roleUpper,
         isActive: user.is_active === 'TRUE',

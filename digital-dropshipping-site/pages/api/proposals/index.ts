@@ -2,6 +2,8 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { query, queryOne } from 'lib/mysql';
 import { requireRole, parsePositiveInt, internalError, sanitizeText } from '../../../src/lib/apiAuth';
 import { checkRateLimit } from '../../../src/lib/rateLimit';
+import { getApplyEligibility, APPLY_COMPLETION_THRESHOLD } from '../../../src/lib/freelancerEligibility';
+import { moderateAndQueue } from '../../../src/lib/moderation/aiModeration';
 
 // Why: request body size limit prevents abuse via oversized payloads.
 export const config = {
@@ -46,12 +48,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Get freelancer record from the AUTHENTICATED user id (not client input)
-    const freelancer = await queryOne<{ id: number }>(
-      `SELECT id FROM freelancers WHERE user_id = ? LIMIT 1`,
-      [user.id]
-    );
-    if (!freelancer) return res.status(404).json({ error: 'Freelancer profile not found' });
+    // Why: server-side gate — verified account + >=90% complete profile required to apply.
+    // Client UI mirrors this via /api/freelancers/can-apply, but enforcement lives here.
+    const eligibility = await getApplyEligibility(user.id);
+    if (!eligibility.freelancerId) {
+      return res.status(404).json({ error: 'Freelancer profile not found' });
+    }
+    if (!eligibility.emailVerified || !eligibility.verified) {
+      return res.status(403).json({
+        error: 'Verify your account before applying to projects.',
+        code: 'VERIFICATION_REQUIRED',
+      });
+    }
+    if (eligibility.completion < APPLY_COMPLETION_THRESHOLD) {
+      return res.status(403).json({
+        error: `Complete your profile (currently ${eligibility.completion}%) before applying. Missing: ${eligibility.missing.join(', ')}.`,
+        code: 'PROFILE_INCOMPLETE',
+        completion: eligibility.completion,
+        missing: eligibility.missing,
+      });
+    }
+    const freelancer = { id: eligibility.freelancerId };
 
     // Check project exists and is open
     const project = await queryOne<{ id: number; status: string }>(
@@ -67,6 +84,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       [projectIdNum, freelancer.id]
     );
     if (existing) return res.status(409).json({ error: 'You have already applied to this project' });
+
+    // Why: cover letters reach clients directly — AI-judge them like all freelancer text.
+    const aiVerdict = await moderateAndQueue('proposal', user.id, { coverLetter: cleanMessage });
+    if (aiVerdict.flagged) {
+      return res.status(400).json({
+        error: 'Your cover letter was flagged by automated content review. Please rephrase it and try again.',
+        code: 'AI_FLAGGED',
+      });
+    }
 
     const totalCents = Math.round(rate * 100);
     const validUntil = new Date();

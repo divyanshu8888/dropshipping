@@ -3,8 +3,10 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
 import Header from '../src/components/Header';
+import { highlightSnippetLine } from '../src/lib/highlightSnippet';
 import { buildQuoteHref } from '../src/lib/quoteLink';
 import { query } from '../src/lib/mysql';
+import { useAuth } from '../src/contexts/AuthContext';
 
 
 interface Testimonial {
@@ -322,19 +324,34 @@ $ unitiv status
     };
   }, [tab]);
 
-  const highlightSyntax = (line: string) => {
-    return line
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
+  // Why: the old version's string-highlight regex matched the class="" attributes of its own
+  // injected spans, printing raw `"text-cyan-300">` artifacts on screen. Strings/comments are
+  // now extracted to placeholders first, so later rules can never touch generated markup.
+  // Why: delegated to src/lib/highlightSnippet.ts — the robust placeholder-based
+  // implementation that can't corrupt its own generated markup.
+  const highlightSyntax = (line: string) => highlightSnippetLine(line);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _legacyHighlightSyntax = (line: string) => {
+    const escaped = line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const tokens: string[] = [];
+    // Why: emit spans directly — none of the later keyword rules can match the
+    // inserted class attributes, so no placeholder round-trip is needed at all.
+    const stash = (html: string) => html; // legacy placeholder impl removed: (html: string) => `${tokens.push(html) - 1}`;
+
+    let out = escaped
+      .replace(/(\/\/.*$)/g, (m) => stash(`<span class="text-white/40">${m}</span>`))
+      .replace(/(&quot;.*?&quot;|".*?")/g, (m) => stash(`<span class="text-emerald-300">${m}</span>`))
+      .replace(/('.*?')/g, (m) => stash(`<span class="text-emerald-300">${m}</span>`))
       .replace(/\b(import|from|const|let|type|async|await|return|if|throw|new|export|function)\b/g, '<span class="text-cyan-300">$1</span>')
       .replace(/\b(string|number|boolean|any|undefined|void)\b/g, '<span class="text-violet-300">$1</span>')
-      .replace(/(".*?")/g, '<span class="text-emerald-300">$1</span>')
-      .replace(/('.*?')/g, '<span class="text-emerald-300">$1</span>')
-      .replace(/(\/\/.*$)/g, '<span class="text-white/40">$1</span>')
-      .replace(/(POST|GET|PUT|DELETE)\s+(\/[^\s]+)/g, '<span class="text-yellow-300">$1</span> <span class="text-blue-300">$2</span>')
-      .replace(/(\$\s+)/g, '<span class="text-green-300">$1</span>')
+      .replace(/\b(POST|GET|PUT|DELETE)\b(\s+\/[^\s]+)?/g, (_m, verb, path) =>
+        `<span class="text-yellow-300">${verb}</span>${path ? `<span class="text-blue-300">${path}</span>` : ''}`)
       .replace(/(✔|📊|💰|📅|👨‍💻)/g, '<span class="text-emerald-400">$1</span>');
+
+    // Why: stash() now returns html directly, so the placeholder-restore pass must not run —
+    // it would have replaced every digit in the snippet with garbage.
+    if (false) out = out.replace(/(\d+)/g, (_m, i) => tokens[Number(i)] /* restored */);
+    return out;
   };
 
   return (
@@ -398,7 +415,7 @@ $ unitiv status
             </div>
 
             {/* code area */}
-            <pre className="relative p-3 md:p-4 text-[11px] leading-relaxed overflow-x-auto text-white/90 min-h-[280px] font-mono max-w-full">
+            <pre className="relative p-3 md:p-4 text-[11px] leading-relaxed overflow-x-auto text-white/90 min-h-[280px] font-mono max-w-full [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.15)_transparent] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/15 [&::-webkit-scrollbar-thumb]:rounded-full">
               <code className="[&_*]:font-mono">
                 {typed.split('\n').map((line, idx) => (
                   <div key={idx} className="tabular-nums">
@@ -462,7 +479,180 @@ $ unitiv status
   );
 };
 
+// Hero pointer state shared between the hero container and the canvas
+type HeroPointer = { x: number; y: number; active: boolean };
+
+// Constellation particle canvas — single canvas, DPR capped at 2, <=70 particles.
+// Fully gated behind prefers-reduced-motion; pauses on tab hide; cleans up on unmount.
+const ConstellationCanvas = ({ pointerRef }: { pointerRef: React.MutableRefObject<HeroPointer> }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    // Reduced-motion users get no canvas animation at all — static gradient scene only
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    if (reduceMotion.matches) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let width = 0;
+    let height = 0;
+    let rafId = 0;
+    let running = true;
+
+    const resize = () => {
+      const parent = canvas.parentElement;
+      if (!parent) return;
+      width = parent.clientWidth;
+      height = parent.clientHeight;
+      canvas.width = Math.floor(width * dpr);
+      canvas.height = Math.floor(height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+    resize();
+
+    const COUNT = width < 640 ? 42 : 70;
+    const LINK_DIST = 120;
+    const CURSOR_DIST = 160;
+
+    const particles = Array.from({ length: COUNT }, () => ({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      vx: (Math.random() - 0.5) * 0.24,
+      vy: (Math.random() - 0.5) * 0.24,
+      r: Math.random() * 1.4 + 0.6,
+      isCyan: Math.random() > 0.42,
+    }));
+
+    const draw = () => {
+      ctx.clearRect(0, 0, width, height);
+
+      // Drift + edge wrap
+      for (const p of particles) {
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.x < -10) p.x = width + 10;
+        if (p.x > width + 10) p.x = -10;
+        if (p.y < -10) p.y = height + 10;
+        if (p.y > height + 10) p.y = -10;
+      }
+
+      // Particle-to-particle links
+      for (let i = 0; i < particles.length; i++) {
+        const a = particles[i];
+        for (let j = i + 1; j < particles.length; j++) {
+          const b = particles[j];
+          const dx = a.x - b.x;
+          const dy = a.y - b.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < LINK_DIST) {
+            const alpha = (1 - dist / LINK_DIST) * 0.16;
+            ctx.strokeStyle = a.isCyan
+              ? `rgba(0, 198, 255, ${alpha})`
+              : `rgba(167, 139, 250, ${alpha})`;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(a.x, a.y);
+            ctx.lineTo(b.x, b.y);
+            ctx.stroke();
+          }
+        }
+      }
+
+      // Links toward the cursor (opacity proportional to proximity)
+      const pointer = pointerRef.current;
+      if (pointer.active) {
+        for (const p of particles) {
+          const dx = p.x - pointer.x;
+          const dy = p.y - pointer.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < CURSOR_DIST) {
+            const alpha = (1 - dist / CURSOR_DIST) * 0.32;
+            ctx.strokeStyle = `rgba(0, 198, 255, ${alpha})`;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(pointer.x, pointer.y);
+            ctx.stroke();
+          }
+        }
+      }
+
+      // Dots
+      for (const p of particles) {
+        ctx.fillStyle = p.isCyan ? 'rgba(0, 198, 255, 0.55)' : 'rgba(167, 139, 250, 0.5)';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    };
+
+    const loop = () => {
+      if (!running) return;
+      draw();
+      rafId = requestAnimationFrame(loop);
+    };
+
+    const onVisibility = () => {
+      if (document.hidden) {
+        running = false;
+        cancelAnimationFrame(rafId);
+      } else if (!running) {
+        running = true;
+        rafId = requestAnimationFrame(loop);
+      }
+    };
+
+    window.addEventListener('resize', resize);
+    document.addEventListener('visibilitychange', onVisibility);
+    rafId = requestAnimationFrame(loop);
+
+    return () => {
+      running = false;
+      cancelAnimationFrame(rafId);
+      window.removeEventListener('resize', resize);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [pointerRef]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0 h-full w-full"
+    />
+  );
+};
+
+const HERO_MARQUEE_CATEGORIES = [
+  'Web Development',
+  'AI/ML',
+  'Logo Design',
+  'UX/UI Design',
+  'Voice Over',
+  'UGC Videos',
+  'Social Media Marketing',
+  'SEO',
+  'Data Analytics',
+  'DevOps',
+  'Brand Identity',
+  'Content Writing',
+];
+
+const HERO_QUICK_SEARCHES = [
+  { label: 'Logo Design', href: '/products?category=Design' },
+  { label: 'Web Development', href: '/products?category=Web Development' },
+  { label: 'AI / ML', href: '/products?category=AI & ML' },
+  { label: 'SEO', href: '/products?category=Digital Marketing' },
+];
+
 const HomePage = ({ testimonials, stats }: HomePageProps) => {
+  const { isFreelancer } = useAuth();
+  const viewerIsFreelancer = isFreelancer();
   const [currentTestimonialIndex, setCurrentTestimonialIndex] = useState(0);
   const [isAutoPlaying, _setIsAutoPlaying] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -470,6 +660,49 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
   const [products, setProducts] = useState<any[]>([]);
   const [freelancers, setFreelancers] = useState<any[]>([]);
   const [scrollY, setScrollY] = useState(0);
+
+  // Hero scene refs — pointer shared with canvas, spotlight moved via direct style writes
+  const heroPointerRef = useRef<HeroPointer>({ x: 0, y: 0, active: false });
+  const spotlightRef = useRef<HTMLDivElement>(null);
+  const prefersReducedMotionRef = useRef(false);
+
+  useEffect(() => {
+    prefersReducedMotionRef.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }, []);
+
+  const handleHeroPointerMove = (e: React.MouseEvent<HTMLElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    heroPointerRef.current.x = x;
+    heroPointerRef.current.y = y;
+    heroPointerRef.current.active = true;
+    if (!prefersReducedMotionRef.current && spotlightRef.current) {
+      spotlightRef.current.style.opacity = '1';
+      spotlightRef.current.style.transform = `translate(${x - 240}px, ${y - 240}px)`;
+    }
+  };
+
+  const handleHeroPointerLeave = () => {
+    heroPointerRef.current.active = false;
+    if (spotlightRef.current) {
+      spotlightRef.current.style.opacity = '0';
+    }
+  };
+
+  // 3D tilt for floating stat cards (max 8deg, reset on leave)
+  const handleCardTilt = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (prefersReducedMotionRef.current) return;
+    const el = e.currentTarget;
+    const rect = el.getBoundingClientRect();
+    const px = (e.clientX - rect.left) / rect.width - 0.5;
+    const py = (e.clientY - rect.top) / rect.height - 0.5;
+    el.style.transform = `perspective(700px) rotateX(${(-py * 8).toFixed(2)}deg) rotateY(${(px * 8).toFixed(2)}deg)`;
+  };
+
+  const handleCardTiltReset = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.currentTarget.style.transform = 'perspective(700px) rotateX(0deg) rotateY(0deg)';
+  };
 
   useEffect(() => {
     // Fetch products and freelancers for search
@@ -555,7 +788,6 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
 
   const currentTestimonials = getCurrentTestimonials();
 
-
   return (
     <div className="min-h-screen bg-bg-base">
       <Head>
@@ -595,146 +827,167 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
 
       {/* Why: semantic <main> landmark for screen readers and SEO */}
       <main>
-      {/* Hero Section - Framer Style */}
-      <section className="relative overflow-hidden bg-bg-base">
-        {/* Breathing glow orbs */}
-        <div className="pointer-events-none absolute -top-48 left-[8%] w-[36rem] h-[36rem] rounded-full bg-cyan-500/20 blur-[130px] animate-[pulse_10s_ease-in-out_infinite]"></div>
-        <div className="pointer-events-none absolute -bottom-32 right-[6%] w-[34rem] h-[34rem] rounded-full bg-violet-500/20 blur-[120px] animate-[pulse_12s_ease-in-out_infinite]"></div>
-        <div className="pointer-events-none absolute top-[20%] right-[20%] w-[20rem] h-[20rem] rounded-full bg-blue-500/15 blur-[100px] animate-[pulse_15s_ease-in-out_infinite]"></div>
+      {/* ─── Hero ─── */}
+      <section className="hero-section relative overflow-hidden bg-[#030508] text-white">
+        <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-10%,rgba(34,211,238,0.14),transparent)]" />
+        <div aria-hidden="true" className="hero-perspective-grid absolute inset-0 z-[1] opacity-80" />
+        <div aria-hidden="true" className="hero-scanlines absolute inset-0 z-[4]" />
+        <div aria-hidden="true" className="hero-vignette pointer-events-none absolute inset-0 z-[2]" />
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-[1] overflow-hidden">
+          <div className="absolute -right-32 top-0 h-[36rem] w-[36rem] rounded-full bg-cyan-500/10 blur-[120px] motion-safe:animate-[auroraDrift_22s_ease-in-out_infinite]" />
+          <div className="absolute -bottom-40 -left-32 h-[40rem] w-[40rem] rounded-full bg-indigo-600/10 blur-[120px] motion-safe:animate-[heroAuroraB_26s_ease-in-out_infinite]" />
+        </div>
+        <ConstellationCanvas pointerRef={heroPointerRef} />
+        <div ref={spotlightRef} aria-hidden="true" className="hero-spotlight pointer-events-none absolute left-0 top-0 z-[3]" />
 
-        {/* Floating glow blob */}
-        <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[32rem] h-[32rem] rounded-full bg-gradient-to-r from-cyan-400/25 via-blue-500/20 to-violet-500/25 blur-3xl animate-[pulse_8s_ease-in-out_infinite]"></div>
-        
-        {/* Full-screen video banner */}
-        <div className="relative w-full min-h-[78vh] overflow-hidden text-center pt-6 md:pt-8">
-            <video
-              className="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 hero-video-bg-refined"
-              style={{ opacity: Math.max(0.4, 0.7 - scrollY / 1000) }}
-              src="/Video/meeting.mp4"
-              autoPlay
-              muted
-              loop
-              playsInline
-              preload="metadata"
-            />
-            <div className="absolute inset-0 bg-black/45" />
-            <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-transparent" />
-            <div className="absolute inset-0 hero-overlay-gradient-refined" />
+        <div
+          className="hero-inner"
+          onMouseMove={handleHeroPointerMove}
+          onMouseLeave={handleHeroPointerLeave}
+        >
+          <h1 className="animate-fade-in-up animate-delay-100 hero-headline md:whitespace-nowrap">
+            Your vision, <span className="hero-future-accent">built by experts.</span>
+          </h1>
 
-            {/* Light glow specifically behind gradient text area - much stronger */}
-            <div className="pointer-events-none absolute left-1/2 top-[12vh] -translate-x-1/2 w-[650px] max-w-[75vw] h-[14vh] rounded-[24px] bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-violet-500/20 blur-[32px]"></div>
+          <p className="animate-fade-in-up animate-delay-200 hero-subtitle">
+            Hire verified freelancers in design, development, AI, and marketing.
+          </p>
 
-            <div className="relative z-10 mx-auto max-w-[900px] px-6 pt-[16vh] pb-12 text-center">
-              {/* HEADLINE */}
-              <h1
-                className="mx-auto font-extrabold
-                           text-[clamp(32px,5vw,62px)] leading-[1.1]
-                           animate-fade-in-up animate-delay-100 tracking-[-0.03em] text-white"
-              >
-                Your Vision,{" "}
-                <span className="hero-gradient-refined">
-                  Built by Experts.
-                </span>
-              </h1>
+          <div className="hero-horizon" aria-hidden="true" />
 
-              {/* TAGLINE */}
-              <p
-                className="mx-auto max-w-[560px] animate-fade-in-up animate-delay-300 hero-tagline"
-              >
-                Hire verified freelancers for design, development, marketing, and more — with milestone-based payment protection.
-              </p>
-
-              {/* SEARCH – pushed further down */}
-              <div className="mt-6 flex items-center justify-center animate-fade-in-up animate-delay-500 search-container-wrap">
-                <form onSubmit={handleSearchSubmit} className="relative flex w-full max-w-[680px] items-center gap-2 sm:gap-3 rounded-full px-3 sm:px-4 h-[50px] search-form-airglass">
-                  <svg className="h-5 w-5 text-white/70 shrink-0" viewBox="0 0 24 24" fill="none">
-                    <path d="M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+          <div className="animate-fade-in-up animate-delay-300 hero-command-deck">
+            <div className="hero-search-zone">
+              <div className="hero-neon-search-wrap">
+                <form onSubmit={handleSearchSubmit} className="hero-search-pill">
+                  <svg className="h-4 w-4 shrink-0 text-cyan-400/70" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
                   </svg>
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={handleSearchChange}
                     maxLength={200}
-                    aria-label="Search services"
-                    className="h-full flex-1 bg-transparent text-white outline-none search-input-field"
-                    placeholder="Search services (e.g., 'Logo design')"
+                    aria-label="Search services or freelancers"
+                    aria-expanded={searchSuggestions.length > 0}
+                    aria-controls="hero-search-suggestions"
+                    className="hero-search-input"
+                    placeholder="Search services or freelancers"
                   />
-                  <button
-                    type="submit"
-                    className="shrink-0 h-[38px] px-4 rounded-full 
-                               text-white font-medium transition-all search-submit-btn text-sm"
-                  >
+                  <button type="submit" className="hero-search-btn">
                     Search
                   </button>
-                  {/* Search suggestions dropdown */}
-                  {searchSuggestions.length > 0 && (
-                    <div className="absolute top-full left-0 right-0 mt-2 rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 shadow-[0_20px_60px_rgba(0,0,0,.4)] overflow-hidden z-50">
-                      {searchSuggestions.map((item, idx) => (
-                        <a
-                          key={idx}
-                          href={item.url}
-                          className="flex items-center px-6 py-3 text-white hover:bg-white/20 transition-colors border-b border-white/10 last:border-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
-                        >
-                          <span className="mr-3 text-white/60">{item.type === 'product' ? '📦' : '👤'}</span>
-                          <span className="font-medium">{item.name}</span>
-                        </a>
-                      ))}
-                    </div>
-                  )}
                 </form>
               </div>
-
-              {/* CTAS */}
-            <div className="mt-6 cta-buttons-container animate-fade-in-up animate-delay-400">
-              <Link
-                href={buildQuoteHref({
-                  source: 'general',
-                  intent: 'proposal',
-                  title: 'Request a quote',
-                  subtitle: 'Tell us about your project and we’ll match you with a verified operator.'
-                })}
-                className="cta-btn-primary"
-              >
-                Request a Quote
-                <svg className="inline-block ml-2 w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </Link>
-              <Link
-                href="/freelancers"
-                aria-label="Browse freelancers"
-                className="cta-btn-secondary"
-              >
-                Browse Freelancers
-              </Link>
+              {searchSuggestions.length > 0 && (
+                <div
+                  id="hero-search-suggestions"
+                  role="listbox"
+                  className="hero-search-dropdown text-left"
+                >
+                  {searchSuggestions.map((item, idx) => (
+                    <a
+                      key={`${item.type}-${item.id ?? idx}`}
+                      href={item.url}
+                      role="option"
+                      className="hero-search-dropdown-item"
+                    >
+                      <span className="hero-search-dropdown-tag">
+                        {item.type === 'product' ? 'Service' : 'Talent'}
+                      </span>
+                      <span className="hero-search-dropdown-label">{item.name}</span>
+                    </a>
+                  ))}
+                </div>
+              )}
             </div>
-          
-              {/* TRUST INDICATORS - Matching Freelancer Page Style */}
-              <div className="mt-7 flex flex-wrap items-center justify-center gap-4 sm:gap-6 mb-8 sm:mb-14 text-white/80 text-xs sm:text-sm animate-fade-in-up animate-delay-600">
-                {/* Fast quotes */}
-                <div className="flex items-center gap-2">
-                  <svg className="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                  <span>Fast quotes</span>
-                </div>
 
-                {/* Secure milestones */}
-                <div className="flex items-center gap-2">
-                  <svg className="w-5 h-5 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                  </svg>
-                  <span>Secure milestones</span>
-                </div>
+            {searchSuggestions.length === 0 && (
+            <>
+            <p className="hero-deck-popular">
+              Popular{' '}
+              <span className="normal-case tracking-normal">
+                {HERO_QUICK_SEARCHES.map((item, i) => (
+                  <span key={item.label}>
+                    {i > 0 && <span className="text-zinc-700"> · </span>}
+                    <Link href={item.href} className="hero-quick-link text-zinc-500 hover:text-cyan-300">
+                      {item.label}
+                    </Link>
+                  </span>
+                ))}
+              </span>
+            </p>
 
-                {/* Verified portfolios */}
-                <div className="flex items-center gap-2">
-                  <svg className="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            <div className="hero-deck-actions">
+              {!viewerIsFreelancer && (
+                <Link
+                  href={buildQuoteHref({ source: 'general', intent: 'proposal', title: 'Request a quote' })}
+                  className="hero-cta-sheen hero-future-cta hero-deck-btn text-white"
+                >
+                  Request a Quote
+                  <svg className="ml-1.5 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5-5 5M6 12h12" />
                   </svg>
-                  <span>Verified freelancers</span>
-                </div>
+                </Link>
+              )}
+              {!viewerIsFreelancer && (
+                <Link
+                  href="/freelancers"
+                  className="hero-future-ghost hero-deck-btn text-cyan-50"
+                >
+                  Browse Freelancers
+                </Link>
+              )}
+              {viewerIsFreelancer && (
+                <Link
+                  href="/open-projects"
+                  className="hero-cta-sheen hero-future-cta hero-deck-btn text-white"
+                >
+                  Find Open Projects
+                </Link>
+              )}
+            </div>
+            </>
+            )}
+          </div>
+
+          <div className="animate-fade-in-up animate-delay-500 hero-stat-hud">
+            <div className="text-center">
+              <div className="hero-stat-hud-value">
+                {stats.totalFreelancers > 0 ? `${stats.totalFreelancers.toLocaleString()}+` : '50+'}
               </div>
+              <div className="hero-stat-hud-label">Freelancers</div>
+            </div>
+            <div className="hero-stat-hud-divider" aria-hidden="true" />
+            <div className="text-center">
+              <div className="hero-stat-hud-value">
+                {stats.averageRating && stats.averageRating !== '0.0' ? stats.averageRating : '4.9'}
+                <span className="text-sm font-normal text-cyan-400/80">/5</span>
+              </div>
+              <div className="hero-stat-hud-label">Rating</div>
+            </div>
+            <div className="hero-stat-hud-divider" aria-hidden="true" />
+            <div className="text-center">
+              <div className="hero-stat-hud-value">
+                {stats.totalProjects > 0 ? `${stats.totalProjects.toLocaleString()}+` : '100+'}
+              </div>
+              <div className="hero-stat-hud-label">Projects</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Category marquee */}
+        <div aria-hidden="true" className="hero-marquee-strip">
+          <div className="hero-marquee-track">
+            {[0, 1].map((dup) => (
+              <div key={dup} className="flex items-center">
+                {HERO_MARQUEE_CATEGORIES.map((cat) => (
+                  <span key={`${dup}-${cat}`} className="hero-marquee-item">
+                    <span className="hero-marquee-label">{cat}</span>
+                    <span className="hero-marquee-sep">//</span>
+                  </span>
+                ))}
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -748,14 +1001,10 @@ const HomePage = ({ testimonials, stats }: HomePageProps) => {
               TRUSTED BY TEAMS WORLDWIDE
             </p>
 
-            {/* marquee */}
-            <div className="mt-6 relative overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_15%,black_85%,transparent)]">
-              <div className="flex gap-16 whitespace-nowrap animate-[marquee_45s_linear_infinite] hover:[animation-play-state:paused]">
+            <div className="trust-marquee-strip">
+              <div className="trust-marquee-track">
                 {["FORTUNE 500","TECH LEADERS","STARTUPS","AGENCIES","INNOVATORS","ENTERPRISE","DIGITAL PROS","CREATORS","FORTUNE 500","TECH LEADERS","STARTUPS","AGENCIES","INNOVATORS","ENTERPRISE","DIGITAL PROS","CREATORS"].map((name, i) => (
-                  <span
-                    key={i}
-                    className="text-white/25 hover:text-white/90 transition-colors duration-300 text-sm md:text-base font-semibold tracking-wide"
-                  >
+                  <span key={i} className="trust-marquee-item">
                     {name}
                   </span>
                 ))}
